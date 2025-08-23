@@ -6,6 +6,19 @@ export interface StripeCheckoutSession {
         email?: string;
     } | null;
     metadata?: {
-        items?: unknown[]; // or a more specific type if you know the shape
+        items?: unknown[];
+        customer_first_name?: string;
+        customer_last_name?: string;
+        customer_phone?: string;
+        delivery_method?: string;
+        delivery_address?: string;
+        delivery_city?: string;
+        delivery_postal_code?: string;
     } | null;
+    custom_fields?: Array<{
+        key: string;
+        text?: {
+            value: string;
+        };
+    }>;
 }
