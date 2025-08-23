@@ -30,7 +30,6 @@ export default async function HomePage() {
   return (
     <main className="max-w-7xl mx-auto px-2 sm:px-4 py-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-5xl font-bold">YEEZUZ2020</h1>
         <p className="text-zinc-600 mt-2 text-sm sm:text-base">
           Oficiální e-shop YEEZUZ2020
         </p>

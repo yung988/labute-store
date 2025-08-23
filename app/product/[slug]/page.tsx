@@ -168,7 +168,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Pravý sloupec - Product info (sticky) */}
           <div className="lg:sticky lg:top-30 lg:self-start">
             {/* Product header */}
-            <div className="text-center lg:text-left space-y-8">
+            <div className="text-left space-y-8">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-light tracking-[0.1em] uppercase text-gray-900 mb-6">
                   {product.name}
@@ -180,7 +180,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
               {product.description && (
                 <div className="border-t border-gray-200 pt-8">
-                  <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
+                  <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md">
                     {product.description}
                   </p>
                 </div>
