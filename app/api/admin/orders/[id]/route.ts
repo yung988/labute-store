@@ -3,10 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function PATCH(
   _req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const body: Record<string, unknown> = await _req.json();
-  const { id } = context.params;
+  const { id } = await context.params;
 
   const updates: Record<string, unknown> = {};
   for (const key of [
@@ -35,9 +35,9 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = context.params;
+  const { id } = await context.params;
   const { error } = await supabaseAdmin.from("orders").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
