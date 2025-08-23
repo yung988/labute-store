@@ -20,41 +20,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No Packeta point specified" }, { status: 400 });
     }
 
-    // Create Packeta shipment
+    // Split customer name into first and last name
+    const nameParts = (order.customer_name || "").split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // Create Packeta shipment - using XML format which is more common for Packeta
+    const packetaXml = `<?xml version="1.0" encoding="utf-8"?>
+<createPacket>
+  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
+  <packetAttributes>
+    <number>${orderId}</number>
+    <name>${firstName}</name>
+    <surname>${lastName}</surname>
+    <email>${order.customer_email}</email>
+    <phone>${order.customer_phone}</phone>
+    <addressId>${order.packeta_point_id}</addressId>
+    <cod>0</cod>
+    <value>${(order.amount_total / 100).toFixed(2)}</value>
+    <weight>1.0</weight>
+    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
+  </packetAttributes>
+</createPacket>`;
+
     const packetaResponse = await fetch(`${process.env.PACKETA_API_URL}/packets/`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/xml",
       },
-      body: JSON.stringify({
-        number: orderId,
-        name: order.customer_name,
-        surname: "", // Split name if needed
-        email: order.customer_email,
-        phone: order.customer_phone,
-        addressId: order.packeta_point_id,
-        value: order.amount_total / 100, // Convert from cents
-        weight: 1.0, // Default weight in kg
-        eshop: process.env.PACKETA_ESHOP_ID,
-      }),
+      body: packetaXml,
     });
 
+    const responseText = await packetaResponse.text();
+    
     if (!packetaResponse.ok) {
-      const errorText = await packetaResponse.text();
       return NextResponse.json(
-        { error: `Packeta API error: ${errorText}` },
+        { error: `Packeta API error: ${responseText}` },
         { status: 500 }
       );
     }
 
-    const packetaData = await packetaResponse.json();
+    // Parse XML response to get packet ID
+    const idMatch = responseText.match(/<id>(\d+)<\/id>/);
+    if (!idMatch) {
+      return NextResponse.json(
+        { error: `Invalid Packeta response: ${responseText}` },
+        { status: 500 }
+      );
+    }
+
+    const packetaId = idMatch[1];
 
     // Update order with Packeta ID
     const { error: updateError } = await supabaseAdmin
       .from("orders")
       .update({
-        packeta_shipment_id: packetaData.id,
+        packeta_shipment_id: packetaId,
         status: "shipped",
       })
       .eq("id", orderId);
@@ -65,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      packetaId: packetaData.id,
+      packetaId: packetaId,
     });
 
   } catch (error) {

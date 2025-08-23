@@ -91,6 +91,11 @@ export async function POST(request: NextRequest) {
     params.append('metadata[customer_first_name]', formData.firstName);
     params.append('metadata[customer_last_name]', formData.lastName);
     params.append('metadata[customer_phone]', formData.phone);
+    
+    // Add pickup point ID to metadata as backup
+    if (deliveryMethod === 'pickup' && selectedPickupPoint) {
+      params.append('metadata[packeta_point_id]', selectedPickupPoint.id);
+    }
 
     if (deliveryMethod === 'home_delivery') {
       params.append('metadata[delivery_address]', formData.address);

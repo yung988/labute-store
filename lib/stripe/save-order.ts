@@ -13,12 +13,28 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   
   // Extract pickup point ID from custom fields or metadata
   let packetaPointId = null;
+  
+  // Try custom fields first
   if (session.custom_fields) {
     const pickupPointField = session.custom_fields.find((field) => field.key === 'pickup_point_id');
     if (pickupPointField?.text?.value) {
       packetaPointId = pickupPointField.text.value;
     }
   }
+  
+  // Fallback to metadata if custom fields don't have it
+  if (!packetaPointId && session.metadata?.packeta_point_id) {
+    packetaPointId = session.metadata.packeta_point_id;
+  }
+  
+  console.log("🔍 Debug webhook data:", {
+    sessionId: session.id,
+    metadata: session.metadata,
+    customFields: session.custom_fields,
+    customerName,
+    customerPhone,
+    packetaPointId
+  });
   
   const { error } = await supabaseAdmin.from("orders").insert({
     id: orderId,

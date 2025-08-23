@@ -14,11 +14,12 @@ export interface StripeCheckoutSession {
         delivery_address?: string;
         delivery_city?: string;
         delivery_postal_code?: string;
+        packeta_point_id?: string;
     } | null;
     custom_fields?: Array<{
         key: string;
         text?: {
-            value: string;
+            value: string | null;
         };
     }>;
 }

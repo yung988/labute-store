@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
       customer_details: session.customer_details ? {
         email: session.customer_details.email || undefined
       } : undefined,
-      metadata: session.metadata
+      metadata: session.metadata,
+      custom_fields: session.custom_fields
     };
 
     try {
