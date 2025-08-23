@@ -28,8 +28,13 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-[24vh] sm:pt-[28vh] lg:pt-[32vh]">
-      <ProductGrid products={products ?? []} />
+    <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-[8vh] sm:pt-[6vh] lg:pt-[8vh] pb-[18vh] sm:pb-[24vh] lg:pb-[28vh]">
+      <div
+        className="sticky"
+        style={{ top: 'calc(var(--header-height) + 1rem)' }}
+      >
+        <ProductGrid products={products ?? []} />
+      </div>
     </main>
   );
 }
