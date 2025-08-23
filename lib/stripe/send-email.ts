@@ -1,6 +1,6 @@
 // v send-email.ts
 import { Resend } from "resend";
-import OrderReceiptEmail from "@/emails/OrderReceiptEmail";
+import OrderReceiptEmail from "@/app/emails/OrderReceiptEmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 

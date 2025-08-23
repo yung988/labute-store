@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
-import { useSpreeCart } from "@/context/SpreeCartContext";
+import { useSpreeCart } from "@/context/CartContext";
 import StripePaymentElement from "@/components/StripePaymentElement";
 
 import type { PacketaPoint } from "@/lib/packeta";

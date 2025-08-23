@@ -43,6 +43,49 @@ export const useCart = () => {
   return context;
 };
 
+// Compatibility layer for Spree integration
+export const useSpreeCart = () => {
+  const cartContext = useContext(CartContext);
+  if (!cartContext) {
+    throw new Error("useSpreeCart musí být použit uvnitř CartProvider");
+  }
+
+  // Convert local cart to Spree format
+  const cart = {
+    line_items: cartContext.items.map(item => ({
+      id: item.id,
+      variant: {
+        name: item.name,
+        price: item.price.toString(),
+        option_values: item.size ? [{ name: 'size', presentation: item.size }] : []
+      },
+      product: {
+        name: item.name,
+        images: item.image ? [{ url: item.image }] : []
+      },
+      quantity: item.quantity,
+      total: (item.price * item.quantity).toString()
+    })),
+    total: cartContext.totalPrice.toString(),
+    number: `local-${Date.now()}`
+  };
+
+  const updateItemQuantity = (lineItemId: string, quantity: number) => {
+    cartContext.updateQuantity(lineItemId, quantity);
+  };
+
+  const removeItem = (lineItemId: string) => {
+    cartContext.removeItem(lineItemId);
+  };
+
+  return {
+    cart,
+    loading: !cartContext.isInitialized,
+    updateItemQuantity,
+    removeItem
+  };
+};
+
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
