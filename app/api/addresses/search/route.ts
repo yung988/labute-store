@@ -9,39 +9,47 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // RUIAN API pro české adresy
-    const response = await fetch(
-      `https://ags.cuzk.cz/arcgis/rest/services/RUIAN/Vyhledavaci_sluzba_nad_daty_RUIAN/MapServer/exts/GeocodeServer/findAddressCandidates?` +
-      new URLSearchParams({
-        SingleLine: query,
-        f: 'json',
-        outFields: 'Addr_type,Match_addr,StAddr,City,Postal',
-        maxLocations: '10'
-      })
-    );
+    // Mapy.cz Geocoding API
+    const apiKey = process.env.MAPY_CZ_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Missing MAPY_CZ_API_KEY' }, { status: 500 });
+    }
+
+    const url = new URL('https://api.mapy.cz/v1/geocode');
+    url.searchParams.set('query', query);
+    url.searchParams.set('limit', '10');
+    url.searchParams.set('lang', 'cs');
+
+    const response = await fetch(url.toString(), {
+      headers: { 'X-Mapy-Api-Key': apiKey },
+      // Next caches GET by default; we want fresh suggestions while typing
+      // cache: 'no-store' // Next.js RequestInit differs; omit to keep defaults
+    });
 
     if (!response.ok) {
-      throw new Error('RUIAN API error');
+      throw new Error(`Mapy.cz API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    const addresses = data.candidates?.map((candidate: {
-      address: string;
-      score: number;
-      attributes?: {
-        StAddr?: string;
-        City?: string;
-        Postal?: string;
+    // Expected shape: { items: [{ title, address?: { street, houseNumber, municipality, postcode, country }, score }] }
+    const addresses = (data.items ?? []).map((item: any) => {
+      const a = item.address ?? {};
+      const street = [a.street, a.houseNumber].filter(Boolean).join(' ').trim();
+      const city = a.municipality || a.town || '';
+      const postal = a.postcode || '';
+      const country = a.country || '';
+      const fullLine = [street, [postal, city].filter(Boolean).join(' '), country]
+        .filter(Boolean)
+        .join(', ');
+      return {
+        address: fullLine || item.title || '',
+        street,
+        city,
+        postalCode: postal,
+        fullAddress: fullLine || item.title || '',
+        score: typeof item.score === 'number' ? item.score : 0,
       };
-    }) => ({
-      address: candidate.address,
-      street: candidate.attributes?.StAddr || '',
-      city: candidate.attributes?.City || '',
-      postalCode: candidate.attributes?.Postal || '',
-      fullAddress: candidate.address,
-      score: candidate.score
-    })) || [];
+    });
 
     return NextResponse.json({ addresses });
 

@@ -292,7 +292,7 @@ function CartForm() {
 
   const isFormValid = formData.email && formData.firstName && formData.lastName && formData.phone &&
     ((deliveryMethod === "pickup" && selectedPickupPoint) ||
-     (deliveryMethod === "home_delivery" && formData.address && formData.city && formData.postalCode));
+     (deliveryMethod === "home_delivery" && formData.address));
 
   // Zobraz loading dokud se nenačte cart z localStorage
   if (!isInitialized) {
@@ -501,26 +501,7 @@ function CartForm() {
                         placeholder="Ulice a číslo popisné*"
                         className="required"
                       />
-                      <div className="grid grid-cols-2 gap-4">
-                        <input 
-                          type="text" 
-                          name="city" 
-                          placeholder="Město*" 
-                          value={formData.city} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
-                        />
-                        <input 
-                          type="text" 
-                          name="postalCode" 
-                          placeholder="PSČ*" 
-                          value={formData.postalCode} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
-                        />
-                      </div>
+                      {/* City and PSČ are derived from AddressAutocomplete selection and stored internally */}
                       <input 
                         type="tel" 
                         name="phone" 

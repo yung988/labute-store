@@ -15,9 +15,7 @@ import {
 
 interface Session {
   id: string;
-  customer_details?: {
-    email?: string | null;
-  } | null;
+  customer_details?: { email?: string | null } | null;
   amount_total: number | null;
 }
 
@@ -34,19 +32,38 @@ export default function OrderReceiptEmail({
   session: Session;
   items: LineItem[];
 }) {
+  const subtotal = items.reduce((sum, it) => sum + it.amount_total, 0);
+  const shipping = 0; // adjust if you store it separately
+  const total = session.amount_total ?? subtotal + shipping;
+
   return (
     <Html>
       <Head />
       <Preview>Objednávka #{session.id} – yeezuz2020</Preview>
+
       <Body
         style={{
-          backgroundColor: "#ffffff",
+          backgroundColor: "#f7f7f7",
           fontFamily: "Helvetica, Arial, sans-serif",
           color: "#111",
           fontSize: "14px",
           lineHeight: "22px",
+          margin: 0,
+          padding: 0,
         }}
       >
+        {/* Header bar */}
+        <Section style={{ backgroundColor: "#000", padding: "24px 0" }}>
+          <Container>
+            <Img
+              src="https://yeezuz2020.store/logo.png"
+              width="120"
+              alt="yeezuz2020.store"
+              style={{ display: "block", margin: "0 auto" }}
+            />
+          </Container>
+        </Section>
+
         <Container
           style={{
             backgroundColor: "#ffffff",
@@ -54,38 +71,22 @@ export default function OrderReceiptEmail({
             maxWidth: "600px",
           }}
         >
-          {/* Logo */}
-          <Section style={{ textAlign: "center", marginBottom: "30px" }}>
-            <Img
-              src="https://yeezuz2020.store/logo.png"
-              width="160"
-              alt="yeezuz2020.store"
-              style={{ marginBottom: "20px" }}
-            />
-          </Section>
-
-          {/* Úvodní text */}
+          {/* Intro */}
           <Heading
             style={{
-              textAlign: "center",
               fontWeight: "bold",
               fontSize: "20px",
               letterSpacing: "1px",
-              marginBottom: "20px",
+              margin: "0 0 8px",
             }}
           >
-            Yeezuz2020 Merch – Potvrzení objednávky
+            Thank you for your order
           </Heading>
-
-          <Text style={{ marginBottom: "20px", textAlign: "center" }}>
-            Díky, že podporuješ <strong>yeezuz2020</strong>. Tvůj drip je na cestě.
+          <Text style={{ margin: "0 0 24px", color: "#555" }}>
+            Order <strong>#{session.id}</strong> has been received and paid.
           </Text>
 
-          <Text style={{ marginBottom: "30px", textAlign: "center", color: "#555" }}>
-            Objednávka <strong>#{session.id}</strong> byla úspěšně přijata a zaplacena.
-          </Text>
-
-          {/* Shrnutí objednávky */}
+          {/* Order summary */}
           <Section
             style={{
               border: "1px solid #e5e5e5",
@@ -93,14 +94,16 @@ export default function OrderReceiptEmail({
               marginBottom: "40px",
             }}
           >
-            {items?.map((item, i) => (
+            {items.map((it, i) => (
               <Row key={i} style={{ marginBottom: "12px" }}>
                 <Column>
-                  <Text style={{ fontSize: "13px" }}>{item.description}</Text>
+                  <Text style={{ margin: 0, fontSize: "13px" }}>
+                    {it.description}
+                  </Text>
                 </Column>
                 <Column style={{ textAlign: "right" }}>
-                  <Text style={{ fontSize: "13px" }}>
-                    {item.quantity} × {(item.amount_total / 100).toFixed(2)} Kč
+                  <Text style={{ margin: 0, fontSize: "13px" }}>
+                    {it.quantity} × {(it.amount_total / 100).toFixed(2)} Kč
                   </Text>
                 </Column>
               </Row>
@@ -108,35 +111,56 @@ export default function OrderReceiptEmail({
 
             <Hr style={{ borderColor: "#e5e5e5", margin: "20px 0" }} />
 
-            <Row>
+            <Row style={{ color: "#666" }}>
               <Column>
-                <Text style={{ fontSize: "13px" }}>Celkem</Text>
+                <Text style={{ margin: 0, fontSize: "13px" }}>Shipping</Text>
               </Column>
               <Column style={{ textAlign: "right" }}>
-                <Text style={{ fontSize: "13px", fontWeight: "bold" }}>
-                  {session.amount_total
-                    ? (session.amount_total / 100).toFixed(2)
-                    : "0.00"}{" "}
-                  Kč
+                <Text style={{ margin: 0, fontSize: "13px" }}>
+                  {(shipping / 100).toFixed(2)} Kč
+                </Text>
+              </Column>
+            </Row>
+
+            <Hr style={{ borderColor: "#e5e5e5", margin: "20px 0" }} />
+
+            <Row>
+              <Column>
+                <Text style={{ margin: 0, fontSize: "13px", fontWeight: "bold" }}>
+                  Total
+                </Text>
+              </Column>
+              <Column style={{ textAlign: "right" }}>
+                <Text style={{ margin: 0, fontSize: "13px", fontWeight: "bold" }}>
+                  {(total / 100).toFixed(2)} Kč
                 </Text>
               </Column>
             </Row>
           </Section>
 
-          {/* Adresy */}
+          {/* Addresses */}
           <Section style={{ marginBottom: "40px" }}>
             <Row>
               <Column>
-                <Text style={{ fontSize: "13px", fontWeight: "bold" }}>
-                  Dodací adresa:
+                <Text style={{ fontWeight: "bold", margin: "0 0 4px" }}>
+                  Delivery address
                 </Text>
-                <Text style={{ fontSize: "13px" }}>Vyplněná zákazníkem</Text>
+                <Text style={{ margin: 0, fontSize: "13px", color: "#555" }}>
+                  Provided by customer
+                </Text>
               </Column>
+            </Row>
+
+            <Hr style={{ borderColor: "#e5e5e5", margin: "20px 0" }} />
+
+            <Row>
               <Column>
-                <Text style={{ fontSize: "13px", fontWeight: "bold" }}>
-                  Fakturační adresa:
+                <Text style={{ fontWeight: "bold", margin: "0 0 4px" }}>
+                  Billing address
                 </Text>
-                <Text style={{ fontSize: "13px" }}>Vyplněná zákazníkem</Text>
+                <Text style={{ margin: 0, fontSize: "13px", color: "#555" }}>
+                  Provided by customer
+                </Text>
               </Column>
             </Row>
           </Section>
@@ -146,12 +170,14 @@ export default function OrderReceiptEmail({
             style={{
               fontSize: "11px",
               color: "#666",
-              marginTop: "40px",
               textAlign: "center",
+              margin: 0,
             }}
           >
-            Tento e-mail je oficiální potvrzení z <strong>yeezuz2020.store</strong>.<br />
-            Jakékoli dotazy směřuj na {" "}
+            This email is an official confirmation from{" "}
+            <strong>yeezuz2020.store</strong>
+            <br />
+            Questions? Reach us at{" "}
             <a
               href="mailto:support@yeezuz2020.store"
               style={{ color: "#000", textDecoration: "none" }}
