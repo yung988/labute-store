@@ -165,12 +165,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       <div className="mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24 max-w-[1400px] pt-[8vh] pb-12">
         {/* Mobile navigation - high fashion style */}
-        <nav className="mb-16 lg:hidden text-center">
+        <nav className="mb-16 lg:hidden text-left">
           <Link href="/" className="inline-block group">
             <div className="text-xs font-medium tracking-[0.2em] uppercase text-gray-600 group-hover:text-gray-900 transition-colors duration-300 mb-2">
               ← ZPĚT DO OBCHODU
             </div>
-            <div className="w-16 h-px bg-gray-300 group-hover:bg-gray-900 transition-colors duration-300 mx-auto"></div>
+            <div className="w-16 h-px bg-gray-300 group-hover:bg-gray-900 transition-colors duration-300 mx-0"></div>
           </Link>
         </nav>
 
@@ -187,7 +187,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             style={{ top: 'calc(var(--header-height) + 6vh)' }}
           >
             {/* Product header */}
-            <div className="text-center lg:text-left space-y-8">
+            <div className="text-left space-y-8">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-light tracking-[0.1em] uppercase text-gray-900 mb-6">
                   {product.name}
@@ -203,7 +203,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     const tracks = parseNumberedTracks(product.description);
                     if (tracks.length > 0) {
                       return (
-                        <ol className="list-decimal pl-6 space-y-1 text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
+                        <ol className="list-decimal pl-6 space-y-1 text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-0">
                           {tracks.map((t, i) => (
                             <li key={i}>{t}</li>
                           ))}
@@ -211,7 +211,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       );
                     }
                     return (
-                      <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
+                      <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-0">
                         {product.description}
                       </p>
                     );
@@ -233,13 +233,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   variants={product.variants}
                 />
 
-                <div className="text-center lg:text-left">
+                <div className="text-left">
                   <div className="space-y-3 text-xs tracking-wide text-gray-600 font-light">
-                    <p className="flex items-center justify-center lg:justify-start">
+                    <p className="flex items-center justify-start">
                       <span className="w-1 h-1 bg-gray-400 rounded-full mr-3"></span>
                       SKLADEM A ODESÍLÁME DO 3–5 PRACOVNÍCH DNŮ
                     </p>
-                    <p className="flex items-center justify-center lg:justify-start">
+                    <p className="flex items-center justify-start">
                       <span className="w-1 h-1 bg-gray-400 rounded-full mr-3"></span>
                       OMEZENÉ MNOŽSTVÍ KUSŮ NA OSOBU
                     </p>
