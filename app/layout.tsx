@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { CartProvider } from "@/context/CartContext";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ReactLenis } from "lenis/react";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
