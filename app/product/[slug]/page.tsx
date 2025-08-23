@@ -166,7 +166,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           {/* Pravý sloupec - Product info (sticky) */}
-          <div className="lg:sticky lg:top-30 lg:self-start">
+          <div className="lg:sticky lg:top-20 lg:self-start">
             {/* Product header */}
             <div className="text-center lg:text-left space-y-8">
               <div>

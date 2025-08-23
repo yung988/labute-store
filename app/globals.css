@@ -67,4 +67,17 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Ensure browser autofill text is visible on light backgrounds */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #111 !important;
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  /* Packeta widget: force text color in case it's inheriting white */
+  .packeta-widget, .packeta-widget * {
+    color: #111 !important;
+  }
 }
