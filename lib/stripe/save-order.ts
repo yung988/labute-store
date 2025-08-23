@@ -35,6 +35,12 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   }
 
   // Fetch line items from Stripe (authoritative source)
+  type StripeCheckoutLineItem = {
+    description?: string | null;
+    quantity?: number | null;
+    amount_total?: number | null;
+  };
+  type StripeList<T> = { data?: T[] };
   let normalizedItems: Array<{ description: string; quantity: number; amount_total: number } > = [];
   try {
     const res = await fetch(
@@ -44,12 +50,12 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
       }
     );
     if (res.ok) {
-      const json = await res.json();
-      const data = Array.isArray(json?.data) ? json.data : [];
-      normalizedItems = data.map((li: any) => ({
+      const json = (await res.json()) as StripeList<StripeCheckoutLineItem>;
+      const data: StripeCheckoutLineItem[] = Array.isArray(json?.data) ? json.data : [];
+      normalizedItems = data.map((li) => ({
         description: li.description ?? '',
-        quantity: typeof li.quantity === 'number' ? li.quantity : Number(li.quantity) || 0,
-        amount_total: typeof li.amount_total === 'number' ? li.amount_total : Number(li.amount_total) || 0,
+        quantity: typeof li.quantity === 'number' ? li.quantity : 0,
+        amount_total: typeof li.amount_total === 'number' ? li.amount_total : 0,
       }));
     } else {
       console.error('⚠️ Failed to fetch Stripe line_items', await res.text());

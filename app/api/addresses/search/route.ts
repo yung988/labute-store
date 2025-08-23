@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type MapyAddress = {
+  street?: string;
+  houseNumber?: string;
+  municipality?: string;
+  town?: string;
+  postcode?: string;
+  country?: string;
+};
+
+type MapyItem = {
+  title?: string;
+  address?: MapyAddress;
+  score?: number;
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q');
@@ -30,10 +45,11 @@ export async function GET(req: NextRequest) {
       throw new Error(`Mapy.cz API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: { items?: MapyItem[] } = await response.json();
     // Expected shape: { items: [{ title, address?: { street, houseNumber, municipality, postcode, country }, score }] }
-    const addresses = (data.items ?? []).map((item: any) => {
-      const a = item.address ?? {};
+    const sourceItems: MapyItem[] = Array.isArray(data.items) ? data.items : [];
+    const addresses = sourceItems.map((item: MapyItem) => {
+      const a: MapyAddress = item.address ?? {};
       const street = [a.street, a.houseNumber].filter(Boolean).join(' ').trim();
       const city = a.municipality || a.town || '';
       const postal = a.postcode || '';
