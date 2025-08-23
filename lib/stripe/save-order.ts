@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { StripeCheckoutSession } from "./types";
 
-export default async function saveOrderToDb(session: any) {
+export default async function saveOrderToDb(session: StripeCheckoutSession) {
   const { error } = await supabaseAdmin.from("orders").insert({
     stripe_session_id: session.id,
     customer_email: session.customer_details?.email,
