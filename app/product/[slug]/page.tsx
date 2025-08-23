@@ -147,7 +147,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24 max-w-[1400px] py-12">
+      <div className="mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24 max-w-[1400px] pt-[22vh] md:pt-[26vh] lg:pt-[30vh] pb-12">
         {/* Mobile navigation - high fashion style */}
         <nav className="mb-16 lg:hidden text-center">
           <Link href="/" className="inline-block group">
@@ -166,7 +166,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           {/* Pravý sloupec - Product info (sticky) */}
-          <div className="lg:sticky lg:top-20 lg:self-start">
+          <div className="lg:sticky lg:top-28 lg:self-start">
             {/* Product header */}
             <div className="text-center lg:text-left space-y-8">
               <div>

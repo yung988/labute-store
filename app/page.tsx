@@ -28,7 +28,7 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4">
+    <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-[24vh] sm:pt-[28vh] lg:pt-[32vh]">
       <ProductGrid products={products ?? []} />
     </main>
   );
