@@ -87,14 +87,14 @@ export async function RelatedProducts({ currentProductId, limit = 4 }: RelatedPr
               >
                 <div className="space-y-3">
                   {/* Product Image */}
-                  <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-white border border-black">
                     {product.image_url ? (
                       <Image
                         src={product.image_url}
                         alt={product.name}
                         width={400}
                         height={400}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
