@@ -438,8 +438,8 @@ function CheckoutForm() {
                     type="button"
                     onClick={() => setDeliveryMethod("home_delivery")}
                     className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${deliveryMethod === "home_delivery"
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                       }`}
                   >
                     <Package className="w-4 h-4" />
@@ -450,8 +450,8 @@ function CheckoutForm() {
                     type="button"
                     onClick={() => setDeliveryMethod("pickup")}
                     className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${deliveryMethod === "pickup"
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                       }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -573,10 +573,10 @@ function CheckoutForm() {
                       }}
                       pickupPoint={deliveryMethod === "pickup" && selectedPickupPoint ? {
                         id: String(selectedPickupPoint.id),
-                        name: selectedPickupPoint.name,
-                        street: selectedPickupPoint.street,
-                        zip: selectedPickupPoint.zip,
-                        city: selectedPickupPoint.city,
+                        name: selectedPickupPoint.name ?? "",
+                        ...(selectedPickupPoint.street ? { street: selectedPickupPoint.street } : {}),
+                        ...(selectedPickupPoint.zip ? { zip: selectedPickupPoint.zip } : {}),
+                        ...(selectedPickupPoint.city ? { city: selectedPickupPoint.city } : {}),
                       } : null}
                       deliveryPriceCents={Math.round(deliveryPrice * 100)}
                     />
