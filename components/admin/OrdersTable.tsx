@@ -88,6 +88,48 @@ export default function OrdersTable() {
     setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
+  const createPacketaShipment = async (orderId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/packeta/create-shipment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to create shipment");
+      
+      // Update order status to shipped
+      await updateStatus(orderId, "shipped");
+      alert(`Zásilka vytvořena! Packeta ID: ${json.packetaId}`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to create shipment");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const printPacketaLabel = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
+        method: "GET",
+      });
+      if (!res.ok) throw new Error("Failed to get label");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `packeta-label-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to print label");
+    }
+  };
+
   const statuses = useMemo(
     () => ["new", "paid", "processing", "shipped", "cancelled", "refunded"],
     []
@@ -207,9 +249,30 @@ export default function OrdersTable() {
                   {new Date(o.created_at).toLocaleString()}
                 </td>
                 <td className="p-2 border align-top whitespace-nowrap">
-                  <Button variant="destructive" onClick={() => onDelete(o.id)} size="sm">
-                    Delete
-                  </Button>
+                  <div className="flex gap-1 flex-col">
+                    {o.packeta_point_id && o.status === "paid" && (
+                      <Button 
+                        variant="default" 
+                        onClick={() => createPacketaShipment(o.id)} 
+                        size="sm"
+                        disabled={loading}
+                      >
+                        Create Shipment
+                      </Button>
+                    )}
+                    {o.status === "shipped" && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => printPacketaLabel(o.id)} 
+                        size="sm"
+                      >
+                        Print Label
+                      </Button>
+                    )}
+                    <Button variant="destructive" onClick={() => onDelete(o.id)} size="sm">
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

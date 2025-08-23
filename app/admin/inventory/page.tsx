@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
-
 import { createClient } from "@/lib/supabase/server";
-import { InfoIcon } from "lucide-react";
-import OrdersTable from "@/components/admin/OrdersTable";
+import InventoryTable from "@/components/admin/InventoryTable";
 
-export default async function AdminPage() {
+export default async function InventoryPage() {
   const supabase = await createClient();
 
   const { data: user, error } = await supabase.auth.getUser();
@@ -12,7 +10,7 @@ export default async function AdminPage() {
     redirect("/auth/login");
   }
 
-  // Check user role - get user metadata or custom claims
+  // Check user role
   const userRole = user.user.user_metadata?.role || user.user.app_metadata?.role;
   if (!userRole || !['shopmanager', 'superadmin'].includes(userRole)) {
     redirect("/auth/error?message=Unauthorized access");
@@ -20,15 +18,9 @@ export default async function AdminPage() {
 
   return (
     <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is an admin-only page. You must be authenticated to view it.
-        </div>
-      </div>
       <div>
-        <h2 className="font-bold text-2xl mb-4">Orders</h2>
-        <OrdersTable />
+        <h2 className="font-bold text-2xl mb-4">Inventory Management</h2>
+        <InventoryTable />
       </div>
     </div>
   );

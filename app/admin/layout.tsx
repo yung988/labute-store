@@ -13,7 +13,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <Link href="/admin" className="hover:underline">
               Orders
             </Link>
-            {/* Add other admin sections here */}
+            <Link href="/admin/inventory" className="hover:underline">
+              Inventory
+            </Link>
+            <Link href="/admin/packeta" className="hover:underline">
+              Packeta
+            </Link>
           </nav>
           <div className="ml-auto text-sm">
             <Link href="/" className="hover:underline">
