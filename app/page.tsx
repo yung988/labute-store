@@ -27,13 +27,19 @@ export default async function HomePage() {
     });
   }
 
+  // Reorder: put non-CD items first so the 4 black items occupy the first row; CDs go to the bottom
+  const orderedProducts = (products ?? []).slice().sort((a: any, b: any) => {
+    const isCD = (p: any) => /\bcd\b/i.test(p?.name ?? '');
+    return Number(isCD(a)) - Number(isCD(b));
+  });
+
   return (
     <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-[8vh] sm:pt-[6vh] lg:pt-[8vh] pb-[18vh] sm:pb-[24vh] lg:pb-[28vh]">
       <div
         className="sticky"
         style={{ top: 'calc(var(--header-height) + 1rem)' }}
       >
-        <ProductGrid products={products ?? []} />
+        <ProductGrid products={orderedProducts} />
       </div>
     </main>
   );
