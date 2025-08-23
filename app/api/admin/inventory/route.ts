@@ -9,7 +9,7 @@ export async function GET() {
         id,
         name,
         slug,
-        price,
+        price_cents,
         skus (
           size,
           stock

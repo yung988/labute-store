@@ -72,7 +72,7 @@ export default function InventoryTable() {
                 <tr key={`${product.id}-${sku.size}`} className="odd:bg-background even:bg-muted/30">
                   <td className="p-2 border align-top">{product.name}</td>
                   <td className="p-2 border align-top">{product.slug}</td>
-                  <td className="p-2 border align-top">{product.price} CZK</td>
+                  <td className="p-2 border align-top">{(product.price_cents / 100).toFixed(2)} CZK</td>
                   <td className="p-2 border align-top">{sku.size}</td>
                   <td className="p-2 border align-top">
                     <Input

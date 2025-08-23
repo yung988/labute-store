@@ -11,7 +11,7 @@ export interface ProductImage {
     id: string;
     name: string;
     slug: string;
-    price: number;
+    price_cents: number;
     product_images?: ProductImage[];
     skus?: Sku[];
   }
