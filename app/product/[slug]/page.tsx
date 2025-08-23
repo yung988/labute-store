@@ -110,6 +110,22 @@ interface ProductPageProps {
   }>;
 }
 
+// Helper: Try to parse a numbered tracklist from a long description text
+function parseNumberedTracks(description: string): string[] {
+  if (!description) return [];
+  // Take part after the first ':' if present ("obsahuje tyto skladby: ...")
+  const text = description.split(":").slice(1).join(":") || description;
+  // Match segments like "1 Title ..." up to the next number or end
+  const regex = /\b(\d{1,2})\s+([^\d]+?)(?=(?:\s\d{1,2}\s)|$)/g;
+  const tracks: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    const title = m[2].trim().replace(/^[-–•\s]+/, "");
+    if (title) tracks.push(title);
+  }
+  return tracks;
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const product = await getProduct(slug);
@@ -167,8 +183,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           {/* Pravý sloupec - Product info (sticky) */}
           <div
-            className="lg:sticky lg:self-start lg:-mt-[6vh]"
-            style={{ top: 'calc(var(--header-height) + 2vh)' }}
+            className="lg:sticky lg:self-start lg:-mt-[2vh]"
+            style={{ top: 'calc(var(--header-height) + 6vh)' }}
           >
             {/* Product header */}
             <div className="text-center lg:text-left space-y-8">
@@ -183,9 +199,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
               {product.description && (
                 <div className="border-t border-gray-200 pt-8">
-                  <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
-                    {product.description}
-                  </p>
+                  {(() => {
+                    const tracks = parseNumberedTracks(product.description);
+                    if (tracks.length > 0) {
+                      return (
+                        <ol className="list-decimal pl-6 space-y-1 text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
+                          {tracks.map((t, i) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ol>
+                      );
+                    }
+                    return (
+                      <p className="text-sm leading-relaxed text-gray-700 font-light tracking-wide max-w-md mx-auto lg:mx-0">
+                        {product.description}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
             </div>
