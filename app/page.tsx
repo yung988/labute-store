@@ -28,12 +28,7 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4 py-8">
-      <div className="text-center mb-8">
-        <p className="text-zinc-600 mt-2 text-sm sm:text-base">
-          Oficiální e-shop YEEZUZ2020
-        </p>
-      </div>
+    <main className="max-w-7xl mx-auto px-2 sm:px-4">
       <ProductGrid products={products ?? []} />
     </main>
   );
