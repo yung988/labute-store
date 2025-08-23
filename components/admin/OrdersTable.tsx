@@ -10,7 +10,7 @@ type Order = {
   customer_name: string | null;
   customer_phone: string | null;
   packeta_point_id: string | null;
-  items: any;
+  items: unknown[];
   status: string;
   amount_total: number | null;
   created_at: string;
@@ -38,8 +38,8 @@ export default function OrdersTable() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load");
       setOrders(json.orders);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -62,8 +62,8 @@ export default function OrdersTable() {
       if (!res.ok) throw new Error(json.error || "Create failed");
       setNewOrder({ customer_email: "", customer_name: "", customer_phone: "", packeta_point_id: "", amount_total: undefined, status: "new" });
       await load();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Create failed");
     } finally {
       setLoading(false);
     }
@@ -134,8 +134,13 @@ export default function OrdersTable() {
             <label className="text-sm">Amount total (CZK)</label>
             <Input
               type="number"
-              value={newOrder.amount_total as any}
-              onChange={(e) => setNewOrder((s) => ({ ...s, amount_total: Number(e.target.value) || undefined }))}
+              value={newOrder.amount_total !== undefined ? String(newOrder.amount_total) : ""}
+              onChange={(e) =>
+                setNewOrder((s) => ({
+                  ...s,
+                  amount_total: e.target.value === "" ? undefined : Number(e.target.value),
+                }))
+              }
               placeholder="0"
             />
           </div>

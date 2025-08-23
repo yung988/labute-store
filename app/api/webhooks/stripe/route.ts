@@ -24,9 +24,24 @@ export async function POST(req: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
+    // Type guard to ensure we have required data
+    if (!session.amount_total) {
+      console.error("❌ Missing amount_total in session");
+      return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
+    }
+
+    const sessionData = {
+      id: session.id,
+      amount_total: session.amount_total,
+      customer_details: session.customer_details ? {
+        email: session.customer_details.email || undefined
+      } : undefined,
+      metadata: session.metadata
+    };
+
     try {
-      await saveOrderToDb(session);
-      await sendOrderEmail(session);
+      await saveOrderToDb(sessionData);
+      await sendOrderEmail(sessionData);
     } catch (err) {
       console.error("❌ Processing error:", err);
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });
