@@ -8,7 +8,14 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   // Extract customer info from metadata
   const firstName = session.metadata?.customer_first_name;
   const lastName = session.metadata?.customer_last_name;
-  const customerName = firstName && lastName ? `${firstName} ${lastName}` : null;
+  const toTitle = (v?: string | null) => {
+    if (!v) return v ?? undefined;
+    return v
+      .trim()
+      .toLowerCase()
+      .replace(/(^|\s|[-'])\p{L}/gu, (m) => m.toUpperCase());
+  };
+  const customerName = firstName && lastName ? `${toTitle(firstName)} ${toTitle(lastName)}` : null;
   const customerPhone = session.metadata?.customer_phone;
   
   // Extract pickup point ID from custom fields or metadata
@@ -26,14 +33,39 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   if (!packetaPointId && session.metadata?.packeta_point_id) {
     packetaPointId = session.metadata.packeta_point_id;
   }
-  
+
+  // Fetch line items from Stripe (authoritative source)
+  let normalizedItems: Array<{ description: string; quantity: number; amount_total: number } > = [];
+  try {
+    const res = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items`,
+      {
+        headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+      }
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const data = Array.isArray(json?.data) ? json.data : [];
+      normalizedItems = data.map((li: any) => ({
+        description: li.description ?? '',
+        quantity: typeof li.quantity === 'number' ? li.quantity : Number(li.quantity) || 0,
+        amount_total: typeof li.amount_total === 'number' ? li.amount_total : Number(li.amount_total) || 0,
+      }));
+    } else {
+      console.error('⚠️ Failed to fetch Stripe line_items', await res.text());
+    }
+  } catch (e) {
+    console.error('⚠️ Error fetching Stripe line_items', e);
+  }
+
   console.log("🔍 Debug webhook data:", {
     sessionId: session.id,
     metadata: session.metadata,
     customFields: session.custom_fields,
     customerName,
     customerPhone,
-    packetaPointId
+    packetaPointId,
+    itemsCount: normalizedItems.length
   });
   
   const { error } = await supabaseAdmin.from("orders").insert({
@@ -44,7 +76,7 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     customer_phone: customerPhone,
     packeta_point_id: packetaPointId,
     status: "paid",
-    items: JSON.stringify(session.metadata?.items ?? []),
+    items: JSON.stringify(normalizedItems),
     amount_total: session.amount_total,
   });
 
