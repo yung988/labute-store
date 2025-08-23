@@ -17,6 +17,9 @@ interface CartSidebarProps {
 export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const { items, totalItems, totalPrice, removeItem, updateQuantity } = useCart();
   const [mounted, setMounted] = React.useState(false);
+  const [startX, setStartX] = React.useState<number | null>(null);
+  const [dragX, setDragX] = React.useState(0); // positive => dragging to the right (closing)
+  const [dragging, setDragging] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -54,10 +57,44 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
       {/* Sidebar */}
       <div
-        className={`fixed right-0 top-0 h-screen w-full max-w-md bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed right-0 top-0 w-full max-w-md bg-white shadow-xl flex flex-col will-change-transform ${
+          dragging ? "transition-none" : "transition-transform duration-300 ease-in-out"
         }`}
-        style={{ zIndex: 1000000 }}
+        style={{
+          zIndex: 1000000,
+          height: "100svh",
+          maxHeight: "100svh",
+          transform:
+            isOpen
+              ? `translate3d(${Math.max(0, dragX)}px, 0, 0)`
+              : "translate3d(100%, 0, 0)",
+          touchAction: "pan-y",
+        }}
+        onTouchStart={(e) => {
+          if (!isOpen) return;
+          const x = e.touches[0]?.clientX ?? 0;
+          setStartX(x);
+          setDragging(true);
+          setDragX(0);
+        }}
+        onTouchMove={(e) => {
+          if (!dragging || startX === null) return;
+          const currentX = e.touches[0]?.clientX ?? 0;
+          const delta = currentX - startX;
+          // Only allow dragging to the right to close (positive delta)
+          setDragX(Math.max(0, delta));
+        }}
+        onTouchEnd={() => {
+          if (!dragging) return;
+          const threshold = 60; // px to trigger close
+          if (dragX > threshold) {
+            onClose();
+          }
+          // reset drag state
+          setDragging(false);
+          setStartX(null);
+          setDragX(0);
+        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -158,7 +195,10 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+              <div
+                className="p-6 border-t border-gray-100 bg-gray-50 flex-shrink-0"
+                style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+              >
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-light text-gray-700 uppercase tracking-wide">
