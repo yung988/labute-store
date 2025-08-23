@@ -1,6 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 
-export default async function saveOrderToDb(session: any) {
+interface Session {
+  id: string;
+  customer_details?: {
+    email?: string | null;
+  } | null;
+  metadata?: {
+    items?: unknown[];
+  } | null;
+  amount_total: number | null;
+}
+
+export default async function saveOrderToDb(session: Session) {
   const supabase = await createClient();
 
   const { error } = await supabase.from("orders").insert({

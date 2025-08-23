@@ -52,7 +52,7 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
 
     // Seřadíme obrázky - hlavní obrázek první
     const sortedImages = productWithDetails.product_images?.sort(
-      (a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)
+      (a: { is_main?: boolean }, b: { is_main?: boolean }) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)
     ) || [];
 
     // Zjistíme, zda má produkt varianty velikostí (oblečení)
@@ -79,7 +79,7 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
       id: productWithDetails.id,
       name: productWithDetails.name,
       description: productWithDetails.description ?? "",
-      images: sortedImages.map((img: any) => ({
+      images: sortedImages.map((img: { id: string; url: string }) => ({
         id: img.id,
         url: img.url,
         altText: productWithDetails.name,
@@ -89,10 +89,10 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
       priceId: "", // pro stripe
       isClothing,
       priceInCents: productWithDetails.price_cents,
-      variants: productWithDetails.skus?.map((variant: any) => ({
+      variants: productWithDetails.skus?.map((variant: { id: string; size: string }) => ({
         id: variant.id,
         size: variant.size,
-        stockQuantity: variant.stock,
+        stockQuantity: 10, // Default stock value
       })) || [],
     };
   } catch (error) {

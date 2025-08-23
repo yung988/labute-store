@@ -51,17 +51,6 @@ export default function ZasilkovnaWidget({
   // Zásilkovna API klíč - musí být v env proměnné
   const apiKey = process.env.NEXT_PUBLIC_ZASILKOVNA_API_KEY;
 
-  if (!apiKey) {
-    console.error("NEXT_PUBLIC_ZASILKOVNA_API_KEY is not defined");
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-        <p className="text-red-600 text-sm">
-          Chyba: Zásilkovna API klíč není nastaven. Kontaktujte podporu.
-        </p>
-      </div>
-    );
-  }
-
   useEffect(() => {
     // Callback funkce pro widget
     window.packetaCallback = (point: ZasilkovnaPoint | null) => {
@@ -76,6 +65,17 @@ export default function ZasilkovnaWidget({
       delete window.packetaCallback;
     };
   }, [onPointSelect]);
+
+  if (!apiKey) {
+    console.error("NEXT_PUBLIC_ZASILKOVNA_API_KEY is not defined");
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p className="text-red-600 text-sm">
+          Chyba: Zásilkovna API klíč není nastaven. Kontaktujte podporu.
+        </p>
+      </div>
+    );
+  }
 
   const openWidget = () => {
     if (widgetLoaded && window.Packeta && window.packetaCallback) {

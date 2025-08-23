@@ -57,7 +57,8 @@ export const useSpreeCart = () => {
       variant: {
         name: item.name,
         price: item.price.toString(),
-        option_values: item.size ? [{ name: 'size', presentation: item.size }] : []
+        option_values: item.size ? [{ name: 'size', presentation: item.size }] : [],
+        images: item.image ? [{ url: item.image }] : []
       },
       product: {
         name: item.name,

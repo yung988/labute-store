@@ -50,7 +50,7 @@ async function getRandomProducts(
       price: p.price_cents,
       status: 'active',
       image_url:
-        p.product_images?.find((img: any) => img.is_main)?.url || p.product_images?.[0]?.url,
+        p.product_images?.find((img: { is_main?: boolean; url: string }) => img.is_main)?.url || p.product_images?.[0]?.url,
     }));
   } catch (error) {
     console.error("Error loading related products:", error);
@@ -78,9 +78,6 @@ export async function RelatedProducts({ currentProductId, limit = 4 }: RelatedPr
             const priceFormatted = product.price
               ? `${(product.price / 100).toLocaleString("cs-CZ")} Kč`
               : "Cena na dotaz";
-
-            // Convert price from cents to CZK for BuyButton
-            const priceInCZK = product.price / 100;
 
             return (
               <Link

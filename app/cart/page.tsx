@@ -20,11 +20,7 @@ export interface PacketaPoint {
 
 type ZasilkovnaPoint = PacketaPoint;
 
-interface SelectedBranch {
-  id: string;
-  name: string;
-  address: string;
-}
+
 
 interface CartSummaryProps {
   isMobile?: boolean;
@@ -170,7 +166,7 @@ function CartForm() {
   const { items, totalPrice, isInitialized } = useCart();
   const router = useRouter();
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<ZasilkovnaPoint | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<SelectedBranch | null>(null);
+
   const [isMobile, setIsMobile] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(true);
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
@@ -212,12 +208,7 @@ function CartForm() {
         const point = JSON.parse(savedPickupPoint);
         setSelectedPickupPoint(point);
         if (point) {
-          const branch: SelectedBranch = {
-            id: point.id,
-            name: point.name || '',
-            address: `${point.street || ''}, ${point.zip || ''} ${point.city || ''}`.trim()
-          };
-          setSelectedBranch(branch);
+          // Note: selectedBranch was removed as unused variable
         }
       } catch (error) {
         console.error('Chyba při načítání pickup point:', error);
@@ -393,15 +384,8 @@ function CartForm() {
                       onPointSelect={(point) => {
                         setSelectedPickupPoint(point);
                         if (point) {
-                          const branch: SelectedBranch = {
-                            id: point.id,
-                            name: point.name || '',
-                            address: `${point.street || ''}, ${point.zip || ''} ${point.city || ''}`.trim()
-                          };
-                          setSelectedBranch(branch);
                           localStorage.setItem('checkout-pickup-point', JSON.stringify(point));
                         } else {
-                          setSelectedBranch(null);
                           localStorage.removeItem('checkout-pickup-point');
                         }
                       }}

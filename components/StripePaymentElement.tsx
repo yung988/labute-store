@@ -53,7 +53,7 @@ export default function StripePaymentElement({
       const deliveryMethod = pickupPoint ? "pickup" : "home_delivery";
 
       const requestBody = {
-        items: cartItems.map((item: any) => ({
+        items: cartItems.map((item: { name: string; price: number; quantity: number; image?: string; size?: string }) => ({
           name: item.name,
           price: item.price,
           quantity: item.quantity,

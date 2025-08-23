@@ -4,7 +4,15 @@ import OrderReceiptEmail from "@/app/emails/OrderReceiptEmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export default async function sendOrderEmail(session: any) {
+interface Session {
+  id: string;
+  customer_details?: {
+    email?: string | null;
+  } | null;
+  amount_total: number | null;
+}
+
+export default async function sendOrderEmail(session: Session) {
   if (!session.customer_details?.email) {
     throw new Error("Missing customer email");
   }

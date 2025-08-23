@@ -201,13 +201,11 @@ function CheckoutForm() {
   const { cart, loading, updateItemQuantity, removeItem } = useSpreeCart();
   const router = useRouter();
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<ZasilkovnaPoint | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<SelectedBranch | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(true);
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
   const [showEmptyModal, setShowEmptyModal] = useState(false);
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
-  const [loadingShipping, setLoadingShipping] = useState(true);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -235,12 +233,11 @@ function CheckoutForm() {
   useEffect(() => {
     const fetchShippingMethods = async () => {
       try {
-        setLoadingShipping(true);
         const response = await fetch('/api/spree/storefront/shipping_methods');
         if (response.ok) {
           const data = await response.json();
           // Transform Spree data to our interface
-          const methods: ShippingMethod[] = data.shipping_methods?.map((method: any) => ({
+          const methods: ShippingMethod[] = data.shipping_methods?.map((method: { id: string; name: string; code: string; description?: string; cost: number; currency: string }) => ({
             id: method.id,
             name: method.name,
             code: method.code,
@@ -277,8 +274,6 @@ function CheckoutForm() {
             delivery_type: 'home_delivery'
           }
         ]);
-      } finally {
-        setLoadingShipping(false);
       }
     };
 
@@ -484,10 +479,8 @@ function CheckoutForm() {
                             name: point.name || '',
                             address: `${point.street || ''}, ${point.zip || ''} ${point.city || ''}`.trim()
                           };
-                          setSelectedBranch(branch);
                           savePacketaBranch(branch);
                         } else {
-                          setSelectedBranch(null);
                           clearPacketaBranch();
                         }
                       }}
@@ -579,10 +572,10 @@ function CheckoutForm() {
                       }}
                       pickupPoint={deliveryMethod === "pickup" && selectedPickupPoint ? {
                         id: String(selectedPickupPoint.id),
-                        name: selectedPickupPoint.name,
-                        street: selectedPickupPoint.street,
-                        zip: selectedPickupPoint.zip,
-                        city: selectedPickupPoint.city,
+                        name: selectedPickupPoint.name || '',
+                        street: selectedPickupPoint.street || '',
+                        zip: selectedPickupPoint.zip || '',
+                        city: selectedPickupPoint.city || '',
                       } : null}
                       deliveryPriceCents={Math.round(deliveryPrice * 100)}
                     />

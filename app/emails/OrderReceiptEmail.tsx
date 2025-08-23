@@ -14,7 +14,21 @@ import {
     Row,
   } from "@react-email/components";
   
-  export default function OrderReceiptEmail({ session, items }: { session: any; items: any[] }) {
+  interface Session {
+  id: string;
+  customer_details?: {
+    email?: string | null;
+  } | null;
+  amount_total: number | null;
+}
+
+interface LineItem {
+  description: string;
+  quantity: number;
+  amount_total: number;
+}
+
+export default function OrderReceiptEmail({ session, items }: { session: Session; items: LineItem[] }) {
     return (
       <Html>
         <Head />
@@ -54,11 +68,11 @@ import {
                 <strong>Číslo objednávky:</strong> {session.id}
               </Text>
               <Text>
-                <strong>Email:</strong> {session.customer_details?.email}
+                <strong>Email:</strong> {session.customer_details?.email || 'Nezadáno'}
               </Text>
               <Text>
                 <strong>Celková částka:</strong>{" "}
-                {(session.amount_total / 100).toFixed(2)} Kč
+                {session.amount_total ? (session.amount_total / 100).toFixed(2) : '0.00'} Kč
               </Text>
             </Section>
   

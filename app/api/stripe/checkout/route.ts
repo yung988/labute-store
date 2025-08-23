@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     params.append('currency', 'czk');
 
     // Line items - products
-    items.forEach((item: any, index: number) => {
+    items.forEach((item: { name: string; price: number; quantity: number; image?: string; size?: string }, index: number) => {
       params.append(`line_items[${index}][price_data][currency]`, 'czk');
       params.append(`line_items[${index}][price_data][product_data][name]`, item.name);
       params.append(`line_items[${index}][price_data][unit_amount]`, Math.round(item.price * 100).toString()); // Convert to cents
