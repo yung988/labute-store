@@ -235,13 +235,16 @@ export default function OrdersTable() {
                   <td className="p-2 border align-top max-w-[200px]">
                     {items.length > 0 ? (
                       <div className="text-xs">
-                        {items.map((item: any, idx: number) => (
-                          <div key={idx} className="mb-1">
-                            {item.name || 'Unknown item'} 
-                            {item.size && <span className="text-gray-500"> ({item.size})</span>}
-                            {item.quantity && <span className="text-blue-600"> x{item.quantity}</span>}
-                          </div>
-                        ))}
+                        {items.map((item: unknown, idx: number) => {
+                          const typedItem = item as { name?: string; size?: string; quantity?: number };
+                          return (
+                            <div key={idx} className="mb-1">
+                              {typedItem.name || 'Unknown item'} 
+                              {typedItem.size && <span className="text-gray-500"> ({typedItem.size})</span>}
+                              {typedItem.quantity && <span className="text-blue-600"> x{typedItem.quantity}</span>}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <span className="text-gray-400 text-xs">No items</span>
@@ -293,9 +296,10 @@ export default function OrdersTable() {
                       Delete
                     </Button>
                   </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
