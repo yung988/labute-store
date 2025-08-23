@@ -105,13 +105,13 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
 }
 
 interface ProductPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { slug } = params;
+  const { slug } = await params;
   const product = await getProduct(slug);
 
   if (!product) {
