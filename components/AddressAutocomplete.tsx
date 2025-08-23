@@ -84,15 +84,15 @@ export default function AddressAutocomplete({
       </div>
 
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-10 w-full bg-white border border-gray-300 shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full bg-white border border-gray-300 shadow-lg max-h-60 overflow-y-auto mt-1">
           {suggestions.map((address, index) => (
             <button
               key={index}
               type="button"
               onClick={() => handleAddressSelect(address)}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-900"
             >
-              <div className="text-sm font-medium">{address.fullAddress}</div>
+              <div className="text-sm font-medium text-gray-900">{address.fullAddress}</div>
               {address.city && address.postalCode && (
                 <div className="text-xs text-gray-600">{address.city}, {address.postalCode}</div>
               )}

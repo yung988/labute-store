@@ -33,8 +33,8 @@ function SuccessContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 w-full">
+      <div className="text-center max-w-md w-full mx-auto">
         <div className="mb-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg 
@@ -51,13 +51,13 @@ function SuccessContent() {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-medium tracking-wide uppercase text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl font-medium tracking-wide uppercase text-gray-900 mb-2">
             YEEZUZ2020
           </h1>
-          <h2 className="text-lg font-light text-gray-700 mb-4">
+          <h2 className="text-base sm:text-lg font-light text-gray-700 mb-4">
             Platba byla úspěšná!
           </h2>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-gray-600 leading-relaxed px-2">
             Děkujeme za vaši objednávku. Brzy vám pošleme e-mail s potvrzením a informacemi o doručení.
           </p>
         </div>
@@ -70,7 +70,7 @@ function SuccessContent() {
           </Link>
           
           {sessionId && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 break-all px-2">
               ID platby: {sessionId}
             </p>
           )}
