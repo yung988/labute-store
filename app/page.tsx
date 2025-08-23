@@ -2,10 +2,24 @@
 import { createClient } from '@/lib/supabase/server';
 import ProductGrid from '@/components/ProductGrid';
 
+interface HomeProductImage {
+  url: string;
+  is_main: boolean;
+}
+
+interface HomeProduct {
+  id: string | number;
+  name: string;
+  slug: string;
+  price_cents: number;
+  product_images?: HomeProductImage[];
+  skus?: { size: string; stock: number }[];
+}
+
 export default async function HomePage() {
   const supabase = await createClient();   // <-- await tady
 
-  const { data: products } = await supabase
+  const { data } = await supabase
     .from('products')
     .select(`
       id,
@@ -18,8 +32,10 @@ export default async function HomePage() {
 
     .order('id', { ascending: false });
 
+  const products: HomeProduct[] = Array.isArray(data) ? (data as HomeProduct[]) : [];
+
   // Debug: log first product data
-  if (products && products.length > 0) {
+  if (products.length > 0) {
     console.log('Database product debug:', {
       firstProduct: products[0],
       price_cents: products[0].price_cents,
@@ -28,8 +44,8 @@ export default async function HomePage() {
   }
 
   // Reorder: put non-CD items first so the 4 black items occupy the first row; CDs go to the bottom
-  const orderedProducts = (products ?? []).slice().sort((a: any, b: any) => {
-    const isCD = (p: any) => /\bcd\b/i.test(p?.name ?? '');
+  const orderedProducts: HomeProduct[] = products.slice().sort((a: HomeProduct, b: HomeProduct) => {
+    const isCD = (p: HomeProduct) => /\bcd\b/i.test(p?.name ?? '');
     return Number(isCD(a)) - Number(isCD(b));
   });
 
