@@ -1,12 +1,13 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
 import { useSpreeCart } from "@/context/CartContext";
 import StripePaymentElement from "@/components/StripePaymentElement";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 import type { PacketaPoint } from "@/lib/packeta";
 
@@ -538,10 +539,19 @@ function CheckoutForm() {
                         <input type="text" name="firstName" placeholder="Křestní jméno*" value={formData.firstName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                         <input type="text" name="lastName" placeholder="Příjmení*" value={formData.lastName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                       </div>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input type="text" name="address" placeholder="Ulice a číslo popisné*" value={formData.address} onChange={handleInputChange} className="w-full pl-10 pr-4 py-3 border border-gray-300 text-sm focus:border-black focus:outline-none rounded-none" required />
-                      </div>
+                      <AddressAutocomplete
+                        value={formData.address}
+                        onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                        onAddressSelect={(address) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            address: address.street || address.fullAddress,
+                            city: address.city || prev.city,
+                            postalCode: address.postalCode || prev.postalCode
+                          }));
+                        }}
+                        placeholder="Ulice a číslo popisné*"
+                      />
                       <div className="grid grid-cols-2 gap-4">
                         <input type="text" name="city" placeholder="Město*" value={formData.city} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                         <input type="text" name="postalCode" placeholder="PSČ*" value={formData.postalCode} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />

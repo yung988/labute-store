@@ -8,6 +8,7 @@ import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
 import { useCart } from "@/context/CartContext";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 export interface PacketaPoint {
   id: string;
@@ -486,14 +487,19 @@ function CartForm() {
                           required 
                         />
                       </div>
-                      <input
-                        type="text"
-                        name="address"
-                        placeholder="Ulice a číslo popisné*"
+                      <AddressAutocomplete
                         value={formData.address}
-                        onChange={handleInputChange}
-                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
-                        required
+                        onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                        onAddressSelect={(address) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            address: address.street || address.fullAddress,
+                            city: address.city || prev.city,
+                            postalCode: address.postalCode || prev.postalCode
+                          }));
+                        }}
+                        placeholder="Ulice a číslo popisné*"
+                        className="required"
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <input 
