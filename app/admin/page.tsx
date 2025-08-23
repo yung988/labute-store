@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InfoIcon } from "lucide-react";
 import { FetchDataSteps } from "@/components/tutorial/fetch-data-steps";
 
-export default async function ProtectedPage() {
+export default async function AdminPage() {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.getClaims();
@@ -17,8 +17,7 @@ export default async function ProtectedPage() {
       <div className="w-full">
         <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
           <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
+          This is an admin-only page. You must be authenticated to view it.
         </div>
       </div>
       <div className="flex flex-col gap-2 items-start">
