@@ -24,6 +24,8 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
+  const [isPasswordMode, setIsPasswordMode] = useState(true);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,8 +40,15 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      // Redirect admin users to admin panel, regular users to home
+      const { data: user } = await supabase.auth.getUser();
+      const userRole = user.user?.user_metadata?.role || user.user?.app_metadata?.role;
+      
+      if (userRole === 'superadmin' || userRole === 'shopmanager') {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
