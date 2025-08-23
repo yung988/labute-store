@@ -167,8 +167,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           {/* Pravý sloupec - Product info (sticky) */}
           <div
-            className="lg:sticky lg:self-start lg:-mt-[8vh]"
-            style={{ top: 'var(--header-height)' }}
+            className="lg:sticky lg:self-start lg:-mt-[6vh]"
+            style={{ top: 'calc(var(--header-height) + 2vh)' }}
           >
             {/* Product header */}
             <div className="text-center lg:text-left space-y-8">
