@@ -1,13 +1,12 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
 import { useSpreeCart } from "@/context/CartContext";
 import StripePaymentElement from "@/components/StripePaymentElement";
-import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 import type { PacketaPoint } from "@/lib/packeta";
 
@@ -202,11 +201,13 @@ function CheckoutForm() {
   const { cart, loading, updateItemQuantity, removeItem } = useSpreeCart();
   const router = useRouter();
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<ZasilkovnaPoint | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<SelectedBranch | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(true);
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
   const [showEmptyModal, setShowEmptyModal] = useState(false);
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [loadingShipping, setLoadingShipping] = useState(true);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -234,11 +235,12 @@ function CheckoutForm() {
   useEffect(() => {
     const fetchShippingMethods = async () => {
       try {
+        setLoadingShipping(true);
         const response = await fetch('/api/spree/storefront/shipping_methods');
         if (response.ok) {
           const data = await response.json();
           // Transform Spree data to our interface
-          const methods: ShippingMethod[] = data.shipping_methods?.map((method: { id: string; name: string; code: string; description?: string; cost: number; currency: string }) => ({
+          const methods: ShippingMethod[] = data.shipping_methods?.map((method: any) => ({
             id: method.id,
             name: method.name,
             code: method.code,
@@ -275,6 +277,8 @@ function CheckoutForm() {
             delivery_type: 'home_delivery'
           }
         ]);
+      } finally {
+        setLoadingShipping(false);
       }
     };
 
@@ -480,8 +484,10 @@ function CheckoutForm() {
                             name: point.name || '',
                             address: `${point.street || ''}, ${point.zip || ''} ${point.city || ''}`.trim()
                           };
+                          setSelectedBranch(branch);
                           savePacketaBranch(branch);
                         } else {
+                          setSelectedBranch(null);
                           clearPacketaBranch();
                         }
                       }}
@@ -539,19 +545,10 @@ function CheckoutForm() {
                         <input type="text" name="firstName" placeholder="Křestní jméno*" value={formData.firstName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                         <input type="text" name="lastName" placeholder="Příjmení*" value={formData.lastName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                       </div>
-                      <AddressAutocomplete
-                        value={formData.address}
-                        onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                        onAddressSelect={(address) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            address: address.street || address.fullAddress,
-                            city: address.city || prev.city,
-                            postalCode: address.postalCode || prev.postalCode
-                          }));
-                        }}
-                        placeholder="Ulice a číslo popisné*"
-                      />
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input type="text" name="address" placeholder="Ulice a číslo popisné*" value={formData.address} onChange={handleInputChange} className="w-full pl-10 pr-4 py-3 border border-gray-300 text-sm focus:border-black focus:outline-none rounded-none" required />
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
                         <input type="text" name="city" placeholder="Město*" value={formData.city} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                         <input type="text" name="postalCode" placeholder="PSČ*" value={formData.postalCode} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
@@ -582,10 +579,10 @@ function CheckoutForm() {
                       }}
                       pickupPoint={deliveryMethod === "pickup" && selectedPickupPoint ? {
                         id: String(selectedPickupPoint.id),
-                        name: selectedPickupPoint.name || '',
-                        street: selectedPickupPoint.street || '',
-                        zip: selectedPickupPoint.zip || '',
-                        city: selectedPickupPoint.city || '',
+                        name: selectedPickupPoint.name,
+                        street: selectedPickupPoint.street,
+                        zip: selectedPickupPoint.zip,
+                        city: selectedPickupPoint.city,
                       } : null}
                       deliveryPriceCents={Math.round(deliveryPrice * 100)}
                     />
