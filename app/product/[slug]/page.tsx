@@ -104,23 +104,6 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
   }
 }
 
-// Funkce pro načtení všech produktů z API
-async function getAllProducts() {
-  try {
-    const supabase = await createClient();
-    
-    const { data: allProducts } = await supabase
-      .from('products')
-      .select('slug')
-      .not('slug', 'is', null);
-
-    return allProducts?.map((product) => product.slug) || [];
-  } catch (error) {
-    console.error("Error loading products:", error);
-    return [];
-  }
-}
-
 interface ProductPageProps {
   params: {
     slug: string;
