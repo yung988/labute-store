@@ -25,30 +25,39 @@ export async function POST(req: NextRequest) {
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
-    // Create Packeta shipment - using XML format which is more common for Packeta
-    const packetaXml = `<?xml version="1.0" encoding="utf-8"?>
-<createPacket>
-  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
-  <packetAttributes>
-    <number>${orderId}</number>
-    <name>${firstName}</name>
-    <surname>${lastName}</surname>
-    <email>${order.customer_email}</email>
-    <phone>${order.customer_phone}</phone>
-    <addressId>${order.packeta_point_id}</addressId>
-    <cod>0</cod>
-    <value>${(order.amount_total / 100).toFixed(2)}</value>
-    <weight>1.0</weight>
-    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
-  </packetAttributes>
-</createPacket>`;
+    // Debug: Check if API key is set
+    console.log("🔍 Packeta API Debug:", {
+      hasApiKey: !!process.env.PACKETA_API_KEY,
+      hasEshopId: !!process.env.PACKETA_ESHOP_ID,
+      apiUrl: process.env.PACKETA_API_URL,
+      packetaPointId: order.packeta_point_id
+    });
 
-    const packetaResponse = await fetch(`${process.env.PACKETA_API_URL}/packets/`, {
+    if (!process.env.PACKETA_API_KEY) {
+      return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
+    }
+
+    // Create Packeta shipment - using correct URL parameters format
+    const packetParams = new URLSearchParams({
+      apiPassword: process.env.PACKETA_API_KEY!,
+      packetNumber: orderId,
+      packetName: firstName,
+      packetSurname: lastName,
+      packetEmail: order.customer_email || '',
+      packetPhone: order.customer_phone || '',
+      packetAddressId: order.packeta_point_id || '',
+      packetCod: '0',
+      packetValue: (order.amount_total / 100).toFixed(2),
+      packetWeight: '1.0',
+      packetEshop: process.env.PACKETA_ESHOP_ID!,
+    });
+
+    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/rest/createPacket`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/xml",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: packetaXml,
+      body: packetParams.toString(),
     });
 
     const responseText = await packetaResponse.text();
