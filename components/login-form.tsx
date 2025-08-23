@@ -35,19 +35,31 @@ export function LoginForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      // Redirect admin users to admin panel, regular users to home
-      const { data: user } = await supabase.auth.getUser();
-      const userRole = user.user?.user_metadata?.role || user.user?.app_metadata?.role;
-      
-      if (userRole === 'superadmin' || userRole === 'shopmanager') {
-        router.push("/admin");
+      if (isPasswordMode) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        // Redirect admin users to admin panel, regular users to home
+        const { data: user } = await supabase.auth.getUser();
+        const userRole = user.user?.user_metadata?.role || user.user?.app_metadata?.role;
+        
+        if (userRole === 'superadmin' || userRole === 'shopmanager') {
+          router.push("/admin");
+        } else {
+          router.push("/");
+        }
       } else {
-        router.push("/");
+        // Magic link mode
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin`,
+          },
+        });
+        if (error) throw error;
+        setIsMagicLinkSent(true);
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
@@ -66,52 +78,87 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+          {isMagicLinkSent ? (
+            <div className="text-center">
+              <p className="text-sm text-green-600 mb-4">
+                Magic link byl odeslán na váš email. Zkontrolujte svou poštovní schránku.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsMagicLinkSent(false);
+                  setIsPasswordMode(true);
+                }}
+              >
+                Zpět na přihlášení
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/auth/sign-up"
-                className="underline underline-offset-4"
-              >
-                Sign up
-              </Link>
-            </div>
-          </form>
+          ) : (
+            <form onSubmit={handleLogin}>
+              <div className="flex flex-col gap-6">
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    type="button"
+                    variant={isPasswordMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsPasswordMode(true)}
+                  >
+                    Heslo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!isPasswordMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsPasswordMode(false)}
+                  >
+                    Magic Link
+                  </Button>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                
+                {isPasswordMode && (
+                  <div className="grid gap-2">
+                    <div className="flex items-center">
+                      <Label htmlFor="password">Password</Label>
+                      <Link
+                        href="/auth/forgot-password"
+                        className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                      >
+                        Forgot your password?
+                      </Link>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                )}
+                
+                {error && <p className="text-sm text-red-500">{error}</p>}
+                
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading 
+                    ? (isPasswordMode ? "Logging in..." : "Sending magic link...") 
+                    : (isPasswordMode ? "Login" : "Send Magic Link")
+                  }
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
