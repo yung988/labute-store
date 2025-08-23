@@ -5,6 +5,9 @@ import { ProductGallery } from "@/components/ProductGallery";
 import { RelatedProducts } from "@/components/RelatedProducts";
 import { createClient } from '@/lib/supabase/server';
 
+// Force this page to be dynamic to avoid build-time execution of cookies() in Supabase client
+export const dynamic = 'force-dynamic';
+
 // Interface for transformed product data used by components
 interface TransformedProduct {
   id: string;
@@ -118,23 +121,14 @@ async function getAllProducts() {
   }
 }
 
-// Generování statických stránek při buildu
-export async function generateStaticParams() {
-  const productSlugs = await getAllProducts(); // This function now needs to return slugs
-
-  return productSlugs.map((slug: string) => ({
-    slug: slug,
-  }));
-}
-
 interface ProductPageProps {
-  params: Promise<{
+  params: {
     slug: string;
-  }>;
+  };
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { slug } = await params;
+  const { slug } = params;
   const product = await getProduct(slug);
 
   if (!product) {
