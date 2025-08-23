@@ -12,6 +12,7 @@ type Order = {
   packeta_point_id: string | null;
   items: any;
   status: string;
+  amount_total: number | null;
   created_at: string;
 };
 
@@ -23,6 +24,9 @@ export default function OrdersTable() {
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
     customer_email: "",
     customer_name: "",
+    customer_phone: "",
+    packeta_point_id: "",
+    amount_total: undefined,
     status: "new",
   });
 
@@ -56,7 +60,7 @@ export default function OrdersTable() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Create failed");
-      setNewOrder({ customer_email: "", customer_name: "", status: "new" });
+      setNewOrder({ customer_email: "", customer_name: "", customer_phone: "", packeta_point_id: "", amount_total: undefined, status: "new" });
       await load();
     } catch (e: any) {
       setError(e.message);
@@ -111,6 +115,31 @@ export default function OrdersTable() {
             />
           </div>
           <div>
+            <label className="text-sm">Phone</label>
+            <Input
+              value={newOrder.customer_phone as string}
+              onChange={(e) => setNewOrder((s) => ({ ...s, customer_phone: e.target.value }))}
+              placeholder="+420..."
+            />
+          </div>
+          <div>
+            <label className="text-sm">Packeta point ID</label>
+            <Input
+              value={newOrder.packeta_point_id as string}
+              onChange={(e) => setNewOrder((s) => ({ ...s, packeta_point_id: e.target.value }))}
+              placeholder="Z-POINT-ID"
+            />
+          </div>
+          <div>
+            <label className="text-sm">Amount total (CZK)</label>
+            <Input
+              type="number"
+              value={newOrder.amount_total as any}
+              onChange={(e) => setNewOrder((s) => ({ ...s, amount_total: Number(e.target.value) || undefined }))}
+              placeholder="0"
+            />
+          </div>
+          <div>
             <label className="text-sm">Status</label>
             <select
               className="border rounded px-2 py-2 h-10"
@@ -138,7 +167,11 @@ export default function OrdersTable() {
             <tr>
               <th className="p-2 border">ID</th>
               <th className="p-2 border">Email</th>
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Phone</th>
+              <th className="p-2 border">Packeta</th>
               <th className="p-2 border">Status</th>
+              <th className="p-2 border">Amount</th>
               <th className="p-2 border">Created</th>
               <th className="p-2 border">Actions</th>
             </tr>
@@ -148,6 +181,9 @@ export default function OrdersTable() {
               <tr key={o.id} className="odd:bg-background even:bg-muted/30">
                 <td className="p-2 border align-top max-w-[260px] break-all">{o.id}</td>
                 <td className="p-2 border align-top">{o.customer_email}</td>
+                <td className="p-2 border align-top">{o.customer_name}</td>
+                <td className="p-2 border align-top">{o.customer_phone}</td>
+                <td className="p-2 border align-top">{o.packeta_point_id}</td>
                 <td className="p-2 border align-top">
                   <select
                     className="border rounded px-2 py-1"
@@ -161,6 +197,7 @@ export default function OrdersTable() {
                     ))}
                   </select>
                 </td>
+                <td className="p-2 border align-top">{o.amount_total ?? "-"}</td>
                 <td className="p-2 border align-top">
                   {new Date(o.created_at).toLocaleString()}
                 </td>
