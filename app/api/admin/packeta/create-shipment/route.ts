@@ -37,27 +37,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
     }
 
-    // Create Packeta shipment - using correct URL parameters format
-    const packetParams = new URLSearchParams({
-      apiPassword: process.env.PACKETA_API_KEY!,
-      packetNumber: orderId,
-      packetName: firstName,
-      packetSurname: lastName,
-      packetEmail: order.customer_email || '',
-      packetPhone: order.customer_phone || '',
-      packetAddressId: order.packeta_point_id || '',
-      packetCod: '0',
-      packetValue: (order.amount_total / 100).toFixed(2),
-      packetWeight: '1.0',
-      packetEshop: process.env.PACKETA_ESHOP_ID!,
-    });
+    // Use correct Packeta API endpoint with XML format (based on Perplexity research)
+    const packetXml = `<?xml version="1.0" encoding="utf-8"?>
+<packetImport>
+  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
+  <packet>
+    <number>${orderId}</number>
+    <name>${firstName}</name>
+    <surname>${lastName}</surname>
+    <email>${order.customer_email}</email>
+    <phone>${order.customer_phone}</phone>
+    <addressId>${order.packeta_point_id}</addressId>
+    <cod>0</cod>
+    <value>${(order.amount_total / 100).toFixed(2)}</value>
+    <currency>CZK</currency>
+    <weight>1.0</weight>
+    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
+  </packet>
+</packetImport>`;
 
-    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/rest/createPacket`, {
+    console.log("🔍 Packeta XML:", packetXml);
+
+    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/createpacket`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "text/xml",
       },
-      body: packetParams.toString(),
+      body: packetXml,
     });
 
     const responseText = await packetaResponse.text();
