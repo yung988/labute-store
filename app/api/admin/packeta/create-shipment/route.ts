@@ -37,31 +37,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
     }
 
-    // Use correct Packeta API endpoint with XML format (based on Perplexity research)
-    const packetXml = `<?xml version="1.0" encoding="utf-8"?>
-<packetImport>
-  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
+    // Use official Packeta XML format from documentation
+    const packetXml = `<createPacket>
+  <api_key>${process.env.PACKETA_API_KEY}</api_key>
   <packet>
-    <number>${orderId}</number>
+    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
     <name>${firstName}</name>
     <surname>${lastName}</surname>
     <email>${order.customer_email}</email>
     <phone>${order.customer_phone}</phone>
     <addressId>${order.packeta_point_id}</addressId>
-    <cod>0</cod>
     <value>${(order.amount_total / 100).toFixed(2)}</value>
     <currency>CZK</currency>
-    <weight>1.0</weight>
-    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
+    <cod>0</cod>
+    <deliveryType>5</deliveryType>
+    <note>Order ${orderId}</note>
   </packet>
-</packetImport>`;
+</createPacket>`;
 
-    console.log("🔍 Packeta XML:", packetXml);
+    console.log("🔍 Packeta XML (official format):", packetXml);
 
-    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/createpacket`, {
+    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/rest`, {
       method: "POST",
       headers: {
-        "Content-Type": "text/xml",
+        "Content-Type": "application/xml",
+        "Accept": "application/xml",
       },
       body: packetXml,
     });

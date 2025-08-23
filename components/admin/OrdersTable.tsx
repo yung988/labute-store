@@ -213,6 +213,7 @@ export default function OrdersTable() {
           <thead className="bg-muted">
             <tr>
               <th className="p-2 border">ID</th>
+              <th className="p-2 border">Items</th>
               <th className="p-2 border">Email</th>
               <th className="p-2 border">Name</th>
               <th className="p-2 border">Phone</th>
@@ -224,13 +225,32 @@ export default function OrdersTable() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="odd:bg-background even:bg-muted/30">
-                <td className="p-2 border align-top max-w-[260px] break-all">{o.id}</td>
-                <td className="p-2 border align-top">{o.customer_email}</td>
-                <td className="p-2 border align-top">{o.customer_name}</td>
-                <td className="p-2 border align-top">{o.customer_phone}</td>
-                <td className="p-2 border align-top">{o.packeta_point_id}</td>
+            {orders.map((o) => {
+              // Parse items from JSON
+              const items = Array.isArray(o.items) ? o.items : [];
+              
+              return (
+                <tr key={o.id} className="odd:bg-background even:bg-muted/30">
+                  <td className="p-2 border align-top max-w-[260px] break-all">{o.id}</td>
+                  <td className="p-2 border align-top max-w-[200px]">
+                    {items.length > 0 ? (
+                      <div className="text-xs">
+                        {items.map((item: any, idx: number) => (
+                          <div key={idx} className="mb-1">
+                            {item.name || 'Unknown item'} 
+                            {item.size && <span className="text-gray-500"> ({item.size})</span>}
+                            {item.quantity && <span className="text-blue-600"> x{item.quantity}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-xs">No items</span>
+                    )}
+                  </td>
+                  <td className="p-2 border align-top">{o.customer_email}</td>
+                  <td className="p-2 border align-top">{o.customer_name}</td>
+                  <td className="p-2 border align-top">{o.customer_phone}</td>
+                  <td className="p-2 border align-top">{o.packeta_point_id}</td>
                 <td className="p-2 border align-top">
                   <select
                     className="border rounded px-2 py-1"
