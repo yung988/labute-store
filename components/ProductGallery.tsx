@@ -49,8 +49,37 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
 
   return (
     <>
-      {/* Vertical Gallery */}
-      <div className="space-y-4">
+      {/* Mobile: Horizontal scroll gallery */}
+      <div className="lg:hidden">
+        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent -mx-4 px-4">
+          {images.map((image, index) => (
+            <button
+              key={image.id}
+              type="button"
+              className="relative cursor-pointer group shrink-0 snap-start w-[82vw] max-w-[520px]"
+              onClick={() => openModal(index)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") openModal(index);
+              }}
+              aria-label={`Zobrazit obrázek ${index + 1}`}
+            >
+              <div className="relative overflow-hidden rounded-lg bg-white h-[60vh] min-h-[360px]">
+                <Image
+                  src={image.url}
+                  alt={image.altText || `${productName} - obrázek ${index + 1}`}
+                  fill
+                  sizes="82vw"
+                  className="object-contain"
+                  priority={index === 0}
+                />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop: Vertical Gallery */}
+      <div className="hidden lg:block space-y-4">
         {images.map((image, index) => (
           <button
             key={image.id}
@@ -61,7 +90,6 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               if (e.key === "Enter" || e.key === " ") openModal(index);
             }}
           >
-            {/* Změna: odstraněn aspect-square, přidán min-height a flexibilní výška */}
             <div className="relative overflow-hidden rounded-lg bg-white min-h-[400px]">
               <Image
                 src={image.url}
@@ -73,7 +101,6 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 style={{ minHeight: "400px" }}
               />
             </div>
-            {/* Hover overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 rounded-lg flex items-center justify-center">
               <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium">
                 Klikni pro zvětšení
