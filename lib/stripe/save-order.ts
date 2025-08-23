@@ -1,25 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-interface Session {
-  id: string;
-  customer_details?: {
-    email?: string | null;
-  } | null;
-  metadata?: {
-    items?: unknown[];
-  } | null;
-  amount_total: number | null;
-}
-
-export default async function saveOrderToDb(session: Session) {
-  const supabase = await createClient();
-
-  const { error } = await supabase.from("orders").insert({
-    id: session.id,
+export default async function saveOrderToDb(session: any) {
+  const { error } = await supabaseAdmin.from("orders").insert({
     stripe_session_id: session.id,
     customer_email: session.customer_details?.email,
     status: "paid",
     items: JSON.stringify(session.metadata?.items ?? []),
+    amount_total: session.amount_total,
   });
 
   if (error) {
