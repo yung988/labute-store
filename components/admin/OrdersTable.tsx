@@ -121,6 +121,29 @@ export default function OrdersTable() {
     }
   };
 
+  const checkAllPacketaStatuses = async () => {
+    if (!confirm("Zkontrolovat stavy všech aktivních Packeta zásilek? Toto může chvíli trvat.")) return;
+    
+    try {
+      setLoading(true);
+      const res = await fetch("/api/cron/packeta-status-check", {
+        method: "GET",
+        headers: { 
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'manual-check'}` 
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Status check failed");
+      
+      alert(`✅ Zkontrolováno: ${json.checked} zásilek, aktualizováno: ${json.updated} objednávek`);
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Status check failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const bulkCancelPacketaShipments = async () => {
     if (!confirm("Opravdu zrušit VŠECHNY staré Packeta zásilky? Tím se zruší všechny nevyřízené zásilky jak v Packeta systému, tak v databázi.")) return;
     
@@ -247,14 +270,24 @@ export default function OrdersTable() {
         <p className="text-sm text-yellow-700 mb-3">
           Zruší všechny nevyřízené Packeta zásilky (status != shipped) jak v API, tak v databázi
         </p>
-        <Button 
-          variant="outline" 
-          onClick={bulkCancelPacketaShipments} 
-          disabled={loading}
-          className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
-        >
-          Cancel All Old Shipments
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={bulkCancelPacketaShipments} 
+            disabled={loading}
+            className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
+          >
+            Cancel All Old Shipments
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={checkAllPacketaStatuses} 
+            disabled={loading}
+            className="border-blue-400 text-blue-800 hover:bg-blue-100"
+          >
+            🔄 Check All Statuses
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-auto">
