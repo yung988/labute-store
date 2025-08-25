@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getProductImage, formatOrderId } from "@/lib/product-images";
 
 type OrderDetail = {
   id: string;
@@ -182,6 +183,27 @@ export default function OrderDetailPage() {
     }
   };
 
+  const resendOrderEmail = async (type: 'receipt' | 'status') => {
+    if (!order?.customer_email) return;
+    
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/orders/${orderId}/resend-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to resend email");
+      
+      alert(`Email úspěšně odeslán na ${order.customer_email}`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to resend email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const printPacketaLabel = async () => {
     try {
       const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
@@ -277,6 +299,16 @@ export default function OrderDetailPage() {
               </Button>
             </>
           )}
+          {order.customer_email && (
+            <Button variant="outline" onClick={() => resendOrderEmail('receipt')} disabled={loading}>
+              Resend Receipt
+            </Button>
+          )}
+          {order.customer_email && order.status !== 'new' && (
+            <Button variant="outline" onClick={() => resendOrderEmail('status')} disabled={loading}>
+              Resend Status
+            </Button>
+          )}
           {editMode ? (
             <>
               <Button onClick={saveOrder} disabled={loading}>Save</Button>
@@ -303,7 +335,11 @@ export default function OrderDetailPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium">Order ID</label>
-              <p className="text-sm break-all">{order.id}</p>
+              <p className="text-sm">
+                <span className="font-mono text-lg font-bold text-blue-600">{formatOrderId(order.id)}</span>
+                <br />
+                <span className="text-xs text-gray-500 break-all">{order.id}</span>
+              </p>
             </div>
             
             <div>
@@ -430,20 +466,21 @@ export default function OrderDetailPage() {
                   };
                   const itemName = typedItem.description || typedItem.name || 'Unknown item';
                   const itemPrice = typedItem.amount_total ? (typedItem.amount_total / 100) : (typedItem.price || 0);
+                  const productImage = getProductImage(itemName);
                   return (
                     <div key={idx} className="border rounded-lg p-4 bg-white">
                       <div className="flex gap-4">
                         {/* Product Image */}
                         <div className="flex-shrink-0">
-                          {typedItem.image ? (
+                          {productImage ? (
                             <img 
-                              src={typedItem.image} 
+                              src={productImage} 
                                       alt={itemName}
                               className="w-16 h-16 object-cover rounded border"
                             />
                           ) : (
                             <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
-                              <span className="text-gray-400 text-xs">No image</span>
+                              <span className="text-gray-400 text-lg">📦</span>
                             </div>
                           )}
                         </div>

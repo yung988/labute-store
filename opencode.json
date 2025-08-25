@@ -50,7 +50,7 @@
         "npx",
         "-y",
         "@supabase/mcp-server-supabase@latest",
-        "--project-ref=kxynznhyolibcjdyopdt"
+        "--project-ref=randrdrjzsnddhsjliig"
       ],
       "enabled": true,
       "environment": {

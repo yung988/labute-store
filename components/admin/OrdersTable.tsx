@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatOrderId } from "@/lib/product-images";
 
 type Order = {
   id: string;
@@ -256,7 +257,10 @@ export default function OrdersTable() {
                   className="odd:bg-background even:bg-muted/30 hover:bg-blue-50 cursor-pointer"
                   onClick={() => window.open(`/admin/orders/${o.id}`, '_blank')}
                 >
-                  <td className="p-2 border align-top max-w-[260px] break-all">{o.id}</td>
+                  <td className="p-2 border align-top max-w-[260px]">
+                    <div className="font-mono font-bold text-blue-600">{formatOrderId(o.id)}</div>
+                    <div className="text-xs text-gray-500 break-all">{o.id}</div>
+                  </td>
                   <td className="p-2 border align-top max-w-[200px]">
                     {items.length > 0 ? (
                       <div className="text-xs">
