@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .update({
         packeta_shipment_id: packetaId,
-        status: "shipped",
+        status: "processing",
       })
       .eq("id", orderId);
 

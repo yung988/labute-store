@@ -156,6 +156,32 @@ export default function OrderDetailPage() {
     }
   };
 
+  const cancelPacketaShipment = async () => {
+    if (!confirm("Opravdu zrušit Packeta zásilku?")) return;
+    
+    try {
+      setLoading(true);
+      // Reset packeta fields
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          packeta_shipment_id: null,
+          status: "paid" 
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to cancel shipment");
+      
+      alert("Packeta zásilka zrušena");
+      await loadOrder();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to cancel shipment");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const printPacketaLabel = async () => {
     try {
       const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
@@ -216,9 +242,14 @@ export default function OrderDetailPage() {
             </Button>
           )}
           {order.packeta_shipment_id && (
-            <Button variant="outline" onClick={printPacketaLabel}>
-              Print Label
-            </Button>
+            <>
+              <Button variant="outline" onClick={printPacketaLabel}>
+                Print Label
+              </Button>
+              <Button variant="destructive" onClick={cancelPacketaShipment} disabled={loading}>
+                Cancel Shipment
+              </Button>
+            </>
           )}
           {editMode ? (
             <>
@@ -323,7 +354,18 @@ export default function OrderDetailPage() {
 
             <div>
               <label className="text-sm font-medium">Packeta Shipment ID</label>
-              <p className="text-sm">{order.packeta_shipment_id || "-"}</p>
+              {order.packeta_shipment_id ? (
+                <a 
+                  href={`https://www.zasilkovna.cz/sledovani/${order.packeta_shipment_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {order.packeta_shipment_id} ↗
+                </a>
+              ) : (
+                <p className="text-sm">-</p>
+              )}
             </div>
 
             <div>
@@ -340,25 +382,97 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent>
             {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {order.items.map((item: unknown, idx: number) => {
-                  const typedItem = item as { name?: string; size?: string; color?: string; quantity?: number; price?: number };
+                  const typedItem = item as { 
+                    name?: string; 
+                    size?: string; 
+                    color?: string; 
+                    quantity?: number; 
+                    price?: number;
+                    image?: string;
+                    product_id?: string;
+                    variant_id?: string;
+                    total?: number;
+                  };
                   return (
-                    <div key={idx} className="border rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{typedItem.name || 'Unknown item'}</p>
-                          {typedItem.size && <p className="text-sm text-gray-600">Size: {typedItem.size}</p>}
-                          {typedItem.color && <p className="text-sm text-gray-600">Color: {typedItem.color}</p>}
+                    <div key={idx} className="border rounded-lg p-4 bg-white">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          {typedItem.image ? (
+                            <img 
+                              src={typedItem.image} 
+                              alt={typedItem.name || 'Product'} 
+                              className="w-16 h-16 object-cover rounded border"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                              <span className="text-gray-400 text-xs">No image</span>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">x{typedItem.quantity || 1}</p>
-                          {typedItem.price && <p className="text-sm text-gray-600">{typedItem.price} CZK</p>}
+                        
+                        {/* Product Info */}
+                        <div className="flex-grow">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium text-lg">{typedItem.name || 'Unknown item'}</h4>
+                              <div className="text-sm text-gray-600 mt-1 space-y-1">
+                                {typedItem.size && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">Size:</span>
+                                    <span className="bg-gray-100 px-2 py-1 rounded text-xs">{typedItem.size}</span>
+                                  </div>
+                                )}
+                                {typedItem.color && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">Color:</span>
+                                    <span>{typedItem.color}</span>
+                                  </div>
+                                )}
+                                {typedItem.product_id && (
+                                  <div className="text-xs text-gray-500">Product ID: {typedItem.product_id}</div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Price & Quantity */}
+                            <div className="text-right">
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <p className="text-sm text-gray-600">Quantity</p>
+                                  <p className="font-bold text-lg">{typedItem.quantity || 1}</p>
+                                </div>
+                                <div className="text-right">
+                                  {typedItem.price && (
+                                    <p className="text-sm text-gray-600">Unit Price: {typedItem.price} CZK</p>
+                                  )}
+                                  {typedItem.total && (
+                                    <p className="font-bold text-lg text-green-600">{typedItem.total} CZK</p>
+                                  )}
+                                  {!typedItem.total && typedItem.price && typedItem.quantity && (
+                                    <p className="font-bold text-lg text-green-600">{(typedItem.price * typedItem.quantity)} CZK</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
+                
+                {/* Order Total Summary */}
+                <div className="border-t pt-4 bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Order Total:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      {order.amount_total ? `${order.amount_total / 100} CZK` : 'N/A'}
+                    </span>
+                  </div>
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">No items found</p>
@@ -397,29 +511,74 @@ export default function OrderDetailPage() {
             <CardTitle>Notes & Communication</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addNote()}
-                />
-                <Button onClick={addNote}>Add</Button>
+            <div className="space-y-6">
+              {/* Add Note Section */}
+              <div>
+                <h4 className="font-medium mb-2">Add Note</h4>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a note..."
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addNote()}
+                  />
+                  <Button onClick={addNote}>Add</Button>
+                </div>
+              </div>
+
+              {/* Email History Section */}
+              <div>
+                <h4 className="font-medium mb-2">Email History</h4>
+                <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+                  {order.customer_email && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          📧 Order confirmation email
+                        </span>
+                        <span className="text-gray-500">
+                          {new Date(order.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600 pl-6">
+                        To: {order.customer_email}
+                      </div>
+                    </>
+                  )}
+                  
+                  {order.packeta_shipment_id && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        📦 Shipping notification
+                      </span>
+                      <span className="text-gray-500">
+                        {new Date(order.updated_at).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {(!order.customer_email && !order.packeta_shipment_id) && (
+                    <p className="text-gray-500 text-sm">No emails sent yet</p>
+                  )}
+                </div>
               </div>
               
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {notes.map((note) => (
-                  <div key={note.id} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm">{note.note}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(note.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-                {notes.length === 0 && (
-                  <p className="text-gray-500 text-sm">No notes yet</p>
-                )}
+              {/* Notes Section */}
+              <div>
+                <h4 className="font-medium mb-2">Internal Notes</h4>
+                <div className="space-y-3 max-h-40 overflow-y-auto">
+                  {notes.map((note) => (
+                    <div key={note.id} className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-sm">{note.note}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(note.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                  {notes.length === 0 && (
+                    <p className="text-gray-500 text-sm">No notes yet</p>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
