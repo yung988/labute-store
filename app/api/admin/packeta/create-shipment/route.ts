@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     const packetXml = `<createPacket>
   <api_key>${process.env.PACKETA_API_KEY}</api_key>
   <packet>
+    <number>${orderId}</number>
     <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
     <name>${firstName}</name>
     <surname>${lastName}</surname>
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     <value>${(order.amount_total / 100).toFixed(2)}</value>
     <currency>CZK</currency>
     <cod>0</cod>
+    <weight>1.0</weight>
     <deliveryType>5</deliveryType>
     <note>Order ${orderId}</note>
   </packet>

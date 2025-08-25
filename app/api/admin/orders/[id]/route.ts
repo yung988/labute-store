@@ -1,6 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  return NextResponse.json({ order: data });
+}
+
+export async function PUT(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const body: Record<string, unknown> = await _req.json();
+  const { id } = await context.params;
+
+  const updates: Record<string, unknown> = {};
+  for (const key of [
+    "stripe_session_id",
+    "customer_email", 
+    "customer_name",
+    "customer_phone",
+    "packeta_point_id",
+    "items",
+    "status",
+    "amount_total",
+  ]) {
+    if (key in body) updates[key] = body[key];
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ order: data });
+}
+
 export async function PATCH(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }

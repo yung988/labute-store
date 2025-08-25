@@ -273,6 +273,13 @@ export default function OrdersTable() {
                 </td>
                 <td className="p-2 border align-top whitespace-nowrap">
                   <div className="flex gap-1 flex-col">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => window.open(`/admin/orders/${o.id}`, '_blank')} 
+                      size="sm"
+                    >
+                      Detail
+                    </Button>
                     {o.packeta_point_id && o.status === "paid" && (
                       <Button 
                         variant="default" 
