@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ type OrderDetail = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
-  items: any[];
+  items: unknown[];
   status: string;
   amount_total: number | null;
   created_at: string;
@@ -47,7 +47,7 @@ export default function OrderDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
 
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -85,13 +85,13 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
 
   useEffect(() => {
     if (orderId) {
       loadOrder();
     }
-  }, [orderId]);
+  }, [loadOrder, orderId]);
 
   const saveOrder = async () => {
     setLoading(true);
@@ -341,21 +341,24 @@ export default function OrderDetailPage() {
           <CardContent>
             {order.items && order.items.length > 0 ? (
               <div className="space-y-3">
-                {order.items.map((item: any, idx: number) => (
-                  <div key={idx} className="border rounded-lg p-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{item.name || 'Unknown item'}</p>
-                        {item.size && <p className="text-sm text-gray-600">Size: {item.size}</p>}
-                        {item.color && <p className="text-sm text-gray-600">Color: {item.color}</p>}
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">x{item.quantity || 1}</p>
-                        {item.price && <p className="text-sm text-gray-600">{item.price} CZK</p>}
+                {order.items.map((item: unknown, idx: number) => {
+                  const typedItem = item as { name?: string; size?: string; color?: string; quantity?: number; price?: number };
+                  return (
+                    <div key={idx} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{typedItem.name || 'Unknown item'}</p>
+                          {typedItem.size && <p className="text-sm text-gray-600">Size: {typedItem.size}</p>}
+                          {typedItem.color && <p className="text-sm text-gray-600">Color: {typedItem.color}</p>}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">x{typedItem.quantity || 1}</p>
+                          {typedItem.price && <p className="text-sm text-gray-600">{typedItem.price} CZK</p>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-500">No items found</p>
