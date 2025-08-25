@@ -14,7 +14,7 @@ type OrderDetail = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
-  items: unknown[];
+  items: string | unknown[]; // Can be JSON string or array
   status: string;
   amount_total: number | null;
   created_at: string;
@@ -223,6 +223,32 @@ export default function OrderDetailPage() {
     return <div className="p-6">Order not found</div>;
   }
 
+  // Parse items from JSON string if needed
+  let parsedItems: unknown[] = [];
+  try {
+    if (typeof order.items === 'string') {
+      parsedItems = JSON.parse(order.items);
+    } else if (Array.isArray(order.items)) {
+      parsedItems = order.items;
+    }
+  } catch (e) {
+    console.error('Failed to parse items:', e);
+    parsedItems = [];
+  }
+
+  // Separate products from shipping
+  const products = parsedItems.filter((item: unknown) => {
+    const typedItem = item as { description?: string };
+    return !typedItem.description?.toLowerCase().includes('shipping') && 
+           !typedItem.description?.toLowerCase().includes('doprava');
+  });
+  
+  const shipping = parsedItems.filter((item: unknown) => {
+    const typedItem = item as { description?: string };
+    return typedItem.description?.toLowerCase().includes('shipping') || 
+           typedItem.description?.toLowerCase().includes('doprava');
+  });
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -337,7 +363,7 @@ export default function OrderDetailPage() {
 
             <div>
               <label className="text-sm font-medium">Amount Total</label>
-              <p className="text-sm">{order.amount_total ? `${order.amount_total} CZK` : "-"}</p>
+              <p className="text-sm">{order.amount_total ? `${(order.amount_total / 100).toFixed(2)} CZK` : "-"}</p>
             </div>
 
             <div>
@@ -381,20 +407,29 @@ export default function OrderDetailPage() {
             <CardTitle>Order Items</CardTitle>
           </CardHeader>
           <CardContent>
-            {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
-              <div className="space-y-4">
-                {order.items.map((item: unknown, idx: number) => {
+            {parsedItems.length > 0 ? (
+              <div className="space-y-6">
+                {/* Products Section */}
+                {products.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-gray-800">Produkty</h3>
+                    <div className="space-y-4">
+                      {products.map((item: unknown, idx: number) => {
                   const typedItem = item as { 
+                    description?: string;
                     name?: string; 
                     size?: string; 
                     color?: string; 
                     quantity?: number; 
+                    amount_total?: number;
                     price?: number;
                     image?: string;
                     product_id?: string;
                     variant_id?: string;
                     total?: number;
                   };
+                  const itemName = typedItem.description || typedItem.name || 'Unknown item';
+                  const itemPrice = typedItem.amount_total ? (typedItem.amount_total / 100) : (typedItem.price || 0);
                   return (
                     <div key={idx} className="border rounded-lg p-4 bg-white">
                       <div className="flex gap-4">
@@ -403,7 +438,7 @@ export default function OrderDetailPage() {
                           {typedItem.image ? (
                             <img 
                               src={typedItem.image} 
-                              alt={typedItem.name || 'Product'} 
+                                      alt={itemName}
                               className="w-16 h-16 object-cover rounded border"
                             />
                           ) : (
@@ -417,7 +452,7 @@ export default function OrderDetailPage() {
                         <div className="flex-grow">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-medium text-lg">{typedItem.name || 'Unknown item'}</h4>
+                                      <h4 className="font-medium text-lg">{itemName}</h4>
                               <div className="text-sm text-gray-600 mt-1 space-y-1">
                                 {typedItem.size && (
                                   <div className="flex items-center gap-2">
@@ -445,15 +480,10 @@ export default function OrderDetailPage() {
                                   <p className="font-bold text-lg">{typedItem.quantity || 1}</p>
                                 </div>
                                 <div className="text-right">
-                                  {typedItem.price && (
-                                    <p className="text-sm text-gray-600">Unit Price: {typedItem.price} CZK</p>
-                                  )}
-                                  {typedItem.total && (
-                                    <p className="font-bold text-lg text-green-600">{typedItem.total} CZK</p>
-                                  )}
-                                  {!typedItem.total && typedItem.price && typedItem.quantity && (
-                                    <p className="font-bold text-lg text-green-600">{(typedItem.price * typedItem.quantity)} CZK</p>
-                                  )}
+                                  <p className="text-sm text-gray-600">Unit Price: {itemPrice.toFixed(2)} CZK</p>
+                                  <p className="font-bold text-lg text-green-600">
+                                    {(itemPrice * (typedItem.quantity || 1)).toFixed(2)} CZK
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -462,14 +492,56 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
                   );
-                })}
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Shipping Section */}
+                {shipping.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-gray-800">Doprava</h3>
+                    <div className="space-y-4">
+                      {shipping.map((item: unknown, idx: number) => {
+                        const typedItem = item as { 
+                          description?: string;
+                          quantity?: number; 
+                          amount_total?: number;
+                        };
+                        const itemName = typedItem.description || 'Shipping';
+                        const itemPrice = typedItem.amount_total ? (typedItem.amount_total / 100) : 0;
+                        
+                        return (
+                          <div key={idx} className="border rounded-lg p-4 bg-blue-50">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-blue-100 rounded border flex items-center justify-center">
+                                  <span className="text-blue-600 text-lg">🚚</span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-lg">{itemName}</h4>
+                                  <p className="text-sm text-gray-600">Množství: {typedItem.quantity || 1}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg text-blue-600">
+                                  {itemPrice.toFixed(2)} CZK
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Order Total Summary */}
                 <div className="border-t pt-4 bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold">Order Total:</span>
                     <span className="text-xl font-bold text-green-600">
-                      {order.amount_total ? `${order.amount_total / 100} CZK` : 'N/A'}
+                      {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} CZK` : 'N/A'}
                     </span>
                   </div>
                 </div>
