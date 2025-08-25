@@ -121,6 +121,27 @@ export default function OrdersTable() {
     }
   };
 
+  const bulkCancelPacketaShipments = async () => {
+    if (!confirm("Opravdu zrušit VŠECHNY staré Packeta zásilky? Tím se zruší všechny nevyřízené zásilky jak v Packeta systému, tak v databázi.")) return;
+    
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/packeta/bulk-cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Bulk cancel failed");
+      
+      alert(`✅ Úspěšně zpracováno: ${json.database_reset} objednávek resetováno, ${json.cancelled || 0} zásilek zrušeno v Packeta API`);
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Bulk cancel failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const printPacketaLabel = async (orderId: string) => {
     try {
       const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
@@ -219,6 +240,22 @@ export default function OrdersTable() {
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
+
+      {/* Bulk Cancel Section */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="font-semibold text-yellow-800 mb-2">🗑️ Bulk Cancel Old Packeta Shipments</h3>
+        <p className="text-sm text-yellow-700 mb-3">
+          Zruší všechny nevyřízené Packeta zásilky (status != shipped) jak v API, tak v databázi
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={bulkCancelPacketaShipments} 
+          disabled={loading}
+          className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
+        >
+          Cancel All Old Shipments
+        </Button>
+      </div>
 
       <div className="overflow-auto">
         <table className="min-w-full border text-sm">

@@ -15,6 +15,7 @@ type OrderDetail = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
+  packeta_tracking_url: string | null;
   items: string | unknown[]; // Can be JSON string or array
   status: string;
   amount_total: number | null;
@@ -221,6 +222,40 @@ export default function OrderDetailPage() {
     }
   };
 
+  const refreshPacketaTracking = async () => {
+    if (!order?.packeta_shipment_id) return;
+    
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/packeta/track/${order.packeta_shipment_id}`);
+      const trackingData = await res.json();
+      
+      if (!res.ok) throw new Error(trackingData.error || "Failed to get tracking");
+      
+      console.log("📦 Packeta tracking data:", trackingData);
+      
+      // Automatically update order status if tracking shows different status
+      if (trackingData.status && trackingData.status !== order.status) {
+        const updateRes = await fetch(`/api/admin/orders/${orderId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: trackingData.status }),
+        });
+        
+        if (updateRes.ok) {
+          alert(`Status automaticky aktualizován z Packeta: ${trackingData.statusText}`);
+          await loadOrder();
+        }
+      } else {
+        alert(`Aktuální stav zásilky: ${trackingData.statusText}`);
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to refresh tracking");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors = {
       new: "bg-gray-100 text-gray-800",
@@ -289,6 +324,9 @@ export default function OrderDetailPage() {
             <>
               <Button variant="outline" onClick={printPacketaLabel}>
                 Print Label
+              </Button>
+              <Button variant="outline" onClick={refreshPacketaTracking} disabled={loading}>
+                🔄 Refresh Tracking
               </Button>
               <Button variant="destructive" onClick={cancelPacketaShipment} disabled={loading}>
                 Cancel Shipment
@@ -413,14 +451,19 @@ export default function OrderDetailPage() {
             <div>
               <label className="text-sm font-medium">Packeta Shipment ID</label>
               {order.packeta_shipment_id ? (
-                <a 
-                  href={`https://www.zasilkovna.cz/sledovani/${order.packeta_shipment_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  {order.packeta_shipment_id} ↗
-                </a>
+                <div className="space-y-1">
+                  <a 
+                    href={order.packeta_tracking_url || `https://www.zasilkovna.cz/sledovani/${order.packeta_shipment_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline block"
+                  >
+                    {order.packeta_shipment_id} ↗
+                  </a>
+                  {order.packeta_tracking_url && (
+                    <p className="text-xs text-gray-500">Tracking aktivní</p>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm">-</p>
               )}
