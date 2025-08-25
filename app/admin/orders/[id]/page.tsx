@@ -339,7 +339,7 @@ export default function OrderDetailPage() {
             <CardTitle>Order Items</CardTitle>
           </CardHeader>
           <CardContent>
-            {order.items && order.items.length > 0 ? (
+            {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
               <div className="space-y-3">
                 {order.items.map((item: unknown, idx: number) => {
                   const typedItem = item as { name?: string; size?: string; color?: string; quantity?: number; price?: number };
