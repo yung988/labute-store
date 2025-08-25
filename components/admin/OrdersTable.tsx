@@ -10,6 +10,7 @@ type Order = {
   customer_name: string | null;
   customer_phone: string | null;
   packeta_point_id: string | null;
+  packeta_shipment_id: string | null;
   items: string | unknown[]; // Can be JSON string or array
   status: string;
   amount_total: number | null;
@@ -278,7 +279,12 @@ export default function OrdersTable() {
                   <td className="p-2 border align-top">{o.customer_email}</td>
                   <td className="p-2 border align-top">{o.customer_name}</td>
                   <td className="p-2 border align-top">{o.customer_phone}</td>
-                  <td className="p-2 border align-top">{o.packeta_point_id}</td>
+                  <td className="p-2 border align-top">
+                    <div className="text-xs">
+                      {o.packeta_point_id && <div>Point: {o.packeta_point_id}</div>}
+                      {o.packeta_shipment_id && <div className="text-blue-600">Ship: {o.packeta_shipment_id}</div>}
+                    </div>
+                  </td>
                 <td className="p-2 border align-top" onClick={(e) => e.stopPropagation()}>
                   <select
                     className="border rounded px-2 py-1"
@@ -308,7 +314,7 @@ export default function OrdersTable() {
                         Create Shipment
                       </Button>
                     )}
-                    {o.status === "shipped" && (
+                    {o.packeta_shipment_id && (
                       <Button 
                         variant="outline" 
                         onClick={() => printPacketaLabel(o.id)} 

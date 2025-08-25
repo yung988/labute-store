@@ -16,7 +16,7 @@ export async function GET() {
   if (unauthorized) return unauthorized;
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("id,stripe_session_id,customer_email,customer_name,customer_phone,packeta_point_id,items,status,amount_total,created_at")
+    .select("id,stripe_session_id,customer_email,customer_name,customer_phone,packeta_point_id,packeta_shipment_id,items,status,amount_total,created_at")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

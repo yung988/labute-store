@@ -16,6 +16,13 @@ export async function GET(
       .single();
 
     if (orderError || !order || !order.packeta_shipment_id) {
+      console.error("Print label error:", {
+        orderId,
+        orderError: orderError?.message,
+        hasOrder: !!order,
+        hasShipmentId: !!order?.packeta_shipment_id,
+        shipmentId: order?.packeta_shipment_id
+      });
       return NextResponse.json(
         { error: "Order or Packeta shipment not found" },
         { status: 404 }
@@ -33,8 +40,15 @@ export async function GET(
     );
 
     if (!labelResponse.ok) {
+      const errorText = await labelResponse.text();
+      console.error("Packeta label API error:", {
+        status: labelResponse.status,
+        statusText: labelResponse.statusText,
+        error: errorText,
+        url: `${process.env.PACKETA_API_URL}/packets/${order.packeta_shipment_id}/label.pdf`
+      });
       return NextResponse.json(
-        { error: "Failed to get label from Packeta" },
+        { error: `Failed to get label from Packeta: ${labelResponse.status} ${errorText}` },
         { status: 500 }
       );
     }
