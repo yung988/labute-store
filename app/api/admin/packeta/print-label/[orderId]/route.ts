@@ -29,9 +29,9 @@ export async function GET(
       );
     }
 
-    // Get label from Packeta API
+    // Get label from Packeta v3 API
     const labelResponse = await fetch(
-      `${process.env.PACKETA_API_URL}/packets/${order.packeta_shipment_id}/label.pdf`,
+      `https://www.zasilkovna.cz/api/v3/packet/label.pdf?packetIds[]=${order.packeta_shipment_id}`,
       {
         headers: {
           "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,

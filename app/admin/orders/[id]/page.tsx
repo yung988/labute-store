@@ -158,23 +158,19 @@ export default function OrderDetailPage() {
   };
 
   const cancelPacketaShipment = async () => {
-    if (!confirm("Opravdu zrušit Packeta zásilku?")) return;
+    if (!confirm("Opravdu zrušit Packeta zásilku? Tím se zásilka zruší jak v Packeta systému, tak v naší databázi.")) return;
     
     try {
       setLoading(true);
-      // Reset packeta fields
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: "PUT",
+      const res = await fetch(`/api/admin/packeta/cancel-shipment`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          packeta_shipment_id: null,
-          status: "paid" 
-        }),
+        body: JSON.stringify({ orderId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to cancel shipment");
       
-      alert("Packeta zásilka zrušena");
+      alert("Packeta zásilka úspěšně zrušena v systému Packeta i v naší databázi");
       await loadOrder();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to cancel shipment");

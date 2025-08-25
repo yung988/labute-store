@@ -37,56 +37,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
     }
 
-    // Use official Packeta XML format from documentation
-    const packetXml = `<createPacket>
-  <api_key>${process.env.PACKETA_API_KEY}</api_key>
-  <packet>
-    <number>${orderId}</number>
-    <eshop>${process.env.PACKETA_ESHOP_ID}</eshop>
-    <name>${firstName}</name>
-    <surname>${lastName}</surname>
-    <email>${order.customer_email}</email>
-    <phone>${order.customer_phone}</phone>
-    <addressId>${order.packeta_point_id}</addressId>
-    <value>${(order.amount_total / 100).toFixed(2)}</value>
-    <currency>CZK</currency>
-    <cod>0</cod>
-    <weight>1.0</weight>
-    <deliveryType>5</deliveryType>
-    <note>Order ${orderId}</note>
-  </packet>
-</createPacket>`;
+    // Use modern Packeta v3 JSON API
+    const packetData = {
+      recipient: {
+        name: `${firstName} ${lastName}`.trim(),
+        street: "", // Not required for pickup points
+        city: "", // Not required for pickup points  
+        zip: "", // Not required for pickup points
+        phone: order.customer_phone || "",
+        email: order.customer_email || ""
+      },
+      branch_id: parseInt(order.packeta_point_id),
+      cod: 0, // No cash on delivery
+      weight: 1.0,
+      value: parseFloat((order.amount_total / 100).toFixed(2)),
+      currency: "CZK",
+      eshop: process.env.PACKETA_ESHOP_ID,
+      number: orderId,
+      note: `Order ${orderId.slice(-8)}`
+    };
 
-    console.log("🔍 Packeta XML (official format):", packetXml);
+    console.log("🔍 Packeta JSON payload:", JSON.stringify(packetData, null, 2));
 
-    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/rest`, {
+    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/v3/packet`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/xml",
-        "Accept": "application/xml",
+        "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
-      body: packetXml,
+      body: JSON.stringify(packetData),
     });
 
-    const responseText = await packetaResponse.text();
-    
     if (!packetaResponse.ok) {
+      const errorText = await packetaResponse.text();
+      console.error("❌ Packeta API error:", {
+        status: packetaResponse.status,
+        statusText: packetaResponse.statusText,
+        error: errorText
+      });
       return NextResponse.json(
-        { error: `Packeta API error: ${responseText}` },
+        { error: `Packeta API error: ${packetaResponse.status} ${errorText}` },
         { status: 500 }
       );
     }
 
-    // Parse XML response to get packet ID
-    const idMatch = responseText.match(/<id>(\d+)<\/id>/);
-    if (!idMatch) {
+    // Parse JSON response to get packet ID
+    const responseData = await packetaResponse.json();
+    console.log("✅ Packeta API success:", responseData);
+    
+    if (!responseData.id) {
       return NextResponse.json(
-        { error: `Invalid Packeta response: ${responseText}` },
+        { error: `Invalid Packeta response - missing ID: ${JSON.stringify(responseData)}` },
         { status: 500 }
       );
     }
 
-    const packetaId = idMatch[1];
+    const packetaId = responseData.id.toString();
 
     // Update order with Packeta ID
     const { error: updateError } = await supabaseAdmin
