@@ -70,14 +70,24 @@ export default function OrdersTable() {
   };
 
   const updateStatus = async (id: string, status: string) => {
-    const res = await fetch(`/api/admin/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || "Update failed");
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Update failed");
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+      
+      // Show success message
+      const order = orders.find(o => o.id === id);
+      if (order?.customer_email) {
+        console.log(`✅ Status updated and email sent to ${order.customer_email}`);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Update failed");
+    }
   };
 
   const onDelete = async (id: string) => {

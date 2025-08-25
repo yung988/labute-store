@@ -529,36 +529,49 @@ export default function OrderDetailPage() {
               {/* Email History Section */}
               <div>
                 <h4 className="font-medium mb-2">Email History</h4>
-                <div className="space-y-2 bg-gray-50 rounded-lg p-3">
+                <div className="space-y-2 bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
                   {order.customer_email && (
                     <>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2">
-                          📧 Order confirmation email
+                          📧 Order confirmation
                         </span>
                         <span className="text-gray-500">
                           {new Date(order.created_at).toLocaleString()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-600 pl-6">
-                        To: {order.customer_email}
+                      
+                      {/* Status change emails */}
+                      {order.status !== 'new' && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            🔄 Status changed to: {order.status}
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(order.updated_at).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {order.packeta_shipment_id && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            📦 Shipping notification
+                          </span>
+                          <span className="text-gray-500">
+                            {new Date(order.updated_at).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-gray-600 pl-6 border-t pt-2">
+                        All emails sent to: {order.customer_email}
                       </div>
                     </>
                   )}
                   
-                  {order.packeta_shipment_id && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        📦 Shipping notification
-                      </span>
-                      <span className="text-gray-500">
-                        {new Date(order.updated_at).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {(!order.customer_email && !order.packeta_shipment_id) && (
-                    <p className="text-gray-500 text-sm">No emails sent yet</p>
+                  {!order.customer_email && (
+                    <p className="text-gray-500 text-sm">No customer email - no emails sent</p>
                   )}
                 </div>
               </div>
