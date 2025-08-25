@@ -10,7 +10,7 @@ type Order = {
   customer_name: string | null;
   customer_phone: string | null;
   packeta_point_id: string | null;
-  items: unknown[];
+  items: string | unknown[]; // Can be JSON string or array
   status: string;
   amount_total: number | null;
   created_at: string;
@@ -236,8 +236,18 @@ export default function OrdersTable() {
           </thead>
           <tbody>
             {orders.map((o) => {
-              // Parse items from JSON
-              const items = Array.isArray(o.items) ? o.items : [];
+              // Parse items from JSON string if needed
+              let items: unknown[] = [];
+              try {
+                if (typeof o.items === 'string') {
+                  items = JSON.parse(o.items);
+                } else if (Array.isArray(o.items)) {
+                  items = o.items;
+                }
+              } catch (e) {
+                console.error('Failed to parse items:', e);
+                items = [];
+              }
               
               return (
                 <tr 
@@ -250,10 +260,11 @@ export default function OrdersTable() {
                     {items.length > 0 ? (
                       <div className="text-xs">
                         {items.map((item: unknown, idx: number) => {
-                          const typedItem = item as { name?: string; size?: string; quantity?: number };
+                          const typedItem = item as { description?: string; name?: string; size?: string; quantity?: number };
+                          const itemName = typedItem.description || typedItem.name || 'Unknown item';
                           return (
                             <div key={idx} className="mb-1">
-                              {typedItem.name || 'Unknown item'} 
+                              {itemName}
                               {typedItem.size && <span className="text-gray-500"> ({typedItem.size})</span>}
                               {typedItem.quantity && <span className="text-blue-600"> x{typedItem.quantity}</span>}
                             </div>
