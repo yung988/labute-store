@@ -230,7 +230,11 @@ export default function OrdersTable() {
               const items = Array.isArray(o.items) ? o.items : [];
               
               return (
-                <tr key={o.id} className="odd:bg-background even:bg-muted/30">
+                <tr 
+                  key={o.id} 
+                  className="odd:bg-background even:bg-muted/30 hover:bg-blue-50 cursor-pointer"
+                  onClick={() => window.open(`/admin/orders/${o.id}`, '_blank')}
+                >
                   <td className="p-2 border align-top max-w-[260px] break-all">{o.id}</td>
                   <td className="p-2 border align-top max-w-[200px]">
                     {items.length > 0 ? (
@@ -254,7 +258,7 @@ export default function OrdersTable() {
                   <td className="p-2 border align-top">{o.customer_name}</td>
                   <td className="p-2 border align-top">{o.customer_phone}</td>
                   <td className="p-2 border align-top">{o.packeta_point_id}</td>
-                <td className="p-2 border align-top">
+                <td className="p-2 border align-top" onClick={(e) => e.stopPropagation()}>
                   <select
                     className="border rounded px-2 py-1"
                     value={o.status}
@@ -271,15 +275,8 @@ export default function OrdersTable() {
                 <td className="p-2 border align-top">
                   {new Date(o.created_at).toLocaleString()}
                 </td>
-                <td className="p-2 border align-top whitespace-nowrap">
+                <td className="p-2 border align-top whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1 flex-col">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => window.open(`/admin/orders/${o.id}`, '_blank')} 
-                      size="sm"
-                    >
-                      Detail
-                    </Button>
                     {o.packeta_point_id && o.status === "paid" && (
                       <Button 
                         variant="default" 
