@@ -13,6 +13,14 @@ interface OrderData {
 }
 
 export default async function sendOrderStatusEmail(order: OrderData, previousStatus?: string) {
+  console.log(`📧 Attempting to send status email for order ${order.id}:`, {
+    orderId: order.id,
+    customerEmail: order.customer_email,
+    newStatus: order.status,
+    previousStatus,
+    hasCustomerEmail: !!order.customer_email
+  });
+
   if (!order.customer_email) {
     console.log("❌ No customer email found, skipping status email");
     return;

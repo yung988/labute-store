@@ -69,7 +69,7 @@ export default function OrderDetailPage() {
 
       if (json.order.packeta_shipment_id) {
         timelineEvents.push({
-          timestamp: json.order.updated_at,
+          timestamp: json.order.updated_at || json.order.created_at,
           event: "Shipment Created",
           description: `Packeta shipment created: ${json.order.packeta_shipment_id}`
         });
@@ -620,7 +620,7 @@ export default function OrderDetailPage() {
                             🔄 Status changed to: {order.status}
                           </span>
                           <span className="text-gray-500">
-                            {new Date(order.updated_at).toLocaleString()}
+                            {order.updated_at ? new Date(order.updated_at).toLocaleString() : new Date(order.created_at).toLocaleString()}
                           </span>
                         </div>
                       )}
@@ -631,7 +631,7 @@ export default function OrderDetailPage() {
                             📦 Shipping notification
                           </span>
                           <span className="text-gray-500">
-                            {new Date(order.updated_at).toLocaleString()}
+                            {order.updated_at ? new Date(order.updated_at).toLocaleString() : new Date(order.created_at).toLocaleString()}
                           </span>
                         </div>
                       )}

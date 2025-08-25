@@ -1,48 +1,61 @@
 {
-    "$schema": "https://opencode.ai/config.json",
-    "mcp": {
-        "fetch": {
-            "type": "local",
-            "command": [
-                "python",
-                "-m",
-                "mcp_server_fetch"
-            ],
-            "enabled": true,
-            "environment": {}
-        },
-        "perplexity-ask": {
-            "type": "local",
-            "command": [
-                "npx",
-                "-y",
-                "server-perplexity-ask"
-            ],
-            "enabled": true,
-            "environment": {
-                "PERPLEXITY_API_KEY": "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"
-            }
-        },
-        "playwright": {
-            "type": "local",
-            "command": [
-                "npx",
-                "@playwright/mcp@latest"
-            ],
-            "enabled": true,
-            "environment": {}
-        },
-        "stripe": {
-            "type": "local",
-            "command": [
-                "npx",
-                "-y",
-                "@stripe/mcp",
-                "--tools=all",
-                "--api-key=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"
-            ],
-            "enabled": true,
-            "environment": {}
-        }
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "fetch": {
+      "type": "local",
+      "command": [
+        "python",
+        "-m",
+        "mcp_server_fetch"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "perplexity-ask": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "server-perplexity-ask"
+      ],
+      "enabled": true,
+      "environment": {
+        "PERPLEXITY_API_KEY": "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"
+      }
+    },
+    "playwright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "stripe": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@stripe/mcp",
+        "--tools=all",
+        "--api-key=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"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "supabase": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=kxynznhyolibcjdyopdt"
+      ],
+      "enabled": true,
+      "environment": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_186cc0da2189e9cfba65eb8053e803b367107f94"
+      }
     }
+  }
 }
