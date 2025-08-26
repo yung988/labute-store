@@ -36,16 +36,12 @@ export async function POST(req: NextRequest) {
     // Cancel shipment via Packeta v3 API
     console.log(`🔄 Cancelling Packeta shipment: ${order.packeta_shipment_id}`);
     
-    const cancelResponse = await fetch("https://www.zasilkovna.cz/api/v3/packet/cancel", {
+    const cancelResponse = await fetch(`https://api.packeta.com/v3/packet/${order.packeta_shipment_id}/cancel`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-        "Content-Type": "application/json",
+        "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
         "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        packet_ids: [order.packeta_shipment_id]
-      }),
+      }
     });
 
     if (!cancelResponse.ok) {

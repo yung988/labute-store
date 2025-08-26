@@ -46,16 +46,14 @@ export async function POST() {
     // Cancel via Packeta API in batches
     if (packetIds.length > 0) {
       try {
-        const cancelResponse = await fetch("https://www.zasilkovna.cz/api/v3/packet/cancel", {
+        const cancelResponse = await fetch("https://api.packeta.com/v3/packet/cancel", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+            "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
             "Content-Type": "application/json",
             "Accept": "application/json",
           },
-          body: JSON.stringify({
-            packet_ids: packetIds
-          }),
+          body: JSON.stringify({ packet_ids: packetIds }),
         });
 
         if (cancelResponse.ok) {
@@ -64,7 +62,12 @@ export async function POST() {
           cancelledCount = packetIds.length;
         } else {
           const errorText = await cancelResponse.text();
-          console.error("❌ Packeta bulk cancel failed:", errorText);
+          console.error("❌ Packeta bulk cancel error:", {
+            status: cancelResponse.status,
+            statusText: cancelResponse.statusText,
+            error: errorText,
+            packetIds
+          });
           errors.push(`Packeta API error: ${cancelResponse.status} ${errorText}`);
         }
       } catch (error) {

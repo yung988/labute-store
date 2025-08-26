@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
     }
 
-    // Use modern Packeta v3 JSON API
+    // Use Packeta v3 JSON API (official host)
     const packetData = {
       recipient: {
         name: `${firstName} ${lastName}`.trim(),
@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
         phone: order.customer_phone || "",
         email: order.customer_email || ""
       },
+      // Some docs/plugins refer to pickup branch as addressId; keep both for compatibility
       branch_id: parseInt(order.packeta_point_id),
+      addressId: parseInt(order.packeta_point_id),
       cod: 0, // No cash on delivery
       weight: 1.0,
       value: parseFloat((order.amount_total / 100).toFixed(2)),
@@ -55,14 +57,14 @@ export async function POST(req: NextRequest) {
       eshop: process.env.PACKETA_ESHOP_ID,
       number: orderId,
       note: `Order ${orderId.slice(-8)}`
-    };
+    } as Record<string, unknown>;
 
     console.log("🔍 Packeta JSON payload:", JSON.stringify(packetData, null, 2));
 
-    const packetaResponse = await fetch(`https://www.zasilkovna.cz/api/v3/packet`, {
+    const packetaResponse = await fetch(`https://api.packeta.com/v3/packet`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+        "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
         "Content-Type": "application/json",
         "Accept": "application/json",
       },

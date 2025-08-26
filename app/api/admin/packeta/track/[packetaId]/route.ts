@@ -23,32 +23,30 @@ export async function GET(
     console.log(`🔍 Tracking Packeta shipment: ${packetaId}`);
 
     // Call Packeta v3 tracking API
-    const trackingResponse = await fetch(
-      `https://www.zasilkovna.cz/api/v3/packet/${packetaId}/tracking`,
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-          "Accept": "application/json",
-        },
-      }
-    );
+    const packetaRes = await fetch(`https://api.packeta.com/v3/packet/${packetaId}/tracking`, {
+      headers: {
+        Authorization: `ApiKey ${process.env.PACKETA_API_KEY}`,
+        Accept: "application/json",
+      },
+      next: { revalidate: 0 },
+    });
 
-    if (!trackingResponse.ok) {
-      const errorText = await trackingResponse.text();
+    if (!packetaRes.ok) {
+      const errorText = await packetaRes.text();
       console.error("❌ Packeta tracking API error:", {
-        status: trackingResponse.status,
-        statusText: trackingResponse.statusText,
+        status: packetaRes.status,
+        statusText: packetaRes.statusText,
         error: errorText,
         packetId: packetaId
       });
       
       return NextResponse.json(
-        { error: `Failed to get tracking info: ${trackingResponse.status} ${errorText}` },
-        { status: trackingResponse.status }
+        { error: `Failed to get tracking info: ${packetaRes.status} ${errorText}` },
+        { status: packetaRes.status }
       );
     }
 
-    const trackingData = await trackingResponse.json();
+    const trackingData = await packetaRes.json();
     console.log("✅ Packeta tracking data retrieved:", trackingData);
 
     // Normalize the response format

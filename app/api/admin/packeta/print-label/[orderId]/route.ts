@@ -30,14 +30,13 @@ export async function GET(
     }
 
     // Get label from Packeta v3 API
-    const labelResponse = await fetch(
-      `https://www.zasilkovna.cz/api/v3/packet/label.pdf?packetIds[]=${order.packeta_shipment_id}`,
-      {
-        headers: {
-          "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-        },
+    const labelResponse = await fetch(`https://api.packeta.com/v3/packet/labels?packetIds=${encodeURIComponent(order.packeta_shipment_id)}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+        "Accept": "application/pdf"
       }
-    );
+    });
 
     if (!labelResponse.ok) {
       const errorText = await labelResponse.text();
