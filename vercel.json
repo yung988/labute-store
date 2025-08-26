@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/packeta-status-check",
-      "schedule": "*/30 * * * *"
-    }
-  ]
-}
+{}

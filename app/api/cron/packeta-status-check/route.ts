@@ -66,10 +66,10 @@ export async function GET(req: NextRequest) {
 
         // Call Packeta API to get current status
         const trackingResponse = await fetch(
-          `https://www.zasilkovna.cz/api/v3/packet/${order.packeta_shipment_id}/tracking`,
+          `https://api.packeta.com/v3/packet/${order.packeta_shipment_id}/tracking`,
           {
             headers: {
-              "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+              "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
               "Accept": "application/json",
             },
           }
