@@ -8,7 +8,7 @@ async function fetchWithRetry(
   init: RequestInit,
   opts: { retries?: number; timeoutMs?: number; backoffMs?: number } = {}
 ) {
-  const { retries = 2, timeoutMs = 15000, backoffMs = 600 } = opts;
+  const { retries = 3, timeoutMs = 20000, backoffMs = 800 } = opts;
   let attempt = 0;
   let lastErr: unknown;
   while (attempt <= retries) {
@@ -29,8 +29,12 @@ async function fetchWithRetry(
       clearTimeout(timer);
     }
     if (attempt === retries) break;
-    // Exponential backoff with jitter
-    const wait = backoffMs * Math.pow(2, attempt) + Math.floor(Math.random() * 200);
+    // Respect Retry-After when available on 429
+    let wait = backoffMs * Math.pow(2, attempt) + Math.floor(Math.random() * 200);
+    if (lastErr instanceof Error && /HTTP 429/.test(lastErr.message)) {
+      // best-effort: we don't have headers here, so let caller pass backoff or just use larger backoff
+      wait = Math.max(wait, 3000);
+    }
     await new Promise((r) => setTimeout(r, wait));
     attempt++;
   }
@@ -112,12 +116,22 @@ export async function GET(req: NextRequest) {
               "User-Agent": "labute-store/cron (Packeta status check)"
             },
           },
-          { retries: 2, timeoutMs: 15000, backoffMs: 600 }
+          { retries: 3, timeoutMs: 20000, backoffMs: 800 }
         );
 
         if (!trackingResponse.ok) {
+          const contentType = trackingResponse.headers.get("content-type") || "";
+          const xAzureRef = trackingResponse.headers.get("x-azure-ref") || trackingResponse.headers.get("x-azure-ref-originshield") || undefined;
           const errorText = await trackingResponse.text();
-          console.error(`❌ Packeta API error for ${order.packeta_shipment_id}:`, errorText);
+          console.error(
+            `❌ Packeta API error for ${order.packeta_shipment_id}:`,
+            {
+              status: trackingResponse.status,
+              contentType,
+              xAzureRef,
+              snippet: errorText?.slice(0, 300)
+            }
+          );
           errors.push(`${order.id}: ${trackingResponse.status} ${errorText}`);
           continue;
         }
