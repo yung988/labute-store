@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import sendOrderStatusEmail from "@/lib/stripe/send-status-email";
 
+// Simple fetch with timeout and retries for transient Packeta issues (e.g., 5xx/504)
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  opts: { retries?: number; timeoutMs?: number; backoffMs?: number } = {}
+) {
+  const { retries = 2, timeoutMs = 15000, backoffMs = 600 } = opts;
+  let attempt = 0;
+  let lastErr: any;
+  while (attempt <= retries) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      // Retry on 429 or 5xx
+      if (res.status === 429 || (res.status >= 500 && res.status <= 599)) {
+        lastErr = new Error(`HTTP ${res.status}`);
+      } else {
+        clearTimeout(timer);
+        return res;
+      }
+    } catch (e) {
+      lastErr = e;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (attempt === retries) break;
+    // Exponential backoff with jitter
+    const wait = backoffMs * Math.pow(2, attempt) + Math.floor(Math.random() * 200);
+    await new Promise((r) => setTimeout(r, wait));
+    attempt++;
+  }
+  throw lastErr;
+}
+
 // Verify cron secret to prevent unauthorized access
 function verifyCronSecret(req: NextRequest): boolean {
   const cronSecret = req.headers.get('authorization');
@@ -65,14 +100,16 @@ export async function GET(req: NextRequest) {
         console.log(`Checking shipment ${order.packeta_shipment_id} for order ${order.id}`);
 
         // Call Packeta API to get current status
-        const trackingResponse = await fetch(
+        const trackingResponse = await fetchWithRetry(
           `https://api.packeta.com/v3/packet/${order.packeta_shipment_id}/tracking`,
           {
             headers: {
               "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
               "Accept": "application/json",
+              "User-Agent": "labute-store/cron (Packeta status check)"
             },
-          }
+          },
+          { retries: 2, timeoutMs: 15000, backoffMs: 600 }
         );
 
         if (!trackingResponse.ok) {
@@ -138,7 +175,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Add small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
       } catch (error) {
         console.error(`❌ Error processing order ${order.id}:`, error);
