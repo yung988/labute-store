@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/supabase/middleware";
+import { createClient } from "@/lib/supabase/server";
+
+async function requireAuth() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 
 export async function POST() {
   const unauthorized = await requireAuth();
