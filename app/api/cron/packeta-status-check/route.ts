@@ -10,7 +10,7 @@ async function fetchWithRetry(
 ) {
   const { retries = 2, timeoutMs = 15000, backoffMs = 600 } = opts;
   let attempt = 0;
-  let lastErr: any;
+  let lastErr: unknown;
   while (attempt <= retries) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -34,7 +34,10 @@ async function fetchWithRetry(
     await new Promise((r) => setTimeout(r, wait));
     attempt++;
   }
-  throw lastErr;
+  if (lastErr instanceof Error) {
+    throw lastErr;
+  }
+  throw new Error(String(lastErr));
 }
 
 // Verify cron secret to prevent unauthorized access
