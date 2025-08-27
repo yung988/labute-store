@@ -39,12 +39,16 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     description?: string | null;
     quantity?: number | null;
     amount_total?: number | null;
+    price?: {
+      product?: string;
+      nickname?: string;
+    };
   };
   type StripeList<T> = { data?: T[] };
   let normalizedItems: Array<{ description: string; quantity: number; amount_total: number } > = [];
   try {
     const res = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items`,
+      `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items?expand[]=data.price.product`,
       {
         headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
       }
@@ -53,7 +57,7 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
       const json = (await res.json()) as StripeList<StripeCheckoutLineItem>;
       const data: StripeCheckoutLineItem[] = Array.isArray(json?.data) ? json.data : [];
       normalizedItems = data.map((li) => ({
-        description: li.description ?? '',
+        description: li.description || li.price?.product || li.price?.nickname || 'Unknown product',
         quantity: typeof li.quantity === 'number' ? li.quantity : 0,
         amount_total: typeof li.amount_total === 'number' ? li.amount_total : 0,
       }));
