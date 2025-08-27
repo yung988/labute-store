@@ -13,7 +13,12 @@ async function fetchWithRetry(
   while (attempt <= retries) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
+  try {
+    // Temporary: Packeta API has outage (504 errors), disable until fixed
+    return NextResponse.json(
+      { error: "Packeta API temporarily unavailable - try again later" },
+      { status: 503 }
+    );
       const res = await fetch(url, { ...init, signal: controller.signal });
       if (res.status === 429 || (res.status >= 500 && res.status <= 599)) {
         lastErr = new Error(`HTTP ${res.status}`);
@@ -39,133 +44,87 @@ async function fetchWithRetry(
 }
 
 export async function POST(req: NextRequest) {
-  const { orderId } = await req.json();
+   try {
+     const { orderId } = await req.json();
 
-  try {
-    // Get order details
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("id", orderId)
-      .single();
+     // Temporary: Packeta API has outage (504 errors), disable until fixed
+     return NextResponse.json(
+       { error: "Packeta API temporarily unavailable - try again later" },
+       { status: 503 }
+     );
 
-    if (orderError || !order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
+     // TODO: Uncomment and update to v5 when ready
+     /*
+     // Create shipment via Packeta v5 API
+     const packetaResponse = await fetchWithRetry(
+       `${process.env.PACKETA_API_URL}/api/v5/shipments`,
+       {
+         method: "POST",
+         headers: {
+           "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+           "Content-Type": "application/json",
+           "Accept": "application/json",
+         },
+         body: JSON.stringify({
+           // shipment data here
+         }),
+       }
+     );
 
-    if (!order.packeta_point_id) {
-      return NextResponse.json({ error: "No Packeta point specified" }, { status: 400 });
-    }
+     if (!packetaResponse.ok) {
+       const contentType = packetaResponse.headers.get("content-type") || "";
+       const xAzureRef = packetaResponse.headers.get("x-azure-ref") || packetaResponse.headers.get("x-azure-ref-originshield") || undefined;
+       const errorText = await packetaResponse.text();
+       console.error("❌ Packeta API error:", {
+         status: packetaResponse.status,
+         statusText: packetaResponse.statusText,
+         contentType,
+         xAzureRef,
+         snippet: errorText.slice(0, 300)
+       });
+       return NextResponse.json(
+         { error: `Packeta API error: ${packetaResponse.status} ${errorText}` },
+         { status: 500 }
+       );
+     }
 
-    // Split customer name into first and last name
-    const nameParts = (order.customer_name || "").split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
+     // Parse JSON response to get packet ID
+     const responseData = await packetaResponse.json();
+     console.log("✅ Packeta API success:", responseData);
 
-    // Debug: Check if API key is set
-    console.log("🔍 Packeta API Debug:", {
-      hasApiKey: !!process.env.PACKETA_API_KEY,
-      hasEshopId: !!process.env.PACKETA_ESHOP_ID,
-      apiUrl: process.env.PACKETA_API_URL,
-      packetaPointId: order.packeta_point_id
-    });
+     if (!responseData.id) {
+       return NextResponse.json(
+         { error: `Invalid Packeta response - missing ID: ${JSON.stringify(responseData)}` },
+         { status: 500 }
+       );
+     }
 
-    if (!process.env.PACKETA_API_KEY) {
-      return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
-    }
+     const packetaId = responseData.id.toString();
 
-    // Use original working Packeta v3 API (was working on 25.08.)
-    const packetData = {
-      recipient: {
-        name: `${firstName} ${lastName}`.trim(),
-        street: "", // Not required for pickup points
-        city: "", // Not required for pickup points  
-        zip: "", // Not required for pickup points
-        phone: order.customer_phone || "",
-        email: order.customer_email || ""
-      },
-      // Some docs/plugins refer to pickup branch as addressId; keep both for compatibility
-      branch_id: parseInt(order.packeta_point_id),
-      addressId: parseInt(order.packeta_point_id),
-      cod: 0, // No cash on delivery
-      weight: 1.0,
-      value: parseFloat((order.amount_total / 100).toFixed(2)),
-      currency: "CZK",
-      eshop: process.env.PACKETA_ESHOP_ID,
-      number: orderId,
-      note: `Order ${orderId.slice(-8)}`
-    } as Record<string, unknown>;
+     // Update order with Packeta ID
+     const { error: updateError } = await supabaseAdmin
+       .from("orders")
+       .update({
+         packeta_shipment_id: packetaId,
+         status: "processing",
+       })
+       .eq("id", orderId);
 
-    console.log("🔍 Packeta JSON payload:", JSON.stringify(packetData, null, 2));
+     if (updateError) {
+       return NextResponse.json({ error: updateError.message }, { status: 500 });
+     }
 
-    const packetaResponse = await fetchWithRetry(
-      `https://api.packeta.com/v3/packet`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": "labute-store/admin (Packeta create packet)"
-        },
-        body: JSON.stringify(packetData),
-      },
-      { retries: 5, timeoutMs: 30000, backoffMs: 2000 }
-    );
+     return NextResponse.json({
+       success: true,
+       packetaId: packetaId,
+     });
+     */
 
-    if (!packetaResponse.ok) {
-      const contentType = packetaResponse.headers.get("content-type") || "";
-      const xAzureRef = packetaResponse.headers.get("x-azure-ref") || packetaResponse.headers.get("x-azure-ref-originshield") || undefined;
-      const errorText = await packetaResponse.text();
-      console.error("❌ Packeta API error:", {
-        status: packetaResponse.status,
-        statusText: packetaResponse.statusText,
-        contentType,
-        xAzureRef,
-        snippet: errorText.slice(0, 300)
-      });
-      return NextResponse.json(
-        { error: `Packeta API error: ${packetaResponse.status} ${errorText}` },
-        { status: 500 }
-      );
-    }
-
-    // Parse JSON response to get packet ID
-    const responseData = await packetaResponse.json();
-    console.log("✅ Packeta API success:", responseData);
-    
-    if (!responseData.id) {
-      return NextResponse.json(
-        { error: `Invalid Packeta response - missing ID: ${JSON.stringify(responseData)}` },
-        { status: 500 }
-      );
-    }
-
-    const packetaId = responseData.id.toString();
-
-    // Update order with Packeta ID
-    const { error: updateError } = await supabaseAdmin
-      .from("orders")
-      .update({
-        packeta_shipment_id: packetaId,
-        status: "processing",
-      })
-      .eq("id", orderId);
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      packetaId: packetaId,
-    });
-
-  } catch (error) {
-    console.error("Error creating Packeta shipment:", error);
-    return NextResponse.json(
-      { error: "Failed to create shipment" },
-      { status: 500 }
-    );
-  }
-}
+   } catch (error) {
+     console.error("Error creating Packeta shipment:", error);
+     return NextResponse.json(
+       { error: "Failed to create shipment" },
+       { status: 500 }
+     );
+   }
+ }

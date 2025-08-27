@@ -22,12 +22,17 @@ export async function GET(
   try {
     console.log(`🔍 Tracking Packeta shipment: ${packetaId}`);
 
-    // Call Packeta v3 tracking API
-    const packetaRes = await fetch(`https://api.packeta.com/v3/packet/${packetaId}/tracking`, {
+    // Call Packeta v5 tracking API
+    const packetaRes = await fetch(`https://api.packeta.com/api/v5/shipments/tracking`, {
+      method: "POST",
       headers: {
         Authorization: `ApiKey ${process.env.PACKETA_API_KEY}`,
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify({
+        packetIds: [packetaId]
+      }),
       next: { revalidate: 0 },
     });
 
@@ -49,17 +54,20 @@ export async function GET(
     const trackingData = await packetaRes.json();
     console.log("✅ Packeta tracking data retrieved:", trackingData);
 
+    // v5 returns array of tracking data
+    const packetData = Array.isArray(trackingData) ? trackingData[0] : trackingData;
+
     // Normalize the response format
     const normalizedData = {
       packetaId,
-      status: trackingData.status || trackingData.state?.name || 'unknown',
-      statusText: trackingData.status_text || trackingData.status_description || trackingData.state?.description || 'Neznámý stav',
-      currentLocation: trackingData.current_location || trackingData.location,
-      estimatedDelivery: trackingData.estimated_delivery,
-      deliveredAt: trackingData.delivered_at,
-      lastUpdate: trackingData.updatedAt || trackingData.updated_at,
-      trackingUrl: trackingData.tracking_url || `https://www.zasilkovna.cz/sledovani/${packetaId}`,
-      trackingHistory: trackingData.history || trackingData.events || []
+      status: packetData?.status || packetData?.state?.name || 'unknown',
+      statusText: packetData?.status_text || packetData?.status_description || packetData?.state?.description || 'Neznámý stav',
+      currentLocation: packetData?.current_location || packetData?.location,
+      estimatedDelivery: packetData?.estimated_delivery,
+      deliveredAt: packetData?.delivered_at,
+      lastUpdate: packetData?.updatedAt || packetData?.updated_at,
+      trackingUrl: packetData?.tracking_url || `https://www.zasilkovna.cz/sledovani/${packetaId}`,
+      trackingHistory: packetData?.history || packetData?.events || []
     };
 
     return NextResponse.json(normalizedData);

@@ -106,18 +106,23 @@ export async function GET(req: NextRequest) {
       try {
         console.log(`Checking shipment ${order.packeta_shipment_id} for order ${order.id}`);
 
-        // Call Packeta API to get current status
-        const trackingResponse = await fetchWithRetry(
-          `https://api.packeta.com/v3/packet/${order.packeta_shipment_id}/tracking`,
-          {
-            headers: {
-              "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-              "Accept": "application/json",
-              "User-Agent": "labute-store/cron (Packeta status check)"
-            },
-          },
-          { retries: 3, timeoutMs: 20000, backoffMs: 800 }
-        );
+        // Call Packeta v5 API to get current status
+         const trackingResponse = await fetchWithRetry(
+           `https://api.packeta.com/api/v5/shipments/tracking`,
+           {
+             method: "POST",
+             headers: {
+               "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+               "Content-Type": "application/json",
+               "Accept": "application/json",
+               "User-Agent": "labute-store/cron (Packeta status check)"
+             },
+             body: JSON.stringify({
+               packetIds: [order.packeta_shipment_id]
+             }),
+           },
+           { retries: 3, timeoutMs: 20000, backoffMs: 800 }
+         );
 
         if (!trackingResponse.ok) {
           const contentType = trackingResponse.headers.get("content-type") || "";
@@ -137,7 +142,9 @@ export async function GET(req: NextRequest) {
         }
 
         const trackingData = await trackingResponse.json();
-        const packetaStatus = trackingData.status || trackingData.state?.name;
+        // v5 returns array of tracking data
+        const packetData = Array.isArray(trackingData) ? trackingData[0] : trackingData;
+        const packetaStatus = packetData?.status || packetData?.state?.name;
         
         if (!packetaStatus) {
           console.warn(`⚠️ No status found for ${order.packeta_shipment_id}`);

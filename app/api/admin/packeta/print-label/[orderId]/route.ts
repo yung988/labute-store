@@ -29,13 +29,18 @@ export async function GET(
       );
     }
 
-    // Get label from Packeta v3 API (original working version)
-    const labelResponse = await fetch(`https://api.packeta.com/v3/packet/labels?packetIds=${encodeURIComponent(order.packeta_shipment_id)}`, {
-      method: "GET",
+    // Get label from Packeta v5 API
+    const labelResponse = await fetch(`https://api.packeta.com/api/v5/shipments/labels`, {
+      method: "POST",
       headers: {
         "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+        "Content-Type": "application/json",
         "Accept": "application/pdf",
-      }
+      },
+      body: JSON.stringify({
+        packetIds: [order.packeta_shipment_id],
+        format: "pdf"
+      })
     });
 
     if (!labelResponse.ok) {

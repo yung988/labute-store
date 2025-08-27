@@ -46,15 +46,15 @@ export async function POST() {
     // Cancel via Packeta API in batches
     if (packetIds.length > 0) {
       try {
-        const cancelResponse = await fetch("https://api.packeta.com/v3/packet/cancel", {
-          method: "POST",
-          headers: {
-            "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: JSON.stringify({ packet_ids: packetIds }),
-        });
+         const cancelResponse = await fetch("https://api.packeta.com/api/v5/shipments/cancel", {
+           method: "POST",
+           headers: {
+             "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+             "Content-Type": "application/json",
+             "Accept": "application/json",
+           },
+           body: JSON.stringify({ packetIds: packetIds }),
+         });
 
         if (cancelResponse.ok) {
           const result = await cancelResponse.json();

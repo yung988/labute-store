@@ -33,15 +33,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No Packeta shipment to cancel" }, { status: 400 });
     }
 
-    // Cancel shipment via Packeta v3 API
+    // Cancel shipment via Packeta v5 API
     console.log(`🔄 Cancelling Packeta shipment: ${order.packeta_shipment_id}`);
-    
-    const cancelResponse = await fetch(`https://api.packeta.com/v3/packet/${order.packeta_shipment_id}/cancel`, {
+
+    const cancelResponse = await fetch(`https://api.packeta.com/api/v5/shipments/cancel`, {
       method: "POST",
       headers: {
         "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+        "Content-Type": "application/json",
         "Accept": "application/json",
-      }
+      },
+      body: JSON.stringify({
+        packetIds: [order.packeta_shipment_id]
+      })
     });
 
     if (!cancelResponse.ok) {
