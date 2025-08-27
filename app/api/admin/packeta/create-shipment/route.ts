@@ -64,6 +64,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
   }
 
+  // Calculate total weight from order items
+  let totalWeightGrams = 500; // Default 500g fallback
+  try {
+    if (order.items && typeof order.items === 'string') {
+      const items = JSON.parse(order.items) as Array<{
+        description: string;
+        quantity: number;
+        amount_total: number;
+      }>;
+
+      if (items.length > 0) {
+        let calculatedWeight = 0;
+
+        for (const item of items) {
+          // Skip shipping items
+          if (item.description?.toLowerCase().includes('shipping') ||
+              item.description?.toLowerCase().includes('doprava')) {
+            continue;
+          }
+
+          // Find product by name (case-insensitive partial match)
+          const { data: product } = await supabaseAdmin
+            .from('products')
+            .select('weight_kg')
+            .ilike('name', `%${item.description}%`)
+            .single();
+
+          if (product?.weight_kg) {
+            // Convert kg to grams and multiply by quantity
+            calculatedWeight += (product.weight_kg * 1000) * item.quantity;
+          }
+        }
+
+        if (calculatedWeight > 0) {
+          totalWeightGrams = Math.round(calculatedWeight);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not calculate weight from items, using default:', error);
+  }
+
+  console.log(`📦 Calculated weight for order ${orderId}: ${totalWeightGrams}g`);
+
   // Create shipment via Packeta v5 API
   const packetaResponse = await fetchWithRetry(
     `${process.env.PACKETA_API_URL}/api/v5/shipments`,
@@ -84,7 +128,7 @@ export async function POST(req: NextRequest) {
           addressId: order.packeta_point_id,
           cod: order.amount_total || 0,
           value: order.amount_total || 0,
-          weight: 500, // Default weight 500g, should be calculated from items (weight_kg * 1000)
+          weight: totalWeightGrams,
           eshop: "labute-store"
         }
       }),
