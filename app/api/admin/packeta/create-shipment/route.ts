@@ -1,15 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   // Temporary: Packeta API has outage (504 errors), disable until fixed
-  return NextResponse.json(
-    { error: "Packeta API temporarily unavailable - try again later" },
-    { status: 503 }
-  );
+  // return NextResponse.json(
+  //   { error: "Packeta API temporarily unavailable - try again later" },
+  //   { status: 503 }
+  // );
 
   // TODO: Uncomment and update to v5 when ready
-  /*
-  import { supabaseAdmin } from "@/lib/supabase/admin";
 
   // Simple fetch with timeout and retries for transient Packeta issues (e.g., 5xx/504)
   async function fetchWithRetry(
@@ -50,6 +49,21 @@ export async function POST() {
 
   const { orderId } = await req.json();
 
+  // Get order details
+  const { data: order, error: orderError } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (orderError || !order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  if (!order.packeta_point_id) {
+    return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
+  }
+
   // Create shipment via Packeta v5 API
   const packetaResponse = await fetchWithRetry(
     `${process.env.PACKETA_API_URL}/api/v5/shipments`,
@@ -61,7 +75,18 @@ export async function POST() {
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        // shipment data here
+        packetAttributes: {
+          number: orderId,
+          name: order.customer_name || "",
+          surname: "", // Packeta expects separate name/surname, but we have full name
+          email: order.customer_email || "",
+          phone: order.customer_phone || "",
+          addressId: order.packeta_point_id,
+          cod: order.amount_total || 0,
+          value: order.amount_total || 0,
+          weight: 1, // Default weight, should be calculated from items
+          eshop: "labute-store"
+        }
       }),
     }
   );
@@ -113,5 +138,4 @@ export async function POST() {
     success: true,
     packetaId: packetaId,
   });
-  */
 }
