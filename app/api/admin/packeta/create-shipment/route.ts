@@ -138,6 +138,11 @@ export async function POST(req: NextRequest) {
   console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
 
   // Create shipment via Packeta REST API (XML format as per documentation)
+  const eshopId = process.env.PACKETA_ESHOP_ID || process.env.PACKETA_SENDER_ID || "labute-store";
+  const senderId = process.env.PACKETA_SENDER_ID || process.env.PACKETA_ESHOP_ID || "labute-store";
+
+  console.log(`🏪 Using eshop_id: ${eshopId}, sender: ${senderId}`);
+
   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
@@ -151,8 +156,8 @@ export async function POST(req: NextRequest) {
     <cod>${safeAmount}</cod>
     <value>${safeAmount}</value>
     <weight>${totalWeightGrams}</weight>
-    <eshop>labute-store</eshop>
-    <sender>labute-store</sender>
+    <eshop>${eshopId}</eshop>
+    <sender>${senderId}</sender>
   </packetAttributes>
 </createPacket>`;
 
