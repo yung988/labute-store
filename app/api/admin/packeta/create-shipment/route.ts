@@ -74,40 +74,61 @@ export async function POST(req: NextRequest) {
         amount_total: number;
       }>;
 
+      console.log(`🔍 Processing ${items.length} items for weight calculation`);
+
       if (items.length > 0) {
         let calculatedWeight = 0;
 
         for (const item of items) {
+          console.log(`📦 Processing item: ${item.description}, qty: ${item.quantity}`);
+
           // Skip shipping items
           if (item.description?.toLowerCase().includes('shipping') ||
               item.description?.toLowerCase().includes('doprava')) {
+            console.log(`⏭️ Skipping shipping item: ${item.description}`);
             continue;
           }
 
           // Find product by name (case-insensitive partial match)
-          const { data: product } = await supabaseAdmin
+          const { data: product, error: productError } = await supabaseAdmin
             .from('products')
-            .select('weight_kg')
+            .select('name, weight_kg')
             .ilike('name', `%${item.description}%`)
             .single();
 
+          if (productError) {
+            console.warn(`⚠️ Product not found for: ${item.description}`, productError);
+            continue;
+          }
+
           if (product?.weight_kg) {
             // Convert kg to grams and multiply by quantity
-            calculatedWeight += (product.weight_kg * 1000) * item.quantity;
+            const itemWeight = (product.weight_kg * 1000) * item.quantity;
+            calculatedWeight += itemWeight;
+            console.log(`✅ Found product: ${product.name}, weight_kg: ${product.weight_kg}, item weight: ${itemWeight}g`);
+          } else {
+            console.warn(`⚠️ Product found but no weight_kg: ${product?.name}`);
           }
         }
+
+        console.log(`📊 Total calculated weight before capping: ${calculatedWeight}g`);
 
         if (calculatedWeight > 0) {
           // Cap weight at 30kg (Packeta limit) and ensure minimum 100g
           totalWeightGrams = Math.max(100, Math.min(30000, Math.round(calculatedWeight)));
+          console.log(`✂️ Weight after capping: ${totalWeightGrams}g`);
+        } else {
+          console.log(`⚠️ No valid products found, using default weight: ${totalWeightGrams}g`);
         }
       }
+    } else {
+      console.log(`⚠️ No items found in order, using default weight: ${totalWeightGrams}g`);
     }
   } catch (error) {
     console.warn('⚠️ Could not calculate weight from items, using default:', error);
   }
 
-  console.log(`📦 Calculated weight for order ${orderId}: ${totalWeightGrams}g`);
+  console.log(`📦 Final weight for order ${orderId}: ${totalWeightGrams}g`);
 
   // Convert amount from cents to CZK and cap values for Packeta limits
   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
@@ -131,6 +152,7 @@ export async function POST(req: NextRequest) {
     <value>${safeAmount}</value>
     <weight>${totalWeightGrams}</weight>
     <eshop>labute-store</eshop>
+    <sender>labute-store</sender>
   </packetAttributes>
 </createPacket>`;
 
