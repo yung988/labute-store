@@ -108,42 +108,41 @@ export async function POST(req: NextRequest) {
 
   console.log(`📦 Calculated weight for order ${orderId}: ${totalWeightGrams}g`);
 
-  // Create shipment via Packeta v5 API
+  // Create shipment via Packeta REST API (XML format as per documentation)
+  const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<createPacket>
+  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
+  <packetAttributes>
+    <number>${orderId}</number>
+    <name>${order.customer_name || ""}</name>
+    <surname></surname>
+    <email>${order.customer_email || ""}</email>
+    <phone>${order.customer_phone || ""}</phone>
+    <addressId>${order.packeta_point_id}</addressId>
+    <cod>${order.amount_total || 0}</cod>
+    <value>${order.amount_total || 0}</value>
+    <weight>${totalWeightGrams}</weight>
+    <eshop>labute-store</eshop>
+  </packetAttributes>
+</createPacket>`;
+
   const packetaResponse = await fetchWithRetry(
-    `${process.env.PACKETA_API_URL}/api/v5/shipments`,
+    "https://www.zasilkovna.cz/api/rest",
     {
       method: "POST",
       headers: {
-        "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Content-Type": "application/xml",
+        "Accept": "application/xml",
       },
-      body: JSON.stringify({
-        packetAttributes: {
-          number: orderId,
-          name: order.customer_name || "",
-          surname: "", // Packeta expects separate name/surname, but we have full name
-          email: order.customer_email || "",
-          phone: order.customer_phone || "",
-          addressId: order.packeta_point_id,
-          cod: order.amount_total || 0,
-          value: order.amount_total || 0,
-          weight: totalWeightGrams,
-          eshop: "labute-store"
-        }
-      }),
+      body: xmlBody,
     }
   );
 
   if (!packetaResponse.ok) {
-    const contentType = packetaResponse.headers.get("content-type") || "";
-    const xAzureRef = packetaResponse.headers.get("x-azure-ref") || packetaResponse.headers.get("x-azure-ref-originshield") || undefined;
     const errorText = await packetaResponse.text();
     console.error("❌ Packeta API error:", {
       status: packetaResponse.status,
       statusText: packetaResponse.statusText,
-      contentType,
-      xAzureRef,
       snippet: errorText.slice(0, 300)
     });
     return NextResponse.json(
@@ -152,18 +151,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Parse JSON response to get packet ID
-  const responseData = await packetaResponse.json();
-  console.log("✅ Packeta API success:", responseData);
+  // Parse XML response to get packet ID
+  const responseText = await packetaResponse.text();
+  console.log("✅ Packeta API success:", responseText);
 
-  if (!responseData.id) {
+  // Extract packet ID from XML response (simple regex for now)
+  const packetIdMatch = responseText.match(/<id>(\d+)<\/id>/);
+  if (!packetIdMatch) {
     return NextResponse.json(
-      { error: `Invalid Packeta response - missing ID: ${JSON.stringify(responseData)}` },
+      { error: `Invalid Packeta response - missing ID: ${responseText}` },
       { status: 500 }
     );
   }
 
-  const packetaId = responseData.id.toString();
+  const packetaId = packetIdMatch[1];
 
   // Update order with Packeta ID
   const { error: updateError } = await supabaseAdmin
