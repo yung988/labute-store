@@ -4,9 +4,8 @@
     "fetch": {
       "type": "local",
       "command": [
-        "python",
-        "-m",
-        "mcp_server_fetch"
+        "uvx",
+        "mcp-server-fetch"
       ],
       "enabled": true,
       "environment": {}
