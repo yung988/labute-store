@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (calculatedWeight > 0) {
-          totalWeightGrams = Math.round(calculatedWeight);
+          // Cap weight at 30kg (Packeta limit) and ensure minimum 100g
+          totalWeightGrams = Math.max(100, Math.min(30000, Math.round(calculatedWeight)));
         }
       }
     }
@@ -107,6 +108,13 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`📦 Calculated weight for order ${orderId}: ${totalWeightGrams}g`);
+
+  // Convert amount from cents to CZK and cap values for Packeta limits
+  const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
+  const maxAllowedValue = 50000; // Packeta limit for COD/value
+  const safeAmount = Math.min(amountCZK, maxAllowedValue);
+
+  console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
 
   // Create shipment via Packeta REST API (XML format as per documentation)
   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
@@ -119,8 +127,8 @@ export async function POST(req: NextRequest) {
     <email>${order.customer_email || ""}</email>
     <phone>${order.customer_phone || ""}</phone>
     <addressId>${order.packeta_point_id}</addressId>
-    <cod>${order.amount_total || 0}</cod>
-    <value>${order.amount_total || 0}</value>
+    <cod>${safeAmount}</cod>
+    <value>${safeAmount}</value>
     <weight>${totalWeightGrams}</weight>
     <eshop>labute-store</eshop>
   </packetAttributes>
