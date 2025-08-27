@@ -114,6 +114,14 @@ export async function POST(req: NextRequest) {
 
    console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
 
+    // Format phone number for Packeta API (must have +420 prefix)
+   let formattedPhone = order.customer_phone || "";
+   if (formattedPhone && !formattedPhone.startsWith('+')) {
+     // If phone doesn't start with +, assume it's Czech number and add +420
+     formattedPhone = `+420${formattedPhone}`;
+   }
+   console.log(`📞 Original phone: ${order.customer_phone}, Formatted: ${formattedPhone}`);
+
    // Create shipment via Packeta REST/XML API
    console.log(`📦 Creating Packeta shipment for order ${orderId}`);
 
@@ -125,7 +133,7 @@ export async function POST(req: NextRequest) {
     <name>${order.customer_name || ""}</name>
     <surname></surname>
     <email>${order.customer_email || ""}</email>
-    <phone>${order.customer_phone || ""}</phone>
+    <phone>${formattedPhone}</phone>
     <addressId>${order.packeta_point_id}</addressId>
     <cod>${safeAmount}</cod>
     <value>${safeAmount}</value>
