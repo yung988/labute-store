@@ -29,12 +29,12 @@ export async function GET(
       );
     }
 
-    // Get label from Packeta v3 API
+    // Get label from Packeta v3 API (original working version)
     const labelResponse = await fetch(`https://api.packeta.com/v3/packet/labels?packetIds=${encodeURIComponent(order.packeta_shipment_id)}`, {
       method: "GET",
       headers: {
         "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-        "Accept": "application/pdf"
+        "Accept": "application/pdf",
       }
     });
 

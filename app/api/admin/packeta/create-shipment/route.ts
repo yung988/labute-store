@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "PACKETA_API_KEY not configured" }, { status: 500 });
     }
 
-    // Use Packeta v3 JSON API (official host)
+    // Use original working Packeta v3 API (was working on 25.08.)
     const packetData = {
       recipient: {
         name: `${firstName} ${lastName}`.trim(),
@@ -98,56 +98,20 @@ export async function POST(req: NextRequest) {
 
     console.log("🔍 Packeta JSON payload:", JSON.stringify(packetData, null, 2));
 
-    // Use correct Packeta REST API endpoint for packet creation (2024)
-    const endpoints = [
-      'https://api.packeta.com/v1/packet',
-      'https://api.packeta.com/v3/packet' // fallback
-    ];
-    
-    let packetaResponse: Response | null = null;
-    let lastError: string = '';
-    
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔄 Trying Packeta endpoint: ${endpoint}`);
-        packetaResponse = await fetchWithRetry(
-          endpoint,
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "User-Agent": "labute-store/admin (Packeta create packet)"
-            },
-            body: JSON.stringify(packetData),
-          },
-          { retries: 3, timeoutMs: 25000, backoffMs: 1500 }
-        );
-        
-        if (packetaResponse.ok) {
-          console.log(`✅ Success with endpoint: ${endpoint}`);
-          break;
-        } else {
-          const errorText = await packetaResponse.text();
-          lastError = `${endpoint}: ${packetaResponse.status} ${errorText}`;
-          console.log(`❌ Failed with ${endpoint}: ${packetaResponse.status}`);
-          packetaResponse = null;
-        }
-      } catch (error) {
-        lastError = `${endpoint}: ${error}`;
-        console.log(`❌ Error with ${endpoint}:`, error);
-        packetaResponse = null;
-      }
-    }
-    
-    if (!packetaResponse) {
-      console.error("❌ All Packeta endpoints failed:", lastError);
-      return NextResponse.json(
-        { error: `All Packeta endpoints failed: ${lastError}` },
-        { status: 503 }
-      );
-    }
+    const packetaResponse = await fetchWithRetry(
+      `https://api.packeta.com/v3/packet`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "labute-store/admin (Packeta create packet)"
+        },
+        body: JSON.stringify(packetData),
+      },
+      { retries: 5, timeoutMs: 30000, backoffMs: 2000 }
+    );
 
     if (!packetaResponse.ok) {
       const contentType = packetaResponse.headers.get("content-type") || "";
