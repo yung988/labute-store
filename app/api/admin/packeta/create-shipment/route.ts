@@ -225,35 +225,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const packetaId = packetIdMatch[1];
+   const packetaId = packetIdMatch[1];
 
-  // Update order with Packeta ID
-  const { error: updateError } = await supabaseAdmin
-    .from("orders")
-    .update({
-      packeta_shipment_id: packetaId,
-      status: "processing",
-    })
-    .eq("id", orderId);
+   // Update order with Packeta ID
+   const { error: updateError } = await supabaseAdmin
+     .from("orders")
+     .update({
+       packeta_shipment_id: packetaId,
+       status: "processing",
+     })
+     .eq("id", orderId);
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-
-  const packetaId = packetIdMatch[1];
-
-  // Update order with Packeta ID
-  const { error: updateError } = await supabaseAdmin
-    .from("orders")
-    .update({
-      packeta_shipment_id: packetaId,
-      status: "processing",
-    })
-    .eq("id", orderId);
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
+   if (updateError) {
+     return NextResponse.json({ error: updateError.message }, { status: 500 });
+   }
 
   return NextResponse.json({
     success: true,
