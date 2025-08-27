@@ -4,50 +4,13 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export async function POST(req: NextRequest) {
   console.log('🚀 Starting create-shipment for order:', req.url);
 
-  // Temporary: Packeta API has outage (504 errors), disable until fixed
-  // return NextResponse.json(
-  //   { error: "Packeta API temporarily unavailable - try again later" },
-  //   { status: 503 }
-  // );
+   // Temporary: Packeta API has outage (504 errors), disable until fixed
+   // return NextResponse.json(
+   //   { error: "Packeta API temporarily unavailable - try again later" },
+   //   { status: 503 }
+   // );
 
-  // TODO: Uncomment and update to v5 when ready
-
-  // Simple fetch with timeout and retries for transient Packeta issues (e.g., 5xx/504)
-  async function fetchWithRetry(
-    url: string,
-    init: RequestInit,
-    opts: { retries?: number; timeoutMs?: number; backoffMs?: number } = {}
-  ) {
-    const { retries = 5, timeoutMs = 30000, backoffMs = 2000 } = opts;
-    let attempt = 0;
-    let lastErr: unknown;
-    while (attempt <= retries) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, { ...init, signal: controller.signal });
-      if (res.status === 429 || (res.status >= 500 && res.status <= 599)) {
-        lastErr = new Error(`HTTP ${res.status}`);
-      } else {
-        clearTimeout(timer);
-        return res;
-      }
-    } catch (e) {
-      lastErr = e;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (attempt === retries) break;
-    let wait = backoffMs * Math.pow(2, attempt) + Math.floor(Math.random() * 200);
-    if (lastErr instanceof Error && /HTTP 429/.test(lastErr.message)) {
-      wait = Math.max(wait, 3000);
-    }
-    await new Promise((r) => setTimeout(r, wait));
-    attempt++;
-  }
-  if (lastErr instanceof Error) throw lastErr;
-  throw new Error(String(lastErr));
-  }
+   // TODO: Uncomment and update to v5 when ready
 
   const { orderId } = await req.json();
 
