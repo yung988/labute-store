@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -510,19 +511,21 @@ export default function OrderDetailPage() {
                     <div key={idx} className="border rounded-lg p-4 bg-white">
                       <div className="flex gap-4">
                         {/* Product Image */}
-                        <div className="flex-shrink-0">
-                          {productImage ? (
-                            <img 
-                              src={productImage} 
-                                      alt={itemName}
-                              className="w-16 h-16 object-cover rounded border"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
-                              <span className="text-gray-400 text-lg">📦</span>
-                            </div>
-                          )}
-                        </div>
+                          <div className="flex-shrink-0">
+                           {productImage ? (
+                             <Image
+                               src={productImage}
+                               alt={itemName}
+                               width={64}
+                               height={64}
+                               className="w-16 h-16 object-cover rounded border"
+                             />
+                           ) : (
+                             <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                               <span className="text-gray-400 text-lg">📦</span>
+                             </div>
+                           )}
+                         </div>
                         
                         {/* Product Info */}
                         <div className="flex-grow">

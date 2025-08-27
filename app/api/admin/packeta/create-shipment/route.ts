@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function POST(_req: NextRequest) {
+export async function POST() {
   // Temporary: Packeta API has outage (504 errors), disable until fixed
   return NextResponse.json(
     { error: "Packeta API temporarily unavailable - try again later" },
