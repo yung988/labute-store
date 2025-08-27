@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
+  console.log('🚀 Starting create-shipment for order:', req.url);
+
   // Temporary: Packeta API has outage (504 errors), disable until fixed
   // return NextResponse.json(
   //   { error: "Packeta API temporarily unavailable - try again later" },
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
   const { orderId } = await req.json();
 
   // Get order details
+  console.log('📋 Getting order details for:', orderId);
   const { data: order, error: orderError } = await supabaseAdmin
     .from("orders")
     .select("*")
@@ -57,8 +60,16 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (orderError || !order) {
+    console.error('❌ Order not found:', orderError);
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
+
+  console.log('✅ Order found:', {
+    id: order.id,
+    amount_total: order.amount_total,
+    packeta_point_id: order.packeta_point_id,
+    items_length: order.items?.length || 0
+  });
 
   if (!order.packeta_point_id) {
     return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
