@@ -75,16 +75,18 @@ export async function POST(req: NextRequest) {
       }>;
 
       console.log(`🔍 Processing ${items.length} items for weight calculation`);
+      console.log(`📋 Raw items:`, JSON.stringify(items, null, 2));
 
       if (items.length > 0) {
         let calculatedWeight = 0;
 
         for (const item of items) {
-          console.log(`📦 Processing item: ${item.description}, qty: ${item.quantity}`);
+          console.log(`📦 Processing item: "${item.description}", qty: ${item.quantity}, amount: ${item.amount_total}`);
 
           // Skip shipping items
           if (item.description?.toLowerCase().includes('shipping') ||
-              item.description?.toLowerCase().includes('doprava')) {
+              item.description?.toLowerCase().includes('doprava') ||
+              item.description?.toLowerCase().includes('zásilkovna')) {
             console.log(`⏭️ Skipping shipping item: ${item.description}`);
             continue;
           }
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (productError) {
-            console.warn(`⚠️ Product not found for: ${item.description}`, productError);
+            console.warn(`⚠️ Product not found for: "${item.description}"`, productError);
             continue;
           }
 
@@ -105,9 +107,9 @@ export async function POST(req: NextRequest) {
             // Weight is already in grams, just multiply by quantity
             const itemWeight = product.weight_g * item.quantity;
             calculatedWeight += itemWeight;
-            console.log(`✅ Found product: ${product.name}, weight_g: ${product.weight_g}, item weight: ${itemWeight}g`);
+            console.log(`✅ Found product: "${product.name}", weight_g: ${product.weight_g}, quantity: ${item.quantity}, item weight: ${itemWeight}g, running total: ${calculatedWeight}g`);
           } else {
-            console.warn(`⚠️ Product found but no weight_g: ${product?.name}`);
+            console.warn(`⚠️ Product "${product?.name}" found but no weight_g`);
           }
         }
 
@@ -126,6 +128,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.warn('⚠️ Could not calculate weight from items, using default:', error);
+    console.error('Error details:', error);
   }
 
   console.log(`📦 Final weight for order ${orderId}: ${totalWeightGrams}g`);
