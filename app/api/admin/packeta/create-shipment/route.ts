@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
           // Find product by name (case-insensitive partial match)
           const { data: product, error: productError } = await supabaseAdmin
             .from('products')
-            .select('name, weight_kg')
+            .select('name, weight_g')
             .ilike('name', `%${item.description}%`)
             .single();
 
@@ -101,13 +101,13 @@ export async function POST(req: NextRequest) {
             continue;
           }
 
-          if (product?.weight_kg) {
-            // Convert kg to grams and multiply by quantity
-            const itemWeight = (product.weight_kg * 1000) * item.quantity;
+          if (product?.weight_g) {
+            // Weight is already in grams, just multiply by quantity
+            const itemWeight = product.weight_g * item.quantity;
             calculatedWeight += itemWeight;
-            console.log(`✅ Found product: ${product.name}, weight_kg: ${product.weight_kg}, item weight: ${itemWeight}g`);
+            console.log(`✅ Found product: ${product.name}, weight_g: ${product.weight_g}, item weight: ${itemWeight}g`);
           } else {
-            console.warn(`⚠️ Product found but no weight_kg: ${product?.name}`);
+            console.warn(`⚠️ Product found but no weight_g: ${product?.name}`);
           }
         }
 
