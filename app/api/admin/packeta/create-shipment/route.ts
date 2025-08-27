@@ -144,6 +144,18 @@ export async function POST(req: NextRequest) {
 
   console.log(`📦 Final weight for order ${orderId}: ${totalWeightGrams}g`);
 
+  // TEMPORARY: Return debug info instead of calling Packeta API
+  return NextResponse.json({
+    debug: {
+      orderId,
+      totalWeightGrams,
+      orderItems: order.items,
+      packetaPointId: order.packeta_point_id,
+      amountTotal: order.amount_total
+    },
+    message: "DEBUG MODE: Check console for detailed logs"
+  });
+
   // Convert amount from cents to CZK and cap values for Packeta limits
   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
   const maxAllowedValue = 50000; // Packeta limit for COD/value
@@ -206,11 +218,26 @@ export async function POST(req: NextRequest) {
 
   // Extract packet ID from XML response (simple regex for now)
   const packetIdMatch = responseText.match(/<id>(\d+)<\/id>/);
-  if (!packetIdMatch) {
+  if (!packetIdMatch || !packetIdMatch[1]) {
     return NextResponse.json(
       { error: `Invalid Packeta response - missing ID: ${responseText}` },
       { status: 500 }
     );
+  }
+
+  const packetaId = packetIdMatch[1];
+
+  // Update order with Packeta ID
+  const { error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({
+      packeta_shipment_id: packetaId,
+      status: "processing",
+    })
+    .eq("id", orderId);
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
   const packetaId = packetIdMatch[1];
