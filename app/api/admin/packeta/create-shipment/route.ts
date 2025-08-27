@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
           addressId: order.packeta_point_id,
           cod: order.amount_total || 0,
           value: order.amount_total || 0,
-          weight: 1, // Default weight, should be calculated from items
+          weight: 500, // Default weight 500g, should be calculated from items (weight_kg * 1000)
           eshop: "labute-store"
         }
       }),
