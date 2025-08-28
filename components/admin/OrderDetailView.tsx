@@ -190,35 +190,48 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     }
   };
 
-     const printPacketaLabel = async () => {
-       try {
-         // Call the Next.js API route instead of edge function
-         const response = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
-           method: 'GET',
-           headers: {
-             'Content-Type': 'application/json',
-           },
-         });
+      const printPacketaLabel = async () => {
+        try {
+          // Call the Next.js API route with direct=true to get PDF directly
+          const response = await fetch(`/api/admin/packeta/print-label/${orderId}?direct=true`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
 
-         if (!response.ok) {
-           const errorData = await response.json().catch(() => ({}));
-           throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-         }
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+          }
 
-         const data = await response.json();
+          // Check if response is PDF (direct download)
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/pdf')) {
+            // Direct PDF download
+            const pdfBlob = await response.blob();
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
 
-         if (data.error) {
-           throw new Error(data.error);
-         }
+            // Clean up the object URL after a delay
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
+          } else {
+            // JSON response with URL
+            const data = await response.json();
 
-         if (!data.success || !data.url) {
-           throw new Error("Invalid response from server");
-         }
+            if (data.error) {
+              throw new Error(data.error);
+            }
 
-         // Open the PDF URL in a new tab/window
-         window.open(data.url, '_blank');
+            if (!data.success || !data.url) {
+              throw new Error("Invalid response from server");
+            }
 
-        alert("Štítek byl otevřen!");
+            // Open the PDF URL in a new tab/window
+            window.open(data.url, '_blank');
+          }
+
+         alert("Štítek byl otevřen!");
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to print label");
         console.error("Print label error:", e);
