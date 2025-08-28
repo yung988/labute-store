@@ -44,14 +44,28 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     setError(null);
     try {
       const supabase = createClient();
+
+      // Try to get user info first
+      const { data: userData } = await supabase.auth.getUser();
+      console.log('Current user:', userData.user);
+
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw new Error(error.message || "Failed to load orders");
+      console.log('Orders data:', ordersData);
+      console.log('Orders error:', error);
+      console.log('Number of orders:', ordersData?.length || 0);
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+      }
+
       setOrders(ordersData || []);
     } catch (e: unknown) {
+      console.error('Load orders error:', e);
       setError(e instanceof Error ? e.message : "Failed to load orders");
     } finally {
       setLoading(false);
@@ -207,6 +221,19 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Debug info */}
+      <div className="bg-gray-100 p-4 rounded-lg text-sm">
+        <h3 className="font-semibold mb-2">Debug Info:</h3>
+        <p>Loading: {loading ? 'Yes' : 'No'}</p>
+        <p>Orders count: {orders.length}</p>
+        <p>Error: {error || 'None'}</p>
+        {orders.length > 0 && (
+          <div className="mt-2">
+            <p>Sample order IDs: {orders.slice(0, 3).map(o => o.id).join(', ')}</p>
+          </div>
+        )}
+      </div>
+
       <div>
         <h2 className="text-xl font-semibold mb-2">Create order (manual)</h2>
         <div className="flex gap-2 flex-wrap items-end">
