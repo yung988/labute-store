@@ -307,9 +307,16 @@ export default function OrderDetailPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
-            ← Back
-          </Button>
+           <Button variant="outline" onClick={() => {
+             // Try router.back() first, fallback to orders list if no history
+             if (window.history.length > 1) {
+               router.back();
+             } else {
+               router.push('/admin/orders');
+             }
+           }}>
+             ← Back
+           </Button>
           <h1 className="text-2xl font-bold">Order Detail</h1>
           <Badge className={getStatusColor(order.status)}>
             {order.status}
