@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+
+
 async function requireAuth() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
@@ -31,13 +33,23 @@ export async function GET(
   try {
     console.log(`🔍 Tracking Packeta shipment: ${packetaId}`);
 
-    // Call Packeta v5 tracking API with timeout and retry
+    // Call Packeta XML tracking API with timeout and retry
     const MAX_RETRIES = 3;
     const TIMEOUT_MS = 30000;
     const BASE_BACKOFF_MS = 1000;
 
     let packetaRes: Response | undefined;
     let lastError: Error | null = null;
+
+    // Build XML request for packet status
+    const xmlBody = `
+<packetStatus>
+  <packetId>${packetaId}</packetId>
+</packetStatus>`.trim();
+
+    console.log('📄 XML Tracking Request:', xmlBody);
+
+    const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -46,12 +58,13 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        packetaRes = await fetch(`https://api.packeta.com/v5/packets/${packetaId}/status`, {
-          method: "GET",
+        packetaRes = await fetch(`${apiUrl}/packetStatus`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${process.env.PACKETA_API_KEY}`,
-            Accept: "application/json",
+            "Content-Type": "application/xml",
+            Accept: "application/xml",
           },
+          body: xmlBody,
           signal: controller.signal,
         });
 
@@ -64,7 +77,7 @@ export async function GET(
 
         // For server errors (5xx including 504), retry
         const errorText = await packetaRes.text();
-        console.log(`⏳ Packeta tracking API returned ${packetaRes.status}, will retry: ${errorText.substring(0, 100)}...`);
+        console.log(`⏳ Packeta XML tracking API returned ${packetaRes.status}, will retry: ${errorText.substring(0, 100)}...`);
 
         if (attempt < MAX_RETRIES) {
           const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
@@ -75,7 +88,7 @@ export async function GET(
       } catch (error) {
         const err = error as Error;
         lastError = err;
-        console.log(`❌ Packeta tracking API attempt ${attempt} failed:`, err.message);
+        console.log(`❌ Packeta XML tracking API attempt ${attempt} failed:`, err.message);
 
         if (attempt < MAX_RETRIES) {
           const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);

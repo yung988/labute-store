@@ -194,13 +194,11 @@ export async function POST(req: NextRequest) {
     return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
   }
 
-  function basicAuthHeader(key: string, password: string) {
-    const token = Buffer.from(`${key}:${password}`).toString('base64');
-    return `Basic ${token}`;
-  }
+
 
   const xmlBody = `
 <createPacket>
+  <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
   <packetAttributes>
     <number>${xmlEscape(packetaOrderId)}</number>
     <firstName>${xmlEscape(firstName)}</firstName>
@@ -215,44 +213,32 @@ export async function POST(req: NextRequest) {
   </packetAttributes>
 </createPacket>`.trim();
 
-  console.log('📄 XML Request Body:', xmlBody);
+   console.log('📄 XML Request Body:', xmlBody);
 
-  // Get XML API credentials
-  const xmlApiKey = process.env.PACKETA_API_KEY;
-  const xmlApiPassword = process.env.PACKETA_API_PASSWORD;
-  const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+   const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 
-  if (!xmlApiPassword) {
-    console.error('❌ PACKETA_API_PASSWORD is not set!');
-    return NextResponse.json(
-      { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
-      { status: 500 }
-    );
-  }
+   // Simple timeout and retry for Packeta XML API
+   const MAX_RETRIES = 3;
+   const TIMEOUT_MS = 30000; // 30 second timeout
 
-  // Simple timeout and retry for Packeta XML API
-  const MAX_RETRIES = 3;
-  const TIMEOUT_MS = 30000; // 30 second timeout
+   let packetaResponse: Response | undefined;
 
-  let packetaResponse: Response | undefined;
+   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+     try {
+       console.log(`🔄 Packeta XML API attempt ${attempt}/${MAX_RETRIES}`);
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      console.log(`🔄 Packeta XML API attempt ${attempt}/${MAX_RETRIES}`);
+       const controller = new AbortController();
+       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-      packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
-        method: "POST",
-        headers: {
-          "Authorization": basicAuthHeader(xmlApiKey!, xmlApiPassword),
-          "Content-Type": "application/xml",
-          "Accept": "application/xml",
-        },
-        body: xmlBody,
-        signal: controller.signal
-      });
+       packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/xml",
+           "Accept": "application/xml",
+         },
+         body: xmlBody,
+         signal: controller.signal
+       });
 
       clearTimeout(timeoutId);
 
