@@ -87,7 +87,7 @@ export async function GET(
           'A6 on A4': 'A6 on A4',     // A6 label on A4 page
           'A6_on_A4': 'A6 on A4',     // A6 label on A4 page
           'A6 on A6': 'A6 on A6',     // A6 label on A6 page
-          'A7 on A4': 'A7 on A4',     // A7 label on A4 page
+          'A7 on A4': 'A7 on A4',     // A7 label on A4 page (may not be supported)
           'PDF': 'A6 on A4',          // Fallback to A6 on A4
           'ZPL': 'A6 on A4'           // Fallback to A6 on A4
         };
