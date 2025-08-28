@@ -23,3 +23,14 @@ export interface StripeCheckoutSession {
         };
     }>;
 }
+
+// Product data for Stripe catalog
+export interface ProductData {
+    id: string;
+    name: string;
+    description?: string;
+    images: string[];
+    price_cents: number;
+    currency: string;
+    metadata?: Record<string, string>;
+}
