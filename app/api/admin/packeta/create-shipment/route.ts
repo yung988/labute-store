@@ -217,18 +217,9 @@ export async function POST(req: NextRequest) {
 
   console.log('📄 XML Request Body:', xmlBody);
 
-  // Get XML API credentials
+  // Get XML API credentials - using API key as both username and password for Basic auth
   const xmlApiKey = process.env.PACKETA_API_KEY;
-  const xmlApiPassword = process.env.PACKETA_API_PASSWORD;
   const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
-
-  if (!xmlApiPassword) {
-    console.error('❌ PACKETA_API_PASSWORD is not set!');
-    return NextResponse.json(
-      { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
-      { status: 500 }
-    );
-  }
 
   // Simple timeout and retry for Packeta XML API
   const MAX_RETRIES = 3;
@@ -246,7 +237,7 @@ export async function POST(req: NextRequest) {
       packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
         method: "POST",
         headers: {
-          "Authorization": basicAuthHeader(xmlApiKey!, xmlApiPassword),
+          "Authorization": basicAuthHeader(xmlApiKey!, xmlApiKey!),
           "Content-Type": "application/xml",
           "Accept": "application/xml",
         },
