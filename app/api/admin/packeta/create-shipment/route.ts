@@ -125,11 +125,15 @@ export async function POST(req: NextRequest) {
    // Create shipment via Packeta REST/XML API
    console.log(`📦 Creating Packeta shipment for order ${orderId}`);
 
+   // Use shorter ID for Packeta (last 8 characters of UUID)
+   const packetaOrderId = orderId.slice(-8);
+   console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
+
    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
   <packetAttributes>
-    <number>${orderId}</number>
+    <number>${packetaOrderId}</number>
     <name>${order.customer_name || ""}</name>
     <surname></surname>
     <email>${order.customer_email || ""}</email>
