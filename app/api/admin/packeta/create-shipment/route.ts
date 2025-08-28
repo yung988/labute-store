@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   console.log('🚀 Starting create-shipment for order:', req.url);
@@ -425,14 +424,7 @@ export async function POST(req: NextRequest) {
     trackingId: trackingId,
     packetaBarcode: packetaBarcode,
     trackingUrl: trackingUrl,
-    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`,
-    debug: {
-      xmlRequest: xmlBody,
-      xmlResponse: xmlResponse,
-      apiUrl: xmlApiUrl,
-      eshopId: eshopId,
-      apiKeyLength: PACKETA_API_KEY?.length || 0
-    }
+    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`
   });
 }
 
