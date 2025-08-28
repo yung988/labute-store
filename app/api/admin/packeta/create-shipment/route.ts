@@ -43,37 +43,30 @@ export async function POST(req: NextRequest) {
   }
 
    // Check required environment variables
+   const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
    const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
    const senderId = process.env.PACKETA_SENDER_ID;
-   const eshopId = process.env.PACKETA_ESHOP_ID;
+   const eshopIndication = process.env.PACKETA_ESHOP_INDICATION;
 
    console.log('🔍 DEBUG: Environment variables check:');
+   console.log('   PACKETA_API_PASSWORD exists:', !!PACKETA_API_PASSWORD);
+   console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length);
    console.log('   PACKETA_API_KEY exists:', !!PACKETA_API_KEY);
-   console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length);
-   console.log('   PACKETA_API_KEY starts with:', PACKETA_API_KEY?.substring(0, 10));
    console.log('   PACKETA_SENDER_ID:', senderId);
-   console.log('   PACKETA_ESHOP_ID:', eshopId);
+   console.log('   PACKETA_ESHOP_INDICATION:', eshopIndication);
 
-   if (!PACKETA_API_KEY) {
-     console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+   if (!PACKETA_API_PASSWORD) {
+     console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
      return NextResponse.json(
-       { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+       { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable (this is different from PACKETA_API_KEY used for widgets).' },
        { status: 500 }
      );
    }
 
-   if (!senderId) {
-     console.error('❌ PACKETA_SENDER_ID is not set on Vercel!');
+   if (!eshopIndication) {
+     console.error('❌ PACKETA_ESHOP_INDICATION is not set on Vercel!');
      return NextResponse.json(
-       { error: 'Packeta sender ID is not configured on Vercel. Please set PACKETA_SENDER_ID environment variable.' },
-       { status: 500 }
-     );
-   }
-
-   if (!eshopId) {
-     console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
-     return NextResponse.json(
-       { error: 'Packeta eshop ID is not configured on Vercel. Please set PACKETA_ESHOP_ID environment variable.' },
+       { error: 'Packeta eshop indication is not configured on Vercel. Please set PACKETA_ESHOP_INDICATION environment variable (this should be your Shop Name/Indication from Packeta admin).' },
        { status: 500 }
      );
    }
@@ -174,27 +167,27 @@ export async function POST(req: NextRequest) {
   // Convert weight from kg to grams (Packeta v5 expects grams)
   const weightInGrams = Math.round(totalWeightKg * 1000);
 
-  const requestBody = {
-    number: packetaOrderId,
-    name: firstName,
-    surname: lastName,
-    email: order.customer_email || "",
-    phone: formattedPhone,
-    currency: "CZK",
-    cod: safeAmount,
-    value: safeAmount,
-    weight: weightInGrams,
-    eshop: eshopId,
-    delivery_point: parseInt(order.packeta_point_id),
-    order_number: packetaOrderId,
-    note: `Order ${orderId.slice(-8)}`
-  };
+   const requestBody = {
+     number: packetaOrderId,
+     name: firstName,
+     surname: lastName,
+     email: order.customer_email || "",
+     phone: formattedPhone,
+     currency: "CZK",
+     cod: safeAmount,
+     value: safeAmount,
+     weight: totalWeightKg,
+     eshop: eshopIndication,
+     delivery_point: 6682,
+     order_number: packetaOrderId,
+     note: `Order ${orderId.slice(-8)}`
+   };
 
   console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
-  console.log('🔧 Environment variables used:');
-  console.log('   PACKETA_SENDER_ID:', senderId);
-  console.log('   PACKETA_ESHOP_ID:', eshopId);
-  console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length || 0);
+   console.log('🔧 Environment variables used:');
+   console.log('   PACKETA_SENDER_ID:', senderId);
+   console.log('   PACKETA_ESHOP_INDICATION:', eshopIndication);
+   console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length || 0);
 
   // Build XML request for Packeta REST API
   function xmlEscape(v: string) {
@@ -203,9 +196,9 @@ export async function POST(req: NextRequest) {
 
 
 
-   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
  <createPacket>
-   <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
+   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
    <packetAttributes>
      <number>${xmlEscape(packetaOrderId)}</number>
      <name>${xmlEscape(firstName)}</name>
@@ -215,8 +208,8 @@ export async function POST(req: NextRequest) {
      <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
      <cod>${xmlEscape(String(safeAmount))}</cod>
      <value>${xmlEscape(String(safeAmount))}</value>
-     <weight>${xmlEscape(String(weightInGrams))}</weight>
-     <eshop>${xmlEscape(eshopId)}</eshop>
+     <weight>${xmlEscape(String(totalWeightKg))}</weight>
+     <eshop>${xmlEscape(eshopIndication)}</eshop>
    </packetAttributes>
  </createPacket>`;
 
