@@ -117,18 +117,14 @@ export async function GET(req: NextRequest) {
 
         // Call Packeta v5 API to get current status
          const trackingResponse = await fetchWithRetry(
-           `https://api.packeta.com/api/v5/shipments/tracking`,
+           `https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/status`,
            {
-             method: "POST",
+             method: "GET",
              headers: {
-               "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-               "Content-Type": "application/json",
+               "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
                "Accept": "application/json",
                "User-Agent": "labute-store/cron (Packeta status check)"
              },
-             body: JSON.stringify({
-               packetIds: [order.packeta_shipment_id]
-             }),
            },
            { retries: 3, timeoutMs: 20000, backoffMs: 800 }
          );
@@ -151,8 +147,8 @@ export async function GET(req: NextRequest) {
         }
 
         const trackingData = await trackingResponse.json();
-        // v5 returns array of tracking data
-        const packetData = Array.isArray(trackingData) ? trackingData[0] : trackingData;
+        // v5 individual packet status endpoint returns object directly
+        const packetData = trackingData;
         const packetaStatus = packetData?.status || packetData?.state?.name;
         
         if (!packetaStatus) {
