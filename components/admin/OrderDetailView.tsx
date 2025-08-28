@@ -190,38 +190,44 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     }
   };
 
-  const printPacketaLabel = async () => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta_print_label', {
-        body: { orderId }
-      });
+   const printPacketaLabel = async () => {
+     try {
+       const supabase = createClient();
+       const { data, error } = await supabase.functions.invoke('packeta_print_label', {
+         body: { orderId }
+       });
 
-      if (error) throw new Error(error.message || "Failed to get label");
+       if (error) throw new Error(error.message || "Failed to get label");
 
-      // Edge Function returns base64 encoded PDF
-      if (!data?.pdf) throw new Error("No PDF data received");
+       // Edge Function returns base64 encoded PDF
+       if (!data?.pdf) throw new Error("No PDF data received");
 
-      // Convert base64 to blob
-      const binaryString = atob(data.pdf);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+       // Convert base64 to blob and download
+       const pdfBlob = new Blob(
+         [Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))],
+         { type: 'application/pdf' }
+       );
 
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = data.filename || `packeta-label-${orderId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to print label");
-    }
-  };
+       // Create download link
+       const downloadUrl = URL.createObjectURL(pdfBlob);
+       const link = document.createElement('a');
+       link.href = downloadUrl;
+       link.download = data.filename || `packeta-label-${orderId}.pdf`;
+
+       // Trigger download
+       document.body.appendChild(link);
+       link.click();
+       document.body.removeChild(link);
+
+       // Clean up
+       URL.revokeObjectURL(downloadUrl);
+
+       alert("Štítek byl stažen!");
+     } catch (e: unknown) {
+       setError(e instanceof Error ? e.message : "Failed to print label");
+       console.error("Print label error:", e);
+     }
+   };
 
   if (loading && !order) {
     return (
