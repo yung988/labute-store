@@ -155,10 +155,10 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        const trackingData = await trackingResponse.json();
-        // v5 individual packet status endpoint returns object directly
-        const packetData = trackingData;
-        const packetaStatus = packetData?.status || packetData?.state?.name;
+        const trackingData = await trackingResponse.text();
+        // Packeta API returns XML, not JSON - parse status from XML
+        const statusMatch = trackingData.match(/<status[^>]*>([^<]*)<\/status>/);
+        const packetaStatus = statusMatch ? statusMatch[1] : null;
         
         if (!packetaStatus) {
           console.warn(`⚠️ No status found for ${order.packeta_shipment_id}`);
