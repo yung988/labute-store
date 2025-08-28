@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   console.log('🚀 Starting create-shipment for order:', req.url);
@@ -202,9 +203,17 @@ export async function POST(req: NextRequest) {
 
 
 
+    // Try both plain text and MD5 hash of the password
+    const md5Password = crypto.createHash('md5').update(PACKETA_API_PASSWORD.trim()).digest('hex');
+    
+    console.log('🔍 Password formats:');
+    console.log('   Plain text length:', PACKETA_API_PASSWORD.trim().length);
+    console.log('   MD5 hash:', md5Password);
+    
+    // Try plain text first
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
-  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
+  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD.trim())}</apiPassword>
   <packetAttributes>
     <number>${xmlEscape(packetaOrderId)}</number>
     <name>${xmlEscape(firstName)}</name>
@@ -269,11 +278,46 @@ export async function POST(req: NextRequest) {
          break;
        }
 
-      // For server errors (5xx) or timeout, retry
-      if (attempt < MAX_RETRIES) {
-        console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${Math.pow(2, attempt)}s...`);
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-      }
+       // For server errors (5xx) or timeout, retry
+       if (attempt < MAX_RETRIES) {
+         console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${Math.pow(2, attempt)}s...`);
+         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+       }
+       
+       // If it's an authentication error, try MD5 hash on second attempt
+       if (attempt === 1 && packetaResponse.status === 200) {
+         const responseText = await packetaResponse.text();
+         if (responseText.includes('IncorrectApiPasswordFault')) {
+           console.log('🔄 Trying MD5 hash of password...');
+           const xmlBodyMD5 = xmlBody.replace(
+             `<apiPassword>${xmlEscape(PACKETA_API_PASSWORD.trim())}</apiPassword>`,
+             `<apiPassword>${xmlEscape(md5Password)}</apiPassword>`
+           );
+           
+           console.log('📄 XML with MD5 password:', xmlBodyMD5);
+           
+           // Try the request again with MD5 password
+           const md5Controller = new AbortController();
+           const md5TimeoutId = setTimeout(() => md5Controller.abort(), TIMEOUT_MS);
+           
+           try {
+             packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
+               method: "POST",
+               headers: {
+                 "Content-Type": "application/xml",
+                 "Accept": "application/xml",
+               },
+               body: xmlBodyMD5,
+               signal: md5Controller.signal
+             });
+             clearTimeout(md5TimeoutId);
+             break; // Exit retry loop if MD5 attempt succeeds
+           } catch (md5Error) {
+             clearTimeout(md5TimeoutId);
+             console.log('❌ MD5 password attempt failed:', md5Error);
+           }
+         }
+       }
 
     } catch (error) {
       const err = error as Error;
