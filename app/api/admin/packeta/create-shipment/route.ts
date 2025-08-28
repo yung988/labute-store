@@ -16,30 +16,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Debug environment variables
-  console.log('🔧 Environment variables:', {
-    PACKETA_API_KEY: process.env.PACKETA_API_KEY ? '✅ Set' : '❌ Missing',
-    PACKETA_API_URL: process.env.PACKETA_API_URL || '❌ Missing',
-    PACKETA_ESHOP_ID: process.env.PACKETA_ESHOP_ID || '❌ Missing',
-    PACKETA_SENDER_ID: process.env.PACKETA_SENDER_ID || '❌ Missing'
-  });
-
-  // Debug actual values
-  console.log('🔧 Actual values:', {
-    PACKETA_API_KEY: process.env.PACKETA_API_KEY,
-    PACKETA_API_URL: process.env.PACKETA_API_URL,
-    PACKETA_ESHOP_ID: process.env.PACKETA_ESHOP_ID,
-    PACKETA_SENDER_ID: process.env.PACKETA_SENDER_ID
-  });
-
-   // Temporary: Packeta API has outage (504 errors), disable until fixed
-   // return NextResponse.json(
-   //   { error: "Packeta API temporarily unavailable - try again later" },
-   //   { status: 503 }
-   // );
-
-   // TODO: Uncomment and update to v5 when ready
-
   const { orderId } = await req.json();
 
   // Get order details
@@ -66,6 +42,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
   }
 
+  // Check required environment variables
+  const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+  const senderId = process.env.PACKETA_SENDER_ID;
+  const eshopId = process.env.PACKETA_ESHOP_ID;
+
+  if (!PACKETA_API_KEY) {
+    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+    return NextResponse.json(
+      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { status: 500 }
+    );
+  }
+
+  if (!senderId) {
+    console.error('❌ PACKETA_SENDER_ID is not set on Vercel!');
+    return NextResponse.json(
+      { error: 'Packeta sender ID is not configured on Vercel. Please set PACKETA_SENDER_ID environment variable.' },
+      { status: 500 }
+    );
+  }
+
+  if (!eshopId) {
+    console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
+    return NextResponse.json(
+      { error: 'Packeta eshop ID is not configured on Vercel. Please set PACKETA_ESHOP_ID environment variable.' },
+      { status: 500 }
+    );
+  }
+
   // Calculate total weight from order items (in kg for Packeta API)
   let totalWeightKg = 0.5; // Default 0.5kg fallback
   try {
@@ -77,7 +82,6 @@ export async function POST(req: NextRequest) {
       }>;
 
       console.log(`🔍 Processing ${items.length} items for weight calculation`);
-      console.log(`📋 Raw items:`, JSON.stringify(items, null, 2));
 
       if (items.length > 0) {
         let calculatedWeightKg = 0;
@@ -133,171 +137,204 @@ export async function POST(req: NextRequest) {
     console.error('Error details:', error);
   }
 
-   console.log(`📦 Final weight for order ${orderId}: ${totalWeightKg}kg`);
+  console.log(`📦 Final weight for order ${orderId}: ${totalWeightKg}kg`);
 
-   // Convert amount from cents to CZK and cap values for Packeta limits
-   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
-   const maxAllowedValue = 50000; // Packeta limit for COD/value
-   const safeAmount = Math.min(amountCZK, maxAllowedValue);
+  // Convert amount from cents to CZK and cap values for Packeta limits
+  const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
+  const maxAllowedValue = 50000; // Packeta limit for COD/value
+  const safeAmount = Math.min(amountCZK, maxAllowedValue);
 
-   console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
+  console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
 
-    // Format phone number for Packeta API (must have +420 prefix)
-   let formattedPhone = order.customer_phone || "";
-   if (formattedPhone && !formattedPhone.startsWith('+')) {
-     // If phone doesn't start with +, assume it's Czech number and add +420
-     formattedPhone = `+420${formattedPhone}`;
-   }
-   console.log(`📞 Original phone: ${order.customer_phone}, Formatted: ${formattedPhone}`);
+  // Format phone number for Packeta API (must have +420 prefix)
+  let formattedPhone = order.customer_phone || "";
+  if (formattedPhone && !formattedPhone.startsWith('+')) {
+    // If phone doesn't start with +, assume it's Czech number and add +420
+    formattedPhone = `+420${formattedPhone}`;
+  }
+  console.log(`📞 Original phone: ${order.customer_phone}, Formatted: ${formattedPhone}`);
 
-    // Create shipment via Packeta REST/XML API
-    console.log(`📦 Creating Packeta shipment for order ${orderId}`);
+  // Use shorter ID for Packeta (last 8 characters of UUID)
+  const packetaOrderId = orderId.slice(-8);
+  console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
 
-    // Use shorter ID for Packeta (last 8 characters of UUID)
-    const packetaOrderId = orderId.slice(-8);
-    console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
+  // Split customer name into first name and last name
+  const customerName = order.customer_name || "";
+  const nameParts = customerName.trim().split(' ');
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.slice(1).join(' ') || firstName; // If no lastname, use firstname
 
-    // Use Packeta v5 API like other endpoints (JSON format)
-    const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+  // Convert weight from kg to grams (Packeta v5 expects grams)
+  const weightInGrams = Math.round(totalWeightKg * 1000);
 
-    console.log(`🔑 API Key status: ${PACKETA_API_KEY ? 'Set' : 'NOT SET - THIS IS THE PROBLEM!'}`);
+  const requestBody = {
+    number: packetaOrderId,
+    name: firstName,
+    surname: lastName,
+    email: order.customer_email || "",
+    phone: formattedPhone,
+    currency: "CZK",
+    cod: safeAmount,
+    value: safeAmount,
+    weight: weightInGrams,
+    eshop: eshopId,
+    delivery_point: parseInt(order.packeta_point_id),
+    order_number: packetaOrderId,
+    note: `Order ${orderId.slice(-8)}`
+  };
 
-    if (!PACKETA_API_KEY) {
-      console.error('❌ PACKETA_API_KEY is not set on Vercel!');
-      return NextResponse.json(
-        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
-        { status: 500 }
-      );
-    }
+  console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
+  console.log('🔧 Environment variables used:');
+  console.log('   PACKETA_SENDER_ID:', senderId);
+  console.log('   PACKETA_ESHOP_ID:', eshopId);
+  console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length || 0);
 
-    const requestBody = {
-      packetIds: [], // Will be filled by API
-      senderId: process.env.PACKETA_SENDER_ID || "your-sender-id",
-      recipient: {
-        name: order.customer_name || "",
-        email: order.customer_email || "",
-        phone: formattedPhone,
-      },
-      deliveryPointId: order.packeta_point_id,
-      cod: safeAmount,
-      value: safeAmount,
-      weight: totalWeightKg,
-      eshop: process.env.PACKETA_ESHOP_ID || "labute-store",
-      externalReference: packetaOrderId,
-    };
+  // Simple timeout and retry for Packeta API
+  const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 30000; // 30 second timeout
 
-    console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
+  let packetaResponse: Response | undefined;
 
-     // Simple timeout and retry for Packeta API
-     const MAX_RETRIES = 3;
-     const TIMEOUT_MS = 30000; // 30 second timeout (recommended for read operations)
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`🔄 Packeta API attempt ${attempt}/${MAX_RETRIES}`);
 
-     let packetaResponse: Response | undefined;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-       try {
-         const controller = new AbortController();
-         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-         packetaResponse = await fetch("https://api.packeta.com/api/v5/shipments", {
-           method: "POST",
-           headers: {
-             "Authorization": `ApiKey ${PACKETA_API_KEY}`,
-             "Content-Type": "application/json",
-             "Accept": "application/json",
-           },
-           body: JSON.stringify(requestBody),
-           signal: controller.signal
-         });
-
-         clearTimeout(timeoutId);
-         break; // Success, exit retry loop
-
-       } catch (error) {
-         const err = error as Error;
-         console.log(`Packeta API attempt ${attempt} failed:`, err.message);
-
-         if (attempt === MAX_RETRIES) {
-           throw new Error(`Packeta API failed after ${MAX_RETRIES} attempts: ${err.message}`);
-         }
-
-         // Wait before retry (exponential backoff)
-         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-       }
-     }
-
-     if (!packetaResponse) {
-       throw new Error('Packeta API failed: no response received');
-     }
-
-    if (!packetaResponse.ok) {
-      const errorText = await packetaResponse.text();
-      console.error("❌ Packeta API error:", {
-        status: packetaResponse.status,
-        statusText: packetaResponse.statusText,
-        error: errorText
+      packetaResponse = await fetch("https://api.packeta.com/v5/packets", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${PACKETA_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
 
-      // Return user-friendly error messages
-      if (packetaResponse.status === 504) {
-        return NextResponse.json(
-          { error: "Packeta API is temporarily unavailable. Please try again in a few minutes." },
-          { status: 503 }
-        );
+      clearTimeout(timeoutId);
+
+      // If successful (2xx status) or client error (4xx), don't retry
+      if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
+        break;
       }
 
-      return NextResponse.json(
-        { error: `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}` },
-        { status: 500 }
-      );
+      // For server errors (5xx) or timeout, retry
+      if (attempt < MAX_RETRIES) {
+        console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${Math.pow(2, attempt)}s...`);
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+
+    } catch (error) {
+      const err = error as Error;
+      console.log(`❌ Packeta API attempt ${attempt} failed:`, err.message);
+
+      if (attempt === MAX_RETRIES) {
+        throw new Error(`Packeta API failed after ${MAX_RETRIES} attempts: ${err.message}`);
+      }
+
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
+  }
 
-    const packetaResult = await packetaResponse.json();
-    console.log("✅ Packeta API success:", packetaResult);
+  // Check if we got any response
+  if (!packetaResponse) {
+    throw new Error('Packeta API failed: no response received');
+  }
 
-    // Extract packet ID from JSON response
-    const packetaId = packetaResult?.packetIds?.[0] || packetaResult?.id;
-    if (!packetaId) {
-      console.error("❌ No Packeta ID in response:", packetaResult);
-      return NextResponse.json(
-        { error: `Invalid Packeta response - missing ID: ${JSON.stringify(packetaResult)}` },
-        { status: 500 }
-      );
-    }
-
-    // Extract barcode from JSON response (sledovací kód začínající na Z)
-    const packetaBarcode = packetaResult?.barcode || packetaResult?.barcodeText;
-
-    // Generate tracking URL
-    const trackingUrl = `https://www.zasilkovna.cz/sledovani/${packetaId}`;
-
-    console.log(`📦 Created Packeta shipment with ID: ${packetaId}`);
-    console.log(`📦 Packeta barcode: ${packetaBarcode}`);
-    console.log(`🔗 Tracking URL: ${trackingUrl}`);
-
-    // Update order with Packeta data
-    const { error: updateError } = await supabaseAdmin
-      .from("orders")
-      .update({
-        packeta_shipment_id: packetaId,
-        packeta_barcode: packetaBarcode,
-        packeta_tracking_url: trackingUrl,
-        status: "processing",
-      })
-      .eq("id", orderId);
-
-   if (updateError) {
-     console.error("❌ Database update error:", updateError);
-     return NextResponse.json({ error: updateError.message }, { status: 500 });
-   }
-
-   console.log(`✅ Order ${orderId} updated with Packeta ID ${packetaId}`);
-
-    return NextResponse.json({
-      success: true,
-      packetaId: packetaId,
-      packetaBarcode: packetaBarcode,
-      trackingUrl: trackingUrl,
-      message: `Shipment created successfully with Packeta ID: ${packetaId}${packetaBarcode ? ` (Barcode: ${packetaBarcode})` : ''}`
+  // Handle non-2xx responses
+  if (!packetaResponse.ok) {
+    const errorText = await packetaResponse.text();
+    console.error("❌ Packeta API error:", {
+      status: packetaResponse.status,
+      statusText: packetaResponse.statusText,
+      error: errorText.substring(0, 200)
     });
+
+    // Return user-friendly error messages
+    if (packetaResponse.status === 504) {
+      return NextResponse.json(
+        { error: "Packeta API is temporarily unavailable (gateway timeout). Please try again in a few minutes." },
+        { status: 503 }
+      );
+    } else if (packetaResponse.status >= 500) {
+      return NextResponse.json(
+        { error: "Packeta API is experiencing server issues. Please try again in a few minutes." },
+        { status: 503 }
+      );
+    } else if (packetaResponse.status === 401) {
+      return NextResponse.json(
+        { error: "Packeta API authentication failed. Please check API credentials." },
+        { status: 500 }
+      );
+    } else if (packetaResponse.status === 400) {
+      return NextResponse.json(
+        { error: "Invalid shipment data. Please check the order details and try again." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}` },
+      { status: 500 }
+    );
+  }
+
+  const packetaResult = await packetaResponse.json();
+  console.log("✅ Packeta API success:", packetaResult);
+
+  // Extract packet ID from v5 JSON response
+  let packetaId = packetaResult?.id ||
+                  packetaResult?.packet_id ||
+                  packetaResult?.data?.id;
+
+  if (!packetaId) {
+    console.error("❌ No Packeta ID in response:", packetaResult);
+    console.error("❌ Response structure:", JSON.stringify(packetaResult, null, 2));
+    return NextResponse.json(
+      { error: `Invalid Packeta response - missing ID. Response: ${JSON.stringify(packetaResult)}` },
+      { status: 500 }
+    );
+  }
+
+  // Extract barcode/tracking number from v5 JSON response
+  const packetaBarcode = packetaResult?.barcode ||
+                        packetaResult?.tracking_number ||
+                        packetaResult?.number;
+
+  // Generate tracking URL
+  const trackingUrl = `https://www.zasilkovna.cz/sledovani/${packetaId}`;
+
+  console.log(`📦 Created Packeta shipment with ID: ${packetaId}`);
+  console.log(`📦 Packeta barcode: ${packetaBarcode}`);
+  console.log(`🔗 Tracking URL: ${trackingUrl}`);
+
+  // Update order with Packeta data
+  const { error: updateError } = await supabaseAdmin
+    .from("orders")
+    .update({
+      packeta_shipment_id: packetaId,
+      packeta_barcode: packetaBarcode,
+      packeta_tracking_url: trackingUrl,
+      status: "processing",
+    })
+    .eq("id", orderId);
+
+  if (updateError) {
+    console.error("❌ Database update error:", updateError);
+    return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
+  }
+
+  console.log(`✅ Order ${orderId} updated with Packeta ID ${packetaId}`);
+
+  return NextResponse.json({
+    success: true,
+    packetaId: packetaId,
+    packetaBarcode: packetaBarcode,
+    trackingUrl: trackingUrl,
+    message: `Shipment created successfully with Packeta ID: ${packetaId}${packetaBarcode ? ` (Barcode: ${packetaBarcode})` : ''}`
+  });
 }
+

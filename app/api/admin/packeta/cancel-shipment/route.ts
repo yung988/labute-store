@@ -45,19 +45,67 @@ export async function POST(req: NextRequest) {
     // Cancel shipment via Packeta v5 API
     console.log(`🔄 Cancelling Packeta shipment: ${order.packeta_shipment_id}`);
 
-    const cancelResponse = await fetch(`https://api.packeta.com/api/v5/shipments/cancel`, {
-      method: "POST",
-      headers: {
-        "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        packetIds: [order.packeta_shipment_id]
-      })
-    });
+    // Cancel shipment with timeout and retry
+    const MAX_RETRIES = 3;
+    const TIMEOUT_MS = 30000;
+    const BASE_BACKOFF_MS = 1000;
 
-    if (!cancelResponse.ok) {
+    let cancelResponse: Response | undefined;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`🔄 Packeta cancel API attempt ${attempt}/${MAX_RETRIES} for ${order.packeta_shipment_id}`);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+        cancelResponse = await fetch(`https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/cancel`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // Check if response is successful (2xx) or client error (4xx) - don't retry these
+        if (cancelResponse.ok || cancelResponse.status < 500) {
+          break; // Success or client error - exit retry loop
+        }
+
+        // For server errors (5xx including 504), retry
+        const errorText = await cancelResponse.text();
+        console.log(`⏳ Packeta cancel API returned ${cancelResponse.status}, will retry: ${errorText.substring(0, 100)}...`);
+
+        if (attempt < MAX_RETRIES) {
+          const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+          console.log(`⏳ Waiting ${backoffTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+
+      } catch (error) {
+        const err = error as Error;
+        lastError = err;
+        console.log(`❌ Packeta cancel API attempt ${attempt} failed:`, err.message);
+
+        if (attempt < MAX_RETRIES) {
+          const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+          console.log(`⏳ Network error, waiting ${backoffTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+      }
+    }
+
+    // Handle cancel response
+    if (!cancelResponse) {
+      const errorMsg = lastError ? lastError.message : 'Unknown network error';
+      console.error('❌ Packeta cancel API failed after all retries:', errorMsg);
+      console.warn("⚠️ Packeta API cancel failed, but continuing with database reset");
+    } else if (!cancelResponse.ok) {
       const errorText = await cancelResponse.text();
       console.error("❌ Packeta cancel API error:", {
         status: cancelResponse.status,
@@ -65,7 +113,7 @@ export async function POST(req: NextRequest) {
         error: errorText,
         packetId: order.packeta_shipment_id
       });
-      
+
       // If cancel fails, still proceed with database update but warn user
       console.warn("⚠️ Packeta API cancel failed, but continuing with database reset");
     } else {

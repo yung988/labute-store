@@ -55,20 +55,86 @@ export async function POST() {
     // Cancel via Packeta API in batches
     if (packetIds.length > 0) {
       try {
-         const cancelResponse = await fetch("https://api.packeta.com/api/v5/shipments/cancel", {
-           method: "POST",
-           headers: {
-             "Authorization": `ApiKey ${process.env.PACKETA_API_KEY}`,
-             "Content-Type": "application/json",
-             "Accept": "application/json",
-           },
-           body: JSON.stringify({ packetIds: packetIds }),
-         });
+        // Bulk cancel with timeout and retry
+        const MAX_RETRIES = 3;
+        const TIMEOUT_MS = 30000;
+        const BASE_BACKOFF_MS = 1000;
 
-        if (cancelResponse.ok) {
+        let cancelResponse: Response | undefined;
+        let lastError: Error | null = null;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            console.log(`🔄 Packeta bulk cancel API attempt ${attempt}/${MAX_RETRIES} for ${packetIds.length} shipments`);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+            // For bulk cancel, we need to make individual requests in v5
+            const cancelPromises = packetIds.map(async (packetId) => {
+              return fetch(`https://api.packeta.com/v5/packets/${packetId}/cancel`, {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                },
+                signal: controller.signal
+              });
+            });
+
+            const responses = await Promise.allSettled(cancelPromises);
+            
+            // Create a synthetic response based on results
+            const successCount = responses.filter(r => r.status === 'fulfilled' && r.value.ok).length;
+            cancelResponse = {
+              ok: successCount > 0,
+              status: successCount === packetIds.length ? 200 : 207, // Multi-status if partial success
+              statusText: `${successCount}/${packetIds.length} packets cancelled`,
+              json: async () => ({ cancelled: successCount, total: packetIds.length }),
+              text: async () => `${successCount}/${packetIds.length} packets cancelled`
+            } as Response;
+
+            clearTimeout(timeoutId);
+
+            // Check if response is successful (2xx) or client error (4xx) - don't retry these
+            if (cancelResponse.ok || cancelResponse.status < 500) {
+              break; // Success or client error - exit retry loop
+            }
+
+            // For server errors (5xx including 504), retry
+            const errorText = await cancelResponse.text();
+            console.log(`⏳ Packeta bulk cancel API returned ${cancelResponse.status}, will retry: ${errorText.substring(0, 100)}...`);
+
+            if (attempt < MAX_RETRIES) {
+              const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+              console.log(`⏳ Waiting ${backoffTime}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, backoffTime));
+            }
+
+          } catch (error) {
+            const err = error as Error;
+            lastError = err;
+            console.log(`❌ Packeta bulk cancel API attempt ${attempt} failed:`, err.message);
+
+            if (attempt < MAX_RETRIES) {
+              const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+              console.log(`⏳ Network error, waiting ${backoffTime}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, backoffTime));
+            }
+          }
+        }
+
+        // Handle cancel response
+        if (!cancelResponse) {
+          const errorMsg = lastError ? lastError.message : 'Unknown network error';
+          console.error('❌ Packeta bulk cancel API failed after all retries:', errorMsg);
+          errors.push(`Packeta bulk cancel failed after ${MAX_RETRIES} attempts: ${errorMsg}`);
+        } else if (cancelResponse.ok) {
           const result = await cancelResponse.json();
           console.log("✅ Packeta bulk cancel success:", result);
-          cancelledCount = packetIds.length;
+          const resultData = await result.json();
+          cancelledCount = resultData.cancelled || packetIds.length;
         } else {
           const errorText = await cancelResponse.text();
           console.error("❌ Packeta bulk cancel error:", {
@@ -77,7 +143,15 @@ export async function POST() {
             error: errorText,
             packetIds
           });
-          errors.push(`Packeta API error: ${cancelResponse.status} ${errorText}`);
+
+          // Return user-friendly error messages
+          if (cancelResponse.status === 504) {
+            errors.push(`Packeta bulk cancel temporarily unavailable (gateway timeout). Please try again in a few minutes.`);
+          } else if (cancelResponse.status >= 500) {
+            errors.push(`Packeta bulk cancel experiencing server issues. Please try again in a few minutes.`);
+          } else {
+            errors.push(`Packeta bulk cancel error: ${cancelResponse.status} ${errorText}`);
+          }
         }
       } catch (error) {
         console.error("❌ Packeta API call failed:", error);
