@@ -286,9 +286,9 @@ export async function POST(req: NextRequest) {
   console.log("✅ Packeta API success:", packetaResult);
 
   // Extract packet ID from v5 JSON response
-  let packetaId = packetaResult?.id ||
-                  packetaResult?.packet_id ||
-                  packetaResult?.data?.id;
+  const packetaId = packetaResult?.id ||
+                    packetaResult?.packet_id ||
+                    packetaResult?.data?.id;
 
   if (!packetaId) {
     console.error("❌ No Packeta ID in response:", packetaResult);
