@@ -190,44 +190,40 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     }
   };
 
-   const printPacketaLabel = async () => {
-     try {
-       const supabase = createClient();
-       const { data, error } = await supabase.functions.invoke('packeta_print_label', {
-         body: { orderId }
-       });
+     const printPacketaLabel = async () => {
+       try {
+         // Call the Next.js API route instead of edge function
+         const response = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
+           method: 'GET',
+           headers: {
+             'Content-Type': 'application/json',
+           },
+         });
 
-       if (error) throw new Error(error.message || "Failed to get label");
+         if (!response.ok) {
+           const errorData = await response.json().catch(() => ({}));
+           throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+         }
 
-       // Edge Function returns base64 encoded PDF
-       if (!data?.pdf) throw new Error("No PDF data received");
+         const data = await response.json();
 
-       // Convert base64 to blob and download
-       const pdfBlob = new Blob(
-         [Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))],
-         { type: 'application/pdf' }
-       );
+         if (data.error) {
+           throw new Error(data.error);
+         }
 
-       // Create download link
-       const downloadUrl = URL.createObjectURL(pdfBlob);
-       const link = document.createElement('a');
-       link.href = downloadUrl;
-       link.download = data.filename || `packeta-label-${orderId}.pdf`;
+         if (!data.success || !data.url) {
+           throw new Error("Invalid response from server");
+         }
 
-       // Trigger download
-       document.body.appendChild(link);
-       link.click();
-       document.body.removeChild(link);
+         // Open the PDF URL in a new tab/window
+         window.open(data.url, '_blank');
 
-       // Clean up
-       URL.revokeObjectURL(downloadUrl);
-
-       alert("Štítek byl stažen!");
-     } catch (e: unknown) {
-       setError(e instanceof Error ? e.message : "Failed to print label");
-       console.error("Print label error:", e);
-     }
-   };
+        alert("Štítek byl otevřen!");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to print label");
+        console.error("Print label error:", e);
+      }
+    };
 
   if (loading && !order) {
     return (

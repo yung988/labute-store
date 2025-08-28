@@ -22,6 +22,8 @@ import {
 import { formatOrderId } from "@/lib/product-images";
 import { createClient } from "@/lib/supabase/client";
 
+const supabase = createClient();
+
 type PacketaShipment = {
   id: string;
   order_id: string;
@@ -100,38 +102,43 @@ export default function PacketaManagement() {
     return filtered;
   }, [shipments, searchQuery, statusFilter]);
 
-  const printLabel = async (orderId: string, format: string = 'A6') => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta_print_label', {
-        body: { orderId, format }
-      });
+    const printLabel = async (orderId: string, format: string = 'A6') => {
+      try {
+        console.log(`🏷️ Requesting label for order ${orderId} with format ${format}`);
 
-      if (error) throw new Error(error.message || "Failed to get label");
-      
-      // Edge Function returns base64 encoded PDF
-      if (!data?.pdf) throw new Error("No PDF data received");
+        // Call the Next.js API route instead of edge function
+        const response = await fetch(`/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-      // Convert base64 to blob
-      const binaryString = atob(data.pdf);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log(`📡 API response:`, data);
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (!data.success || !data.url) {
+          console.error(`❌ Invalid response data:`, data);
+          throw new Error("Invalid response from server");
+        }
+
+        // Open the PDF URL in a new tab/window
+        console.log(`🔗 Opening URL: ${data.url}`);
+        window.open(data.url, '_blank');
+      } catch (e: unknown) {
+        console.error(`❌ Print label error:`, e);
+        setError(e instanceof Error ? e.message : "Failed to print label");
       }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = data.filename || `packeta-label-${formatOrderId(orderId)}-${format.replace(' ', '-')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to print label");
-    }
-  };
+    };
 
   const toggleOrderSelection = (orderId: string) => {
     setSelectedOrders(prev => {
@@ -153,46 +160,78 @@ export default function PacketaManagement() {
     }
   };
 
-  const bulkPrintLabels = async () => {
-    if (selectedOrders.size === 0) {
-      alert("Vyberte alespoň jednu objednávku");
-      return;
-    }
+   const bulkPrintLabels = async () => {
+     if (selectedOrders.size === 0) {
+       alert("Vyberte alespoň jednu objednávku");
+       return;
+     }
 
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/packeta/bulk-print-labels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderIds: Array.from(selectedOrders)
-        })
-      });
+     try {
+       setLoading(true);
+       console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
 
-      if (!response.ok) throw new Error("Failed to get bulk labels");
+       // For bulk print, we'll call the single label function multiple times
+       // This is simpler than creating a separate bulk function
+       const urls: string[] = [];
+       const errors: string[] = [];
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
+        // Use bulk print API route
+        const response = await fetch('/api/admin/packeta/bulk-print-labels', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderIds: selectedOrders,
+            format: 'A6'
+          }),
+        });
 
-      const filename = selectedOrders.size === 1
-        ? `packeta-label-${formatOrderId(Array.from(selectedOrders)[0])}.pdf`
-        : `packeta-labels-bulk-${selectedOrders.size}-labels.pdf`;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
 
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+        const data = await response.json();
 
-      setSelectedOrders(new Set());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to bulk print labels");
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (data.success && data.url) {
+          urls.push(data.url);
+        } else {
+          errors.push(`Bulk print failed: Invalid response`);
+        }
+
+       if (urls.length === 0) {
+         throw new Error(`Failed to generate any labels. Errors: ${errors.join(', ')}`);
+       }
+
+       if (urls.length === 1) {
+         // Single label - open directly
+         console.log(`🔗 Opening single label URL: ${urls[0]}`);
+         window.open(urls[0], '_blank');
+       } else {
+         // Multiple labels - open first one and show summary
+         console.log(`🔗 Opening first label, generated ${urls.length} labels`);
+         window.open(urls[0], '_blank');
+
+         if (errors.length > 0) {
+           alert(`Generated ${urls.length} labels successfully, but ${errors.length} failed:\n${errors.join('\n')}`);
+         } else {
+           alert(`Successfully generated ${urls.length} labels`);
+         }
+       }
+
+       setSelectedOrders(new Set());
+     } catch (e: unknown) {
+       console.error(`❌ Bulk print error:`, e);
+       setError(e instanceof Error ? e.message : "Failed to bulk print labels");
+     } finally {
+       setLoading(false);
+     }
+   };
 
   const trackShipment = async (packetaId: string) => {
     try {

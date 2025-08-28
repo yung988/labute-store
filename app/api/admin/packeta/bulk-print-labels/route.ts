@@ -130,37 +130,80 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No labels could be generated" }, { status: 500 });
     }
 
-    // If only one label, return it directly
+    let finalPdfBuffer: ArrayBuffer;
+    let fileName: string;
+
+    // If only one label, use it directly
     if (pdfBuffers.length === 1) {
-      console.log(`📦 Returning single label PDF`);
-      return new NextResponse(pdfBuffers[0], {
+      console.log(`📦 Using single label PDF`);
+      finalPdfBuffer = pdfBuffers[0];
+      fileName = `packeta-label-${ordersWithShipments[0].id}.pdf`;
+    } else {
+      // For multiple labels, create a combined PDF
+      console.log(`📦 Creating combined PDF with ${pdfBuffers.length} labels`);
+
+      // Simple approach: concatenate PDF buffers (works for most cases)
+      // For more complex PDF merging, would need pdf-lib or similar library
+      const combinedBuffer = new Uint8Array(pdfBuffers.reduce((acc, buffer) => acc + buffer.byteLength, 0));
+      let offset = 0;
+
+      for (const buffer of pdfBuffers) {
+        combinedBuffer.set(new Uint8Array(buffer), offset);
+        offset += buffer.byteLength;
+      }
+
+      console.log(`📦 Generated combined PDF with ${pdfBuffers.length} labels`);
+      finalPdfBuffer = combinedBuffer.buffer;
+      fileName = `packeta-labels-bulk-${pdfBuffers.length}-labels.pdf`;
+    }
+
+    // Upload PDF to Supabase storage bucket
+    console.log(`📤 Uploading bulk PDF to storage: ${fileName}`);
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('packeta-labels')
+      .upload(fileName, finalPdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true // Allow overwriting existing files
+      });
+
+    if (uploadError) {
+      console.error('❌ Error uploading PDF to storage:', uploadError);
+      // Fallback: return PDF directly if storage upload fails
+      console.log('📄 Returning PDF directly due to storage error');
+      return new NextResponse(finalPdfBuffer, {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="packeta-label-${ordersWithShipments[0].id}.pdf"`,
+          "Content-Disposition": `attachment; filename="${fileName}"`,
         },
       });
     }
 
-    // For multiple labels, create a combined PDF
-    console.log(`📦 Creating combined PDF with ${pdfBuffers.length} labels`);
+    // Get public URL for the uploaded file
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from('packeta-labels')
+      .getPublicUrl(fileName);
 
-    // Simple approach: concatenate PDF buffers (works for most cases)
-    // For more complex PDF merging, would need pdf-lib or similar library
-    const combinedBuffer = new Uint8Array(pdfBuffers.reduce((acc, buffer) => acc + buffer.byteLength, 0));
-    let offset = 0;
-
-    for (const buffer of pdfBuffers) {
-      combinedBuffer.set(new Uint8Array(buffer), offset);
-      offset += buffer.byteLength;
+    if (!publicUrlData.publicUrl) {
+      console.error('❌ Error getting public URL for uploaded PDF');
+      // Fallback: return PDF directly if URL generation fails
+      console.log('📄 Returning PDF directly due to URL generation error');
+      return new NextResponse(finalPdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+        },
+      });
     }
 
-    console.log(`📦 Generated combined PDF with ${pdfBuffers.length} labels`);
+    console.log(`✅ Labels saved to storage: ${publicUrlData.publicUrl}`);
 
-    return new NextResponse(combinedBuffer.buffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="packeta-labels-bulk-${pdfBuffers.length}-labels.pdf"`,
-      },
+    // Return the public URL instead of the PDF buffer
+    return NextResponse.json({
+      success: true,
+      url: publicUrlData.publicUrl,
+      fileName: fileName,
+      labelCount: pdfBuffers.length
     });
 
   } catch (error) {

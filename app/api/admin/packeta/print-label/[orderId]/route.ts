@@ -9,16 +9,28 @@ export async function GET(
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format') || 'A6';
 
+  console.log(`🌐 Request details:`, {
+    orderId,
+    format,
+    url: req.url,
+    method: req.method,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
-    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
+    console.error('❌ PACKETA_API_PASSWORD is not set!');
     return NextResponse.json(
-      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
+      { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
 
+  console.log(`🔑 Packeta API password is configured (length: ${process.env.PACKETA_API_PASSWORD.length})`);
+
   try {
+    console.log(`🏷️ Print label request for order: ${orderId}`);
+
     // Get order with Packeta shipment ID
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
@@ -27,7 +39,7 @@ export async function GET(
       .single();
 
     if (orderError || !order || !order.packeta_shipment_id) {
-      console.error("Print label error:", {
+      console.error("❌ Print label error:", {
         orderId,
         orderError: orderError?.message,
         hasOrder: !!order,
@@ -39,6 +51,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    console.log(`✅ Found order with shipment ID: ${order.packeta_shipment_id}`);
 
     // Get label from Packeta v5 API with timeout and retry
     const MAX_RETRIES = 3;
@@ -155,18 +169,126 @@ export async function GET(
     }
 
     const pdfBuffer = await labelResponse.arrayBuffer();
+    console.log(`📄 PDF buffer received, size: ${pdfBuffer.byteLength} bytes`);
 
-    return new NextResponse(pdfBuffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="packeta-label-${orderId}.pdf"`,
-      },
+    // Test if we can create a simple text file first
+    const testFileName = `test-${orderId}.txt`;
+    const testContent = `Test file for order ${orderId} at ${new Date().toISOString()}`;
+
+    console.log(`🧪 Testing storage upload with text file: ${testFileName}`);
+
+    const { data: testUploadData, error: testUploadError } = await supabaseAdmin.storage
+      .from('packeta-labels')
+      .upload(testFileName, testContent, {
+        contentType: 'text/plain',
+        upsert: true
+      });
+
+    console.log(`🧪 Test upload result:`, { data: testUploadData, error: testUploadError });
+
+    if (testUploadError) {
+      console.error('❌ Even test upload failed, storage is not working properly');
+      // Continue with fallback
+    } else {
+      console.log('✅ Test upload successful, storage is working');
+    }
+
+    // Upload PDF to Supabase storage bucket
+    const fileName = `packeta-label-${orderId}.pdf`;
+    console.log(`📤 Uploading PDF to storage: ${fileName}`);
+    console.log(`📊 PDF buffer size: ${pdfBuffer.byteLength} bytes`);
+
+    // Try different upload approaches
+    let uploadData, uploadError;
+
+    try {
+      const result = await supabaseAdmin.storage
+        .from('packeta-labels')
+        .upload(fileName, pdfBuffer, {
+          contentType: 'application/pdf',
+          upsert: true // Allow overwriting existing files
+        });
+      uploadData = result.data;
+      uploadError = result.error;
+    } catch (uploadErr) {
+      console.error('❌ Upload threw exception:', uploadErr);
+      uploadError = uploadErr;
+    }
+
+    console.log(`📤 Upload result:`, { data: uploadData, error: uploadError });
+
+    // If upload failed, try to list bucket contents to see if we have access
+    if (uploadError) {
+      console.log('🔍 Checking bucket access...');
+      try {
+        const { data: listData, error: listError } = await supabaseAdmin.storage
+          .from('packeta-labels')
+          .list('', {
+            limit: 10,
+            sortBy: { column: 'name', order: 'asc' }
+          });
+        console.log('📁 Bucket list result:', { data: listData, error: listError });
+      } catch (listErr) {
+        console.error('❌ List bucket threw exception:', listErr);
+      }
+    }
+
+    if (uploadError) {
+      console.error('❌ Error uploading PDF to storage:', uploadError);
+      // Fallback: return PDF directly if storage upload fails
+      console.log('📄 Returning PDF directly due to storage error');
+      return new NextResponse(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="packeta-label-${orderId}.pdf"`,
+        },
+      });
+    }
+
+    // Get public URL for the uploaded file
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from('packeta-labels')
+      .getPublicUrl(fileName);
+
+    console.log(`🔗 Public URL data:`, publicUrlData);
+
+    if (!publicUrlData.publicUrl) {
+      console.error('❌ Error getting public URL for uploaded PDF');
+      // Fallback: return PDF directly if URL generation fails
+      console.log('📄 Returning PDF directly due to URL generation error');
+      return new NextResponse(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="packeta-label-${orderId}.pdf"`,
+        },
+      });
+    }
+
+    console.log(`✅ Label saved to storage: ${publicUrlData.publicUrl}`);
+
+    // Return the public URL instead of the PDF buffer
+    console.log(`📤 Returning JSON response with URL: ${publicUrlData.publicUrl}`);
+
+    const response = NextResponse.json({
+      success: true,
+      url: publicUrlData.publicUrl,
+      fileName: fileName
     });
 
+    // Add CORS headers to ensure proper response
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    console.log(`✅ Response headers:`, Object.fromEntries(response.headers.entries()));
+
+    return response;
+
   } catch (error) {
-    console.error("Error getting Packeta label:", error);
+    console.error("❌ Error getting Packeta label:", error);
+    console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: "Failed to get label" },
+      { error: "Failed to get label", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
