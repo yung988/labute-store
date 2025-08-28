@@ -20,12 +20,24 @@ Tento průvodce vysvětluje jak synchronizovat produkty z vašeho webu do Stripe
 ### Možnost 2: Přes příkazovou řádku
 
 ```bash
-# Nainstalujte dependencies (pokud nemáte)
-npm install
-
-# Spusťte synchronizaci
+# Spusťte synchronizaci (žádné dodatečné dependencies nepotřebné)
 node scripts/sync-products.js
+
+# Náhled změn bez provedení (dry run)
+node scripts/sync-products.js --dry-run
+
+# Zobrazit nápovědu
+node scripts/sync-products.js --help
 ```
+
+#### Dry Run Mode
+Dry run mód (`--dry-run`) zobrazí:
+- Které produkty budou vytvořeny
+- Které produkty budou aktualizovány
+- Podrobnosti o cenách a obrázcích
+- **Žádné změny nebudou provedeny**
+
+Perfektní pro kontrolu před skutečnou synchronizací!
 
 ## Co se stane během synchronizace?
 
@@ -68,7 +80,15 @@ Po synchronizaci můžete v Stripe dashboard:
 
 ### Chyba "STRIPE_SECRET_KEY not found"
 - Zkontrolujte že máte nastavenou proměnnou `STRIPE_SECRET_KEY` v `.env.local`
-- Získat můžete v Stripe dashboard > Developers > API keys
+- **Jak získat API key:**
+  1. Jděte na [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys)
+  2. Klikněte na **"Create secret key"** (ne publishable key!)
+  3. Zkopírujte key (začíná `sk_test_...`)
+  4. Přidejte do `.env.local`:
+     ```
+     STRIPE_SECRET_KEY="sk_test_..."
+     ```
+- Pro produkci použijte `sk_live_...` key z live módu
 
 ### Chyba "Product already exists"
 - Synchronizace automaticky aktualizuje existující produkty

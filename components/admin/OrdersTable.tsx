@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { formatOrderId } from "@/lib/product-images";
 
 type Order = {
@@ -294,23 +296,23 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
         </div>
       </div>
 
-      <div className="overflow-auto">
-        <table className="min-w-full border text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="p-2 border">ID</th>
-              <th className="p-2 border">Items</th>
-              <th className="p-2 border">Email</th>
-              <th className="p-2 border">Name</th>
-              <th className="p-2 border">Phone</th>
-              <th className="p-2 border">Packeta</th>
-              <th className="p-2 border">Status</th>
-              <th className="p-2 border">Amount</th>
-              <th className="p-2 border">Created</th>
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Packeta</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {orders.map((o) => {
               // Parse items from JSON string if needed
               let items: unknown[] = [];
@@ -326,16 +328,16 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
               }
               
               return (
-                <tr
+                <TableRow
                   key={o.id}
-                  className="odd:bg-background even:bg-muted/30 hover:bg-blue-50 cursor-pointer"
-                  onClick={() => onOrderClick?.(o.id) || window.open(`/admin/orders/${o.id}`, '_blank')}
+                  className="hover:bg-blue-50 cursor-pointer"
+                  onClick={() => onOrderClick?.(o.id)}
                 >
-                  <td className="p-2 border align-top max-w-[260px]">
+                  <TableCell className="align-top max-w-[260px]">
                     <div className="font-mono font-bold text-blue-600">{formatOrderId(o.id)}</div>
                     <div className="text-xs text-gray-500 break-all">{o.id}</div>
                   </td>
-                  <td className="p-2 border align-top max-w-[200px]">
+                  <TableCell className="align-top max-w-[200px]">
                     {items.length > 0 ? (
                       <div className="text-xs">
                         {items.map((item: unknown, idx: number) => {
@@ -354,63 +356,32 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                       <span className="text-gray-400 text-xs">No items</span>
                     )}
                   </td>
-                  <td className="p-2 border align-top">{o.customer_email}</td>
-                  <td className="p-2 border align-top">{o.customer_name}</td>
-                  <td className="p-2 border align-top">{o.customer_phone}</td>
-                  <td className="p-2 border align-top">
+                  <TableCell className="align-top">{o.customer_email}</TableCell>
+                  <TableCell className="align-top">{o.customer_name}</TableCell>
+                  <TableCell className="align-top">{o.customer_phone}</TableCell>
+                  <TableCell className="align-top">
                     <div className="text-xs">
                       {o.packeta_point_id && <div>Point: {o.packeta_point_id}</div>}
                       {o.packeta_shipment_id && <div className="text-blue-600">Ship: {o.packeta_shipment_id}</div>}
                     </div>
                   </td>
-                <td className="p-2 border align-top" onClick={(e) => e.stopPropagation()}>
-                  <select
-                    className="border rounded px-2 py-1"
-                    value={o.status}
-                    onChange={(e) => updateStatus(o.id, e.target.value)}
+                <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
+                  <Badge
+                    variant={
+                      o.status === 'paid' ? 'default' :
+                      o.status === 'shipped' ? 'secondary' :
+                      o.status === 'cancelled' ? 'destructive' :
+                      'outline'
+                    }
                   >
-                    {statuses.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="p-2 border align-top">{o.amount_total ?? "-"}</td>
-                <td className="p-2 border align-top">
-                  {new Date(o.created_at).toLocaleString()}
-                </td>
-                <td className="p-2 border align-top whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex gap-1 flex-col">
-                    {o.packeta_point_id && o.status === "paid" && (
-                      <Button 
-                        variant="default" 
-                        onClick={() => createPacketaShipment(o.id)} 
-                        size="sm"
-                        disabled={loading}
-                      >
-                        Create Shipment
-                      </Button>
-                    )}
-                    {o.packeta_shipment_id && (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => printPacketaLabel(o.id)} 
-                        size="sm"
-                      >
-                        Print Label
-                      </Button>
-                    )}
-                    <Button variant="destructive" onClick={() => onDelete(o.id)} size="sm">
-                      Delete
-                    </Button>
-                  </div>
-                  </td>
-                </tr>
+                    {o.status}
+                  </Badge>
+                </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

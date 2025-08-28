@@ -3,69 +3,105 @@
 /**
  * Script pro synchronizaci produktů do Stripe Product Catalog
  * Spusťte příkazem: node scripts/sync-products.js
+ *
+ * Poznámka: Ujistěte se že máte nastavenou proměnnou STRIPE_SECRET_KEY
+ * v .env.local nebo jako environment variable
  */
 
 const Stripe = require('stripe');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+
+// Načtení .env.local souboru pokud existuje
+const envLocalPath = path.join(__dirname, '..', '.env.local');
+if (fs.existsSync(envLocalPath)) {
+  const envContent = fs.readFileSync(envLocalPath, 'utf8');
+  const envLines = envContent.split('\n');
+
+  for (const line of envLines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      // Najít první rovnítko a rozdělit na key a value
+      const equalsIndex = trimmed.indexOf('=');
+      if (equalsIndex > 0) {
+        const key = trimmed.substring(0, equalsIndex).trim();
+        let value = trimmed.substring(equalsIndex + 1).trim();
+
+        // Odstranit uvozovky na začátku a konci pokud existují
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+
+        process.env[key] = value;
+      }
+    }
+  }
+  console.log('✅ Načten .env.local soubor');
+}
+
+// Kontrola povinných environment variables
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('❌ Chyba: STRIPE_SECRET_KEY není nastavena!');
+  console.error('');
+  console.error('💡 Jak nastavit STRIPE_SECRET_KEY:');
+  console.error('   1. Jděte na https://dashboard.stripe.com/test/apikeys');
+  console.error('   2. Zkopírujte "Secret key" (začíná sk_test_...)');
+  console.error('   3. Přidejte do .env.local:');
+  console.error('      STRIPE_SECRET_KEY="sk_test_..."');
+  console.error('');
+  console.error('   Nebo nastavte jako environment variable:');
+  console.error('   export STRIPE_SECRET_KEY="sk_test_..."');
+  process.exit(1);
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-12-18.acacia',
 });
 
-// Produkty z vašeho webu
-const PRODUCTS = [
-  {
-    id: 'labute-ss6-tshirt',
-    name: 'Labutě SS6 rhinestone crystal T-shirt',
-    description: 'Elegantní tričko s křišťálovými aplikacemi',
-    images: ['https://6gtahwcca6a0qxzw.public.blob.vercel-storage.com/products/bb6ec0d2-2490-47d2-b65a-b7e23342db1f/50610e08-496b-486d-aead-ce167a1f9f28.jpg'],
-    price_cents: 2500, // 25 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'tshirt',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-hoodie',
-    name: 'Labutě track top Hoodie',
-    description: 'Stylová mikina s kapucí',
-    images: ['https://6gtahwcca6a0qxzw.public.blob.vercel-storage.com/products/8e29b39d-6c02-4350-a6da-c968a08d9441/c03fa82c-8f3d-4309-bdec-e7c43143f426.jpg'],
-    price_cents: 4500, // 45 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'hoodie',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-polo',
-    name: 'Labutě Throwback Polo T-shirt',
-    description: 'Klasické polo tričko v retro stylu',
-    images: ['https://6gtahwcca6a0qxzw.public.blob.vercel-storage.com/products/878154eb-6022-447f-af0c-3c0fee632203/4f4dae48-47e3-47eb-b501-aed2f572d7f5.jpg'],
-    price_cents: 2200, // 22 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'polo',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-tie',
-    name: 'Labutě SS6 rhinestone crystal tie',
-    description: 'Elegantní kravata s křišťálovými aplikacemi',
-    images: ['https://6gtahwcca6a0qxzw.public.blob.vercel-storage.com/products/da8baee5-ca5c-4895-a598-273f7038e134/e55e3250-eaf3-4db3-8fb2-41feb82f2441.jpg'],
-    price_cents: 1800, // 18 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'tie',
-      brand: 'Labutě'
-    }
+// Funkce pro získání produktů z databáze
+async function getProductsFromDatabase() {
+  const { createClient } = require('@supabase/supabase-js');
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  console.log('🔍 Načítám produkty z databáze...');
+
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id, name, slug, price_cents, skus(id, size, stock)')
+    .order('id', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch products: ${error.message}`);
   }
-];
+
+  console.log(`✅ Našel ${products.length} produktů v databázi`);
+
+  return products.map(product => ({
+    id: product.id.toLowerCase(),
+    name: product.name,
+    description: 'Elegantní produkt značky Labutě',
+    images: [], // Obrázky přidáme později pokud budou potřeba
+    price_cents: Math.round(product.price_cents),
+    currency: 'czk',
+    metadata: {
+      category: product.skus && product.skus.length > 0 ? 'clothing' : 'other',
+      brand: 'Labutě',
+      slug: product.slug,
+      has_variants: (product.skus && product.skus.length > 0).toString()
+    }
+  }));
+}
 
 async function syncProducts() {
   console.log('🚀 Starting Stripe product sync...');
+
+  // Získat produkty z databáze
+  const PRODUCTS = await getProductsFromDatabase();
 
   const results = {
     created: 0,
@@ -167,15 +203,68 @@ async function syncProducts() {
   return results;
 }
 
+// Zpracování argumentů příkazové řádky
+const args = process.argv.slice(2);
+const isDryRun = args.includes('--dry-run') || args.includes('-d');
+const showHelp = args.includes('--help') || args.includes('-h');
+
+if (showHelp) {
+  console.log(`
+🔄 Stripe Product Sync Script
+
+Synchronizuje produkty z vašeho webu do Stripe Product Catalog.
+
+Použití:
+  node scripts/sync-products.js [options]
+
+Možnosti:
+  --dry-run, -d    Zobrazí co by se udělalo, ale neprovede žádné změny
+  --help, -h       Zobrazí tuto nápovědu
+
+Příklady:
+  node scripts/sync-products.js              # Spustí synchronizaci
+  node scripts/sync-products.js --dry-run    # Náhled změn
+  node scripts/sync-products.js --help       # Tato nápověda
+
+Produkty které se synchronizují:
+${PRODUCTS.map(p => `  • ${p.name} (${p.price_cents / 100} CZK)`).join('\n')}
+`);
+  process.exit(0);
+}
+
 // Run the sync
 if (require.main === module) {
+  console.log(`🚀 ${isDryRun ? 'DRY RUN' : 'Starting'} Stripe product sync...`);
+  console.log(`📦 Processing ${PRODUCTS.length} products\n`);
+
+  if (isDryRun) {
+    console.log('🔍 DRY RUN MODE - žádné změny nebudou provedeny\n');
+
+    for (const product of PRODUCTS) {
+      console.log(`📦 Would process: ${product.name}`);
+      console.log(`   ID: ${product.id}`);
+      console.log(`   Price: ${product.price_cents / 100} CZK`);
+      console.log(`   Category: ${product.metadata.category}`);
+      console.log(`   Has variants: ${product.metadata.has_variants}`);
+      console.log('');
+    }
+
+    console.log('✅ Dry run completed - žádné změny nebyly provedeny');
+    process.exit(0);
+  }
+
   syncProducts()
-    .then(() => {
+    .then((results) => {
       console.log('\n🎉 Sync completed successfully!');
+      console.log(`📊 Summary: ${results.created} created, ${results.updated} updated, ${results.errors} errors`);
       process.exit(0);
     })
     .catch((error) => {
-      console.error('\n💥 Sync failed:', error);
+      console.error('\n💥 Sync failed:', error.message);
+      console.error('\n🔧 Troubleshooting:');
+      console.error('   1. Zkontrolujte STRIPE_SECRET_KEY v .env.local');
+      console.error('   2. Ověřte připojení k internetu');
+      console.error('   3. Zkontrolujte Stripe dashboard pro API stav');
       process.exit(1);
     });
 }

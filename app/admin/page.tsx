@@ -1,141 +1,19 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { InfoIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrdersTable from "@/components/admin/OrdersTable";
 import InventoryTable from "@/components/admin/InventoryTable";
 import PacketaManagement from "@/components/admin/PacketaManagement";
+import OrderDetailView from "@/components/admin/OrderDetailView";
+import StripeManagement from "@/components/admin/StripeManagement";
 
-// Stripe Management Component
-function StripeManagement() {
-  const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
-  const [syncResult, setSyncResult] = useState<any>(null);
 
-  const syncProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/stripe/sync-products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
-      setSyncResult(data.results);
-      alert(`✅ ${data.message}`);
-      await loadProducts();
-    } catch (error: any) {
-      alert(`❌ Chyba při synchronizaci: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProducts = async () => {
-    try {
-      const res = await fetch('/api/admin/stripe/sync-products');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      setProducts(data.products);
-    } catch (error: any) {
-      console.error('Error loading products:', error);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  return (
-    <div>
-      <h2 className="font-bold text-2xl mb-4">Stripe Product Management</h2>
-
-      <div className="mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <h3 className="font-semibold text-blue-800 mb-2">🔄 Synchronizace produktů</h3>
-          <p className="text-sm text-blue-700 mb-3">
-            Synchronizuje produkty z vašeho webu do Stripe Product Catalog.
-            Tím umožníte lepší správu produktů a pokročilé funkce Stripe.
-          </p>
-          <button
-            onClick={syncProducts}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Synchronizuji...' : 'Synchronizovat produkty'}
-          </button>
-        </div>
-
-        {syncResult && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="font-semibold text-green-800 mb-2">✅ Výsledky synchronizace</h4>
-            <div className="text-sm text-green-700">
-              <p>Vytvořeno: {syncResult.created}</p>
-              <p>Aktualizováno: {syncResult.updated}</p>
-              <p>Chyb: {syncResult.errors}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Aktuální produkty v Stripe</h3>
-        {products.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="p-3 border text-left">Název</th>
-                  <th className="p-3 border text-left">ID</th>
-                  <th className="p-3 border text-left">Aktivní</th>
-                  <th className="p-3 border text-left">Cena</th>
-                  <th className="p-3 border text-left">Metadata</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id} className="odd:bg-background even:bg-muted/30">
-                    <td className="p-3 border font-medium">{product.name}</td>
-                    <td className="p-3 border font-mono text-sm">{product.id}</td>
-                    <td className="p-3 border">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        product.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.active ? 'Aktivní' : 'Neaktivní'}
-                      </span>
-                    </td>
-                    <td className="p-3 border">
-                      {product.default_price && typeof product.default_price === 'object' &&
-                       'unit_amount' in product.default_price
-                        ? `${(product.default_price.unit_amount / 100).toFixed(2)} CZK`
-                        : 'N/A'
-                      }
-                    </td>
-                    <td className="p-3 border">
-                      <div className="text-xs">
-                        {product.metadata && Object.entries(product.metadata).map(([key, value]) => (
-                          <div key={key}>{key}: {String(value)}</div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500">Žádné produkty v Stripe nenalezeny</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-type AdminSection = 'orders' | 'inventory' | 'packeta' | 'order-detail';
+type AdminSection = 'orders' | 'inventory' | 'packeta' | 'stripe' | 'order-detail';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -162,21 +40,25 @@ export default function AdminPage() {
     checkAuth();
   }, [router]);
 
+  // Load section from URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section') as AdminSection;
+    const orderId = urlParams.get('orderId');
+
+    if (section && ['orders', 'inventory', 'packeta', 'stripe', 'order-detail'].includes(section)) {
+      setCurrentSection(section);
+      if (orderId) {
+        setSelectedOrderId(orderId);
+      }
+    }
+  }, []);
+
   const navigateToSection = (section: AdminSection, orderId?: string) => {
     setCurrentSection(section);
     if (orderId) {
       setSelectedOrderId(orderId);
     }
-
-    // Update URL without page reload
-    const params = new URLSearchParams();
-    params.set('section', section);
-    if (orderId) {
-      params.set('orderId', orderId);
-    }
-
-    const newUrl = `/admin?${params.toString()}`;
-    window.history.replaceState({}, '', newUrl);
   };
 
   const handleOrderClick = (orderId: string) => {
@@ -201,75 +83,38 @@ export default function AdminPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        <button
-          onClick={() => navigateToSection('orders')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            currentSection === 'orders'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          Orders
-        </button>
-        <button
-          onClick={() => navigateToSection('inventory')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            currentSection === 'inventory'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          Inventory
-        </button>
-        <button
-          onClick={() => navigateToSection('packeta')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            currentSection === 'packeta'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          Packeta
-        </button>
-        <button
-          onClick={() => navigateToSection('stripe')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            currentSection === 'stripe'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          Stripe
-        </button>
-      </div>
+      <Tabs value={currentSection} onValueChange={(value) => navigateToSection(value as AdminSection)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger value="packeta">Packeta</TabsTrigger>
+          <TabsTrigger value="stripe">Stripe</TabsTrigger>
+        </TabsList>
 
-      {/* Content */}
-      <div>
-        {currentSection === 'orders' && (
-          <>
+        <TabsContent value="orders" className="space-y-4">
+          <div>
             <h2 className="font-bold text-2xl mb-4">Orders</h2>
             <OrdersTable onOrderClick={handleOrderClick} />
-          </>
-        )}
+          </div>
+        </TabsContent>
 
-        {currentSection === 'inventory' && (
-          <>
+        <TabsContent value="inventory" className="space-y-4">
+          <div>
             <h2 className="font-bold text-2xl mb-4">Inventory Management</h2>
             <InventoryTable />
-          </>
-        )}
+          </div>
+        </TabsContent>
 
-        {currentSection === 'packeta' && (
-          <>
+        <TabsContent value="packeta" className="space-y-4">
+          <div>
             <h2 className="font-bold text-2xl mb-4">Packeta Management</h2>
             <PacketaManagement />
-          </>
-        )}
+          </div>
+        </TabsContent>
 
-        {currentSection === 'stripe' && (
+        <TabsContent value="stripe" className="space-y-4">
           <StripeManagement />
-        )}
+        </TabsContent>
 
         {currentSection === 'order-detail' && selectedOrderId && (
           <OrderDetailView
@@ -277,68 +122,12 @@ export default function AdminPage() {
             onBack={() => navigateToSection('orders')}
           />
         )}
-      </div>
+      </Tabs>
     </div>
   );
 }
 
-// Order Detail View Component - Full featured version
-function OrderDetailView({ orderId, onBack }: { orderId: string; onBack: () => void }) {
-  const [order, setOrder] = useState<OrderDetail | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [newNote, setNewNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
 
-  type OrderDetail = {
-    id: string;
-    stripe_session_id: string | null;
-    customer_email: string | null;
-    customer_name: string | null;
-    customer_phone: string | null;
-    packeta_point_id: string | null;
-    packeta_shipment_id: string | null;
-    packeta_tracking_url: string | null;
-    items: string | unknown[];
-    status: string;
-    amount_total: number | null;
-    created_at: string;
-    updated_at: string;
-  };
-
-  type TimelineEvent = {
-    timestamp: string;
-    event: string;
-    description: string;
-  };
-
-  type Note = {
-    id: string;
-    note: string;
-    created_at: string;
-  };
-
-  const loadOrder = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/orders/${orderId}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load order");
-
-      setOrder(json.order);
-      setEditedOrder(json.order);
-
-      // Generate timeline from order data
-      const timelineEvents = [
-        {
-          timestamp: json.order.created_at,
-          event: "Order Created",
-          description: `Order created with status: ${json.order.status}`
-        }
       ];
 
       if (json.order.packeta_shipment_id) {

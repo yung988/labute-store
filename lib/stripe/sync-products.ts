@@ -6,60 +6,42 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia',
 });
 
-// Current products from the website
-const PRODUCTS: ProductData[] = [
-  {
-    id: 'labute-ss6-tshirt',
-    name: 'Labutě SS6 rhinestone crystal T-shirt',
-    description: 'Elegantní tričko s křišťálovými aplikacemi',
-    images: [getProductImage('Labutě SS6 rhinestone crystal T-shirt') || ''],
-    price_cents: 2500, // 25 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'tshirt',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-hoodie',
-    name: 'Labutě track top Hoodie',
-    description: 'Stylová mikina s kapucí',
-    images: [getProductImage('Labutě track top Hoodie') || ''],
-    price_cents: 4500, // 45 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'hoodie',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-polo',
-    name: 'Labutě Throwback Polo T-shirt',
-    description: 'Klasické polo tričko v retro stylu',
-    images: [getProductImage('Labutě Throwback Polo T-shirt') || ''],
-    price_cents: 2200, // 22 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'polo',
-      brand: 'Labutě'
-    }
-  },
-  {
-    id: 'labute-tie',
-    name: 'Labutě SS6 rhinestone crystal tie',
-    description: 'Elegantní kravata s křišťálovými aplikacemi',
-    images: [getProductImage('Labutě SS6 rhinestone crystal tie') || ''],
-    price_cents: 1800, // 18 CZK
-    currency: 'czk',
-    metadata: {
-      category: 'tie',
-      brand: 'Labutě'
-    }
+// Function to get products from database
+async function getProductsFromDatabase(): Promise<ProductData[]> {
+  const { createClient } = await import('@/lib/supabase/server');
+  const supabase = await createClient();
+
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id, name, slug, price_cents, skus(id, size, stock)')
+    .order('id', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch products: ${error.message}`);
   }
-];
+
+  return products.map(product => ({
+    id: product.id.toLowerCase(),
+    name: product.name,
+    description: `Elegantní produkt značky Labutě`,
+    images: [getProductImage(product.name) || ''],
+    price_cents: Math.round(product.price_cents), // Ensure integer
+    currency: 'czk',
+    metadata: {
+      category: product.skus && product.skus.length > 0 ? 'clothing' : 'other',
+      brand: 'Labutě',
+      slug: product.slug,
+      has_variants: (product.skus && product.skus.length > 0).toString()
+    }
+  }));
+}
 
 export async function syncProductsToStripe() {
   console.log('🚀 Starting Stripe product sync...');
+
+  // Get products from database
+  const PRODUCTS = await getProductsFromDatabase();
+  console.log(`📦 Found ${PRODUCTS.length} products in database`);
 
   const results = {
     created: 0,
