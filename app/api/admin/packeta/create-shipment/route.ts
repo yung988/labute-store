@@ -42,34 +42,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
   }
 
-  // Check required environment variables
-  const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
-  const senderId = process.env.PACKETA_SENDER_ID;
-  const eshopId = process.env.PACKETA_ESHOP_ID;
+   // Check required environment variables
+   const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+   const senderId = process.env.PACKETA_SENDER_ID;
+   const eshopId = process.env.PACKETA_ESHOP_ID;
 
-  if (!PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
-    return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
-      { status: 500 }
-    );
-  }
+   console.log('🔍 DEBUG: Environment variables check:');
+   console.log('   PACKETA_API_KEY exists:', !!PACKETA_API_KEY);
+   console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length);
+   console.log('   PACKETA_API_KEY starts with:', PACKETA_API_KEY?.substring(0, 10));
+   console.log('   PACKETA_SENDER_ID:', senderId);
+   console.log('   PACKETA_ESHOP_ID:', eshopId);
 
-  if (!senderId) {
-    console.error('❌ PACKETA_SENDER_ID is not set on Vercel!');
-    return NextResponse.json(
-      { error: 'Packeta sender ID is not configured on Vercel. Please set PACKETA_SENDER_ID environment variable.' },
-      { status: 500 }
-    );
-  }
+   if (!PACKETA_API_KEY) {
+     console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+     return NextResponse.json(
+       { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+       { status: 500 }
+     );
+   }
 
-  if (!eshopId) {
-    console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
-    return NextResponse.json(
-      { error: 'Packeta eshop ID is not configured on Vercel. Please set PACKETA_ESHOP_ID environment variable.' },
-      { status: 500 }
-    );
-  }
+   if (!senderId) {
+     console.error('❌ PACKETA_SENDER_ID is not set on Vercel!');
+     return NextResponse.json(
+       { error: 'Packeta sender ID is not configured on Vercel. Please set PACKETA_SENDER_ID environment variable.' },
+       { status: 500 }
+     );
+   }
+
+   if (!eshopId) {
+     console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
+     return NextResponse.json(
+       { error: 'Packeta eshop ID is not configured on Vercel. Please set PACKETA_ESHOP_ID environment variable.' },
+       { status: 500 }
+     );
+   }
 
   // Calculate total weight from order items (in kg for Packeta API)
   let totalWeightKg = 0.5; // Default 0.5kg fallback
@@ -213,9 +220,10 @@ export async function POST(req: NextRequest) {
    </packetAttributes>
  </createPacket>`;
 
-   console.log('📄 XML Request Body:', xmlBody);
+    console.log('📄 XML Request Body:', xmlBody);
 
-   const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+    const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+    console.log('🔗 API URL:', xmlApiUrl);
 
    // Simple timeout and retry for Packeta XML API
    const MAX_RETRIES = 3;
@@ -230,15 +238,22 @@ export async function POST(req: NextRequest) {
        const controller = new AbortController();
        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-       packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/xml",
-           "Accept": "application/xml",
-         },
-         body: xmlBody,
-         signal: controller.signal
-       });
+        console.log(`🔄 Making request to: ${xmlApiUrl}/createPacket`);
+        console.log(`📨 Headers:`, {
+          "Content-Type": "application/xml",
+          "Accept": "application/xml",
+        });
+        console.log(`📦 Body length:`, xmlBody.length);
+
+        packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/xml",
+            "Accept": "application/xml",
+          },
+          body: xmlBody,
+          signal: controller.signal
+        });
 
       clearTimeout(timeoutId);
 
