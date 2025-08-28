@@ -3,6 +3,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { Geist } from "next/font/google";
+import "../../globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  display: "swap",
+  subsets: ["latin"],
+});
 import { 
   BarChart3, 
   Package, 
@@ -80,6 +88,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
+    <html lang="cs" suppressHydrationWarning>
+      <head>
+        <meta name="color-scheme" content="light" />
+        <title>YEEZUZ2020 Store - Admin</title>
+      </head>
+       <body className={`${geistSans.className} antialiased`}>
     <div className="flex min-h-screen bg-background">
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -99,7 +113,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h1 className="text-xl font-bold">YEEZUZ2020</h1>
+          <h1 className="text-xl font-bold">YEEZUZ2020 Store</h1>
           <Button
             variant="ghost"
             size="sm"
@@ -175,7 +189,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <Menu className="h-4 w-4" />
           </Button>
-          <h2 className="font-semibold">YEEZUZ2020</h2>
+          <h2 className="font-semibold">YEEZUZ2020 Store</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -201,5 +215,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       </div>
     </div>
+      </body>
+    </html>
   );
 }
