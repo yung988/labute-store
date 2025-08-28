@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import JSZip from "jszip";
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -49,10 +48,6 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`📦 Bulk printing ${ordersWithShipments.length} labels in format: ${format}`);
-
-    // Validate and set format
-    const allowedFormats = ['A6', 'A6 on A4'];
-    const labelFormat = allowedFormats.includes(format) ? format : 'A6';
 
     // For multiple orders, use A6 on A4 format to fit multiple labels per page
     // If only one order, use A6 format for single label
