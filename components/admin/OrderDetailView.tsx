@@ -67,6 +67,13 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const [editMode, setEditMode] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
 
+  // Helper function to truncate long text
+  const truncateText = (text: string | null, maxLength: number = 20) => {
+    if (!text) return "Nezadáno";
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
 
   const loadOrder = useCallback(async () => {
     setLoading(true);
@@ -416,7 +423,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Stripe Session ID</Label>
                   <p className="text-sm mt-1 text-muted-foreground">
-                    {order.stripe_session_id || "Nezadáno"}
+                    {truncateText(order.stripe_session_id, 25)}
                   </p>
                 </div>
               </div>
