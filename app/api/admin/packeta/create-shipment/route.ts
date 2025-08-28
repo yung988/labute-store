@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
     <email>${xmlEscape(order.customer_email || '')}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
-    <weight>${xmlEscape(String(totalWeightKg))}</weight>
+    <weight>${xmlEscape(String(weightInGrams))}</weight>
     <value>${xmlEscape(String(safeAmount))}</value>
     <cod>${xmlEscape(String(safeAmount))}</cod>
     <note>${xmlEscape(`Order ${orderId.slice(-8)}`)}</note>
