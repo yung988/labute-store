@@ -189,7 +189,48 @@ export async function POST(req: NextRequest) {
   console.log('   PACKETA_ESHOP_ID:', eshopId);
   console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length || 0);
 
-  // Simple timeout and retry for Packeta API
+  // Build XML request for Packeta REST API
+  function xmlEscape(v: string) {
+    return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  function basicAuthHeader(key: string, password: string) {
+    const token = Buffer.from(`${key}:${password}`).toString('base64');
+    return `Basic ${token}`;
+  }
+
+  const xmlBody = `
+<createPacket>
+  <packetAttributes>
+    <number>${xmlEscape(packetaOrderId)}</number>
+    <firstName>${xmlEscape(firstName)}</firstName>
+    <lastName>${xmlEscape(lastName)}</lastName>
+    <email>${xmlEscape(order.customer_email || '')}</email>
+    <phone>${xmlEscape(formattedPhone)}</phone>
+    <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
+    <weight>${xmlEscape(String(totalWeightKg))}</weight>
+    <value>${xmlEscape(String(safeAmount))}</value>
+    <cod>${xmlEscape(String(safeAmount))}</cod>
+    <note>${xmlEscape(`Order ${orderId.slice(-8)}`)}</note>
+  </packetAttributes>
+</createPacket>`.trim();
+
+  console.log('📄 XML Request Body:', xmlBody);
+
+  // Get XML API credentials
+  const xmlApiKey = process.env.PACKETA_API_KEY;
+  const xmlApiPassword = process.env.PACKETA_API_PASSWORD;
+  const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+
+  if (!xmlApiPassword) {
+    console.error('❌ PACKETA_API_PASSWORD is not set!');
+    return NextResponse.json(
+      { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
+      { status: 500 }
+    );
+  }
+
+  // Simple timeout and retry for Packeta XML API
   const MAX_RETRIES = 3;
   const TIMEOUT_MS = 30000; // 30 second timeout
 
@@ -197,19 +238,19 @@ export async function POST(req: NextRequest) {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`🔄 Packeta API attempt ${attempt}/${MAX_RETRIES}`);
+      console.log(`🔄 Packeta XML API attempt ${attempt}/${MAX_RETRIES}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-      packetaResponse = await fetch("https://api.packeta.com/v5/packets", {
+      packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${PACKETA_API_KEY}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json",
+          "Authorization": basicAuthHeader(xmlApiKey!, xmlApiPassword),
+          "Content-Type": "application/xml",
+          "Accept": "application/xml",
         },
-        body: JSON.stringify(requestBody),
+        body: xmlBody,
         signal: controller.signal
       });
 
@@ -247,7 +288,7 @@ export async function POST(req: NextRequest) {
   // Handle non-2xx responses
   if (!packetaResponse.ok) {
     const errorText = await packetaResponse.text();
-    console.error("❌ Packeta API error:", {
+    console.error("❌ Packeta XML API error:", {
       status: packetaResponse.status,
       statusText: packetaResponse.statusText,
       error: errorText.substring(0, 200)
@@ -277,32 +318,29 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}` },
+      { error: `Packeta XML API error: ${packetaResponse.status} ${packetaResponse.statusText}` },
       { status: 500 }
     );
   }
 
-  const packetaResult = await packetaResponse.json();
-  console.log("✅ Packeta API success:", packetaResult);
+  const xmlResponse = await packetaResponse.text();
+  console.log("✅ Packeta XML API success:", xmlResponse.substring(0, 500));
 
-  // Extract packet ID from v5 JSON response
-  const packetaId = packetaResult?.id ||
-                    packetaResult?.packet_id ||
-                    packetaResult?.data?.id;
+  // Parse XML response to extract packet ID - simple regex parsing
+  const idMatch = xmlResponse.match(/<id[^>]*>([^<]+)<\/id>/i);
+  const packetaId = idMatch ? idMatch[1] : null;
 
   if (!packetaId) {
-    console.error("❌ No Packeta ID in response:", packetaResult);
-    console.error("❌ Response structure:", JSON.stringify(packetaResult, null, 2));
+    console.error("❌ No Packeta ID in XML response:", xmlResponse);
     return NextResponse.json(
-      { error: `Invalid Packeta response - missing ID. Response: ${JSON.stringify(packetaResult)}` },
+      { error: `Invalid Packeta response - missing ID. Response: ${xmlResponse.substring(0, 200)}` },
       { status: 500 }
     );
   }
 
-  // Extract barcode/tracking number from v5 JSON response
-  const packetaBarcode = packetaResult?.barcode ||
-                        packetaResult?.tracking_number ||
-                        packetaResult?.number;
+  // Extract barcode from XML response 
+  const barcodeMatch = xmlResponse.match(/<barcode[^>]*>([^<]+)<\/barcode>/i);
+  const packetaBarcode = barcodeMatch ? barcodeMatch[1] : null;
 
   // Generate tracking URL
   const trackingUrl = `https://www.zasilkovna.cz/sledovani/${packetaId}`;
