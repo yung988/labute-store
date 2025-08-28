@@ -286,10 +286,10 @@ export async function POST(req: NextRequest) {
          const responseText = await packetaResponse.text();
          if (responseText.includes('IncorrectApiPasswordFault')) {
            console.log('🔄 Trying MD5 hash of password...');
-           const xmlBodyMD5 = xmlBody.replace(
-             `<apiPassword>${xmlEscape(PACKETA_API_PASSWORD.trim())}</apiPassword>`,
-             `<apiPassword>${xmlEscape(md5Password)}</apiPassword>`
-           );
+            const xmlBodyMD5 = xmlBody.replace(
+              `<apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>`,
+              `<apiPassword>${xmlEscape(md5Password)}</apiPassword>`
+            );
            
            console.log('📄 XML with MD5 password:', xmlBodyMD5);
            
