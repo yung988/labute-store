@@ -146,7 +146,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     try {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-create-shipment-fixed', {
+      const { data, error } = await supabase.functions.invoke('packeta_create_shipment', {
         body: { orderId }
       });
 
@@ -167,7 +167,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     try {
       setLoading(true);
       const supabase = createClient();
-      const { error } = await supabase.functions.invoke('packeta-cancel-shipment-fixed', {
+      const { error } = await supabase.functions.invoke('packeta_cancel_shipment', {
         body: { orderId }
       });
 
@@ -185,7 +185,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const printPacketaLabel = async () => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
+      const { data, error } = await supabase.functions.invoke('packeta_print_label', {
         body: { orderId }
       });
 

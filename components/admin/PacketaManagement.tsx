@@ -103,7 +103,7 @@ export default function PacketaManagement() {
   const printLabel = async (orderId: string, format: string = 'A6') => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
+      const { data, error } = await supabase.functions.invoke('packeta_print_label', {
         body: { orderId, format }
       });
 

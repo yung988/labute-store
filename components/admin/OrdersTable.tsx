@@ -149,7 +149,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     try {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-create-shipment-fixed', {
+      const { data, error } = await supabase.functions.invoke('packeta_create_shipment', {
         body: { orderId }
       });
 
@@ -168,7 +168,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const printPacketaLabel = async (orderId: string) => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
+      const { data, error } = await supabase.functions.invoke('packeta_print_label', {
         body: { orderId }
       });
 
