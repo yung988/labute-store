@@ -8,6 +8,7 @@ export async function GET(
   const { orderId } = await context.params;
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format') || 'A6';
+  const returnDirect = searchParams.get('direct') === 'true'; // Debug parameter
 
   console.log(`🌐 Request details:`, {
     orderId,
@@ -54,6 +55,15 @@ export async function GET(
 
     console.log(`✅ Found order with shipment ID: ${order.packeta_shipment_id}`);
 
+    // Validate shipment ID
+    if (!order.packeta_shipment_id || order.packeta_shipment_id.trim() === '') {
+      console.error('❌ Shipment ID is empty or null');
+      return NextResponse.json(
+        { error: "Shipment ID is missing or empty" },
+        { status: 400 }
+      );
+    }
+
     // Get label from Packeta v5 API with timeout and retry
     const MAX_RETRIES = 3;
     const TIMEOUT_MS = 30000;
@@ -69,12 +79,20 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        // Validate and set format - only A6 formats are allowed since June 2023
-        const allowedFormats = ['A6', 'A6 on A4'];
-        const labelFormat = allowedFormats.includes(format) ? format : 'A6';
+        // Validate and set format - try different format names
+        const formatMapping: Record<string, string> = {
+          'A6': 'A6',
+          'A6 on A4': 'A6',  // Fallback to A6 for now
+          'A6_on_A4': 'A6'
+        };
+        const labelFormat = formatMapping[format] || 'A6';
+
+        console.log(`🏷️ Requested format: ${format}, using: ${labelFormat}`);
         
         console.log(`🏷️ Using label format: ${labelFormat}`);
         
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+
         const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetLabelPdf>
   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
@@ -83,7 +101,13 @@ export async function GET(
   <offset>0</offset>
 </packetLabelPdf>`;
 
-        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+        console.log(`📡 Sending to Packeta API:`, {
+          url: apiUrl,
+          xmlBody,
+          passwordLength: process.env.PACKETA_API_PASSWORD?.length,
+          packetId: order.packeta_shipment_id,
+          format: labelFormat
+        });
         
         labelResponse = await fetch(`${apiUrl}`, {
           method: "POST",
@@ -171,6 +195,27 @@ export async function GET(
     const pdfBuffer = await labelResponse.arrayBuffer();
     console.log(`📄 PDF buffer received, size: ${pdfBuffer.byteLength} bytes`);
 
+    // Debug: Check if PDF buffer is empty or invalid
+    if (pdfBuffer.byteLength === 0) {
+      console.error('❌ PDF buffer is empty! Packeta API returned no data.');
+      console.log('Response headers:', Object.fromEntries(labelResponse.headers.entries()));
+      const responseText = await labelResponse.clone().text();
+      console.log('Raw response:', responseText.substring(0, 500));
+      return NextResponse.json(
+        { error: "Packeta API returned empty PDF data", details: responseText.substring(0, 200) },
+        { status: 502 }
+      );
+    }
+
+    // Debug: Check PDF header
+    const firstBytes = new Uint8Array(pdfBuffer.slice(0, 10));
+    console.log('📄 PDF first 10 bytes:', Array.from(firstBytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+    if (!firstBytes.length || firstBytes[0] !== 0x25) { // PDF files start with %
+      console.error('❌ PDF buffer does not start with % (PDF signature)');
+      const textContent = new TextDecoder().decode(pdfBuffer.slice(0, 200));
+      console.log('📄 Text content:', textContent);
+    }
+
     // Test if we can create a simple text file first
     const testFileName = `test-${orderId}.txt`;
     const testContent = `Test file for order ${orderId} at ${new Date().toISOString()}`;
@@ -245,6 +290,17 @@ export async function GET(
       });
     }
 
+    // Debug: Also return PDF directly if requested (even if storage works)
+    if (returnDirect) {
+      console.log('🔧 Debug mode: Returning PDF directly (storage works)');
+      return new NextResponse(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
+        },
+      });
+    }
+
     // Get public URL for the uploaded file
     const { data: publicUrlData } = supabaseAdmin.storage
       .from('packeta-labels')
@@ -265,6 +321,17 @@ export async function GET(
     }
 
     console.log(`✅ Label saved to storage: ${publicUrlData.publicUrl}`);
+
+    // Debug: Return PDF directly if requested
+    if (returnDirect) {
+      console.log('🔧 Debug mode: Returning PDF directly');
+      return new NextResponse(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
+        },
+      });
+    }
 
     // Return the public URL instead of the PDF buffer
     console.log(`📤 Returning JSON response with URL: ${publicUrlData.publicUrl}`);
