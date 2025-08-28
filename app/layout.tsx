@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { CartProvider } from "@/context/CartContext";
-import { Header } from "@/components/Header";
-import Footer from "@/components/Footer";
+import { ConditionalLayout } from "@/components/ConditionalLayout";
 import { ReactLenis } from "lenis/react";
 import "./globals.css";
 
@@ -42,9 +41,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <CartProvider>
-              <Header />
-              {children}
-              <Footer />
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
             </CartProvider>
           </ThemeProvider>
         </ReactLenis>
