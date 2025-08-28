@@ -33,7 +33,7 @@ export async function GET(
   try {
     console.log(`🔍 Tracking Packeta shipment: ${packetaId}`);
 
-    // Call Packeta JSON tracking API with timeout and retry
+    // Call Packeta XML tracking API with timeout and retry
     const MAX_RETRIES = 3;
     const TIMEOUT_MS = 30000;
     const BASE_BACKOFF_MS = 1000;
@@ -41,7 +41,16 @@ export async function GET(
     let packetaRes: Response | undefined;
     let lastError: Error | null = null;
 
-    console.log(`🔍 Tracking Packeta shipment via JSON API: ${packetaId}`);
+    // Build XML request for packet status
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetStatus>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${packetaId}</packetId>
+</packetStatus>`;
+
+    console.log('📄 XML Tracking Request:', xmlBody);
+
+    const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -50,12 +59,13 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        packetaRes = await fetch(`https://api.packeta.com/v5/packets/${packetaId}/status`, {
-          method: "GET",
+        packetaRes = await fetch(`${apiUrl}`, {
+          method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
-            "Accept": "application/json",
+            "Content-Type": "application/xml",
+            "Accept": "application/xml",
           },
+          body: xmlBody,
           signal: controller.signal,
         });
 
@@ -132,23 +142,31 @@ export async function GET(
       );
     }
 
-    const trackingData = await packetaRes.json();
-    console.log("✅ Packeta tracking data retrieved:", trackingData);
+    const trackingData = await packetaRes.text();
+    console.log("✅ Packeta tracking XML response:", trackingData);
 
-    // v5 returns array of tracking data
-    const packetData = Array.isArray(trackingData) ? trackingData[0] : trackingData;
+    // Parse XML response (simple regex parsing for now)
+    const statusMatch = trackingData.match(/<status[^>]*>([^<]+)<\/status>/i);
+    const status = statusMatch ? statusMatch[1] : 'unknown';
+    
+    const packetData = {
+      status: status,
+      statusText: status,
+      raw_xml: trackingData
+    };
 
     // Normalize the response format
     const normalizedData = {
       packetaId,
-      status: packetData?.status || packetData?.state?.name || 'unknown',
-      statusText: packetData?.status_text || packetData?.status_description || packetData?.state?.description || 'Neznámý stav',
-      currentLocation: packetData?.current_location || packetData?.location,
-      estimatedDelivery: packetData?.estimated_delivery,
-      deliveredAt: packetData?.delivered_at,
-      lastUpdate: packetData?.updatedAt || packetData?.updated_at,
-      trackingUrl: packetData?.tracking_url || `https://www.zasilkovna.cz/sledovani/${packetaId}`,
-      trackingHistory: packetData?.history || packetData?.events || []
+      status: packetData.status,
+      statusText: packetData.statusText,
+      currentLocation: null,
+      estimatedDelivery: null,
+      deliveredAt: null,
+      lastUpdate: new Date().toISOString(),
+      trackingUrl: `https://www.zasilkovna.cz/sledovani/${packetaId}`,
+      trackingHistory: [],
+      rawResponse: packetData.raw_xml
     };
 
     return NextResponse.json(normalizedData);
