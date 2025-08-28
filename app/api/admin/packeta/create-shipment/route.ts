@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
      // Simple timeout and retry for Packeta API
      const MAX_RETRIES = 3;
-     const TIMEOUT_MS = 15000; // 15 second timeout
+     const TIMEOUT_MS = 30000; // 30 second timeout (recommended for read operations)
 
      let packetaResponse: Response | undefined;
 
