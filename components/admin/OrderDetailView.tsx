@@ -600,22 +600,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                  </div>
                )}
 
-               {order.packeta_tracking_url && (
-                 <div>
-                   <Label className="text-sm font-medium text-muted-foreground">Sledovací URL</Label>
-                   <p className="text-sm mt-1">
-                     <a
-                       href={order.packeta_tracking_url}
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                     >
-                       Otevřít sledování
-                       <ExternalLink className="w-3 h-3" />
-                     </a>
-                   </p>
-                 </div>
-               )}
+
 
               <Separator />
 
