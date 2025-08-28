@@ -46,7 +46,7 @@ const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
   <apiPassword>${PACKETA_API_KEY}</apiPassword>
   <packetAttributes>
     <number>TEST-${Date.now()}</number>
-    <name>Jan Gajdoš</name>
+    <name>Ondřej Sabáček</name>
     <surname></surname>
     <email>test@example.com</email>
     <phone>+420733481280</phone>
