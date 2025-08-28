@@ -1,26 +1,205 @@
-import Link from "next/link";
-import { ReactNode } from "react";
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
+import { 
+  BarChart3, 
+  Package, 
+  ShoppingCart, 
+  Truck, 
+  Users,
+  Menu,
+  X,
+  LogOut,
+  User as UserIcon
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AdminLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  return (
-    <div className="min-h-svh flex flex-col">
-      <header className="border-b bg-background">
-        <div className="container mx-auto px-4 py-3 flex items-center gap-6">
-          <Link href="/admin" className="font-semibold text-lg">
-            Admin
-          </Link>
-          <div className="ml-auto text-sm">
-            <Link href="/" className="hover:underline">
-              Back to store
-            </Link>
-          </div>
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error || !user) {
+        router.push("/auth/login");
+        return;
+      }
+
+      setUser(user);
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [router]);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Načítání...</p>
         </div>
-      </header>
-      <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, href: '/admin' },
+    { id: 'orders', label: 'Objednávky', icon: ShoppingCart, href: '/admin' },
+    { id: 'packeta', label: 'Packeta', icon: Truck, href: '/admin' },
+    { id: 'customers', label: 'Zákazníci', icon: Users, href: '/admin' },
+    { id: 'inventory', label: 'Skladem', icon: Package, href: '/admin' },
+  ];
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed lg:relative lg:translate-x-0 
+        w-64 h-screen bg-card border-r border-border 
+        z-50 transition-transform duration-300 ease-in-out
+        flex flex-col
+      `}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h1 className="text-xl font-bold">YEEZUZ2020</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className="w-full justify-start h-10"
+                onClick={() => {
+                  // Pro teď jen refresh stránky s parametrem
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('section', item.id);
+                  window.location.href = url.toString();
+                }}
+              >
+                <Icon className="w-4 h-4 mr-3" />
+                {item.label}
+              </Button>
+            );
+          })}
+        </nav>
+
+        {/* User info */}
+        <div className="p-4 border-t border-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start p-2">
+                <div className="flex items-center space-x-3 w-full">
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                    <UserIcon className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium truncate">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">Administrátor</p>
+                  </div>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem disabled>
+                <UserIcon className="w-4 h-4 mr-2" />
+                {user.email}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <LogOut className="w-4 h-4 mr-2" />
+                Odhlásit se
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+          <h2 className="font-semibold">YEEZUZ2020</h2>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <UserIcon className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled>
+                {user.email}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <LogOut className="w-4 h-4 mr-2" />
+                Odhlásit se
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-6 overflow-auto">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
