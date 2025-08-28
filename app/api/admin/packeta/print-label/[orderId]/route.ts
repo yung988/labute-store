@@ -18,16 +18,18 @@ export async function GET(
     headers: Object.fromEntries(req.headers.entries())
   });
 
-  // Check if Packeta API password is configured
-  if (!process.env.PACKETA_API_PASSWORD) {
-    console.error('❌ PACKETA_API_PASSWORD is not set!');
-    return NextResponse.json(
-      { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
-      { status: 500 }
-    );
-  }
+    // Check if Packeta API password is configured
+    if (!process.env.PACKETA_API_PASSWORD) {
+      console.error('❌ PACKETA_API_PASSWORD is not set!');
+      return NextResponse.json(
+        { error: 'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
+        { status: 500 }
+      );
+    }
 
-  console.log(`🔑 Packeta API password is configured (length: ${process.env.PACKETA_API_PASSWORD.length})`);
+    console.log(`🔑 Packeta API password is configured (length: ${process.env.PACKETA_API_PASSWORD.length})`);
+    console.log(`🔑 Password starts with: ${process.env.PACKETA_API_PASSWORD.substring(0, 5)}...`);
+    console.log(`🔑 Password ends with: ...${process.env.PACKETA_API_PASSWORD.substring(process.env.PACKETA_API_PASSWORD.length - 5)}`);
 
   try {
     console.log(`🏷️ Print label request for order: ${orderId}`);
@@ -79,13 +81,17 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        // Validate and set format - try different format names
+        // Validate and set format - Packeta API supports specific label formats
         const formatMapping: Record<string, string> = {
-          'A6': 'A6',
-          'A6 on A4': 'A6',  // Fallback to A6 for now
-          'A6_on_A4': 'A6'
+          'A6': 'A6 on A4',           // Default A6 label on A4 page
+          'A6 on A4': 'A6 on A4',     // A6 label on A4 page
+          'A6_on_A4': 'A6 on A4',     // A6 label on A4 page
+          'A6 on A6': 'A6 on A6',     // A6 label on A6 page
+          'A7 on A4': 'A7 on A4',     // A7 label on A4 page
+          'PDF': 'A6 on A4',          // Fallback to A6 on A4
+          'ZPL': 'A6 on A4'           // Fallback to A6 on A4
         };
-        const labelFormat = formatMapping[format] || 'A6';
+        const labelFormat = formatMapping[format] || 'A6 on A4';
 
         console.log(`🏷️ Requested format: ${format}, using: ${labelFormat}`);
         
@@ -192,28 +198,55 @@ export async function GET(
       );
     }
 
-    const pdfBuffer = await labelResponse.arrayBuffer();
-    console.log(`📄 PDF buffer received, size: ${pdfBuffer.byteLength} bytes`);
+    const responseText = await labelResponse.text();
+    console.log(`📄 Packeta response received, size: ${responseText.length} bytes`);
 
-    // Debug: Check if PDF buffer is empty or invalid
-    if (pdfBuffer.byteLength === 0) {
-      console.error('❌ PDF buffer is empty! Packeta API returned no data.');
-      console.log('Response headers:', Object.fromEntries(labelResponse.headers.entries()));
-      const responseText = await labelResponse.clone().text();
-      console.log('Raw response:', responseText.substring(0, 500));
+    // Debug: Check if response is empty
+    if (!responseText || responseText.trim() === '') {
+      console.error('❌ Packeta API returned empty response');
       return NextResponse.json(
-        { error: "Packeta API returned empty PDF data", details: responseText.substring(0, 200) },
+        { error: "Packeta API returned empty response" },
         { status: 502 }
       );
     }
 
-    // Debug: Check PDF header
-    const firstBytes = new Uint8Array(pdfBuffer.slice(0, 10));
-    console.log('📄 PDF first 10 bytes:', Array.from(firstBytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
-    if (!firstBytes.length || firstBytes[0] !== 0x25) { // PDF files start with %
-      console.error('❌ PDF buffer does not start with % (PDF signature)');
-      const textContent = new TextDecoder().decode(pdfBuffer.slice(0, 200));
-      console.log('📄 Text content:', textContent);
+    // Parse XML response
+    let pdfBuffer: ArrayBuffer;
+    try {
+      // Check if response is XML with base64 PDF
+      if (responseText.includes('<result>') && responseText.includes('</result>')) {
+        console.log('📄 Response contains base64 PDF data');
+        const resultMatch = responseText.match(/<result>([^<]*)<\/result>/);
+        if (!resultMatch || !resultMatch[1]) {
+          console.error('❌ No PDF data found in XML response');
+          return NextResponse.json(
+            { error: "No PDF data found in Packeta response", details: responseText.substring(0, 500) },
+            { status: 502 }
+          );
+        }
+
+        // Decode base64 PDF
+        const base64Data = resultMatch[1];
+        console.log(`📄 Base64 data length: ${base64Data.length} characters`);
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        pdfBuffer = bytes.buffer;
+        console.log(`📄 Decoded PDF buffer size: ${pdfBuffer.byteLength} bytes`);
+      } else {
+        // Fallback: treat as direct PDF
+        console.log('📄 Treating response as direct PDF');
+        pdfBuffer = new TextEncoder().encode(responseText).buffer;
+      }
+    } catch (parseError) {
+      console.error('❌ Error parsing Packeta response:', parseError);
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      return NextResponse.json(
+        { error: "Error parsing Packeta response", details: errorMessage },
+        { status: 502 }
+      );
     }
 
     // Test if we can create a simple text file first
