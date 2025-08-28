@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Package, Truck, Edit, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { createClient } from "@/lib/supabase/client";
 
 type OrderDetail = {
   id: string;
@@ -53,28 +54,33 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load order");
+      const supabase = createClient();
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
 
-      setOrder(json.order);
-      setEditedOrder(json.order);
+      if (error) throw new Error(error.message || "Failed to load order");
+
+      setOrder(orderData);
+      setEditedOrder(orderData);
 
       // Generate timeline from order data
       const timelineEvents: TimelineEvent[] = [
         {
-          timestamp: json.order.created_at,
+          timestamp: orderData.created_at,
           event: "Order Created",
-          description: `Order created with status: ${json.order.status}`,
+          description: `Order created with status: ${orderData.status}`,
           icon: <FileText className="w-4 h-4" />
         }
       ];
 
-      if (json.order.packeta_shipment_id) {
+      if (orderData.packeta_shipment_id) {
         timelineEvents.push({
-          timestamp: json.order.updated_at || json.order.created_at,
+          timestamp: orderData.updated_at || orderData.created_at,
           event: "Shipment Created",
-          description: `Packeta shipment created: ${json.order.packeta_shipment_id}`,
+          description: `Packeta shipment created: ${orderData.packeta_shipment_id}`,
           icon: <Truck className="w-4 h-4" />
         });
       }
@@ -95,15 +101,17 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editedOrder),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Save failed");
+      const supabase = createClient();
+      const { data: updatedOrder, error } = await supabase
+        .from('orders')
+        .update(editedOrder)
+        .eq('id', orderId)
+        .select()
+        .single();
 
-      setOrder(json.order);
+      if (error) throw new Error(error.message || "Save failed");
+
+      setOrder(updatedOrder);
       setEditMode(false);
       await loadOrder();
     } catch (e: unknown) {
@@ -118,15 +126,14 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const createPacketaShipment = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/packeta/create-shipment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-create-shipment', {
+        body: { orderId }
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to create shipment");
 
-      alert(`Zásilka vytvořena! Packeta ID: ${json.packetaId}`);
+      if (error) throw new Error(error.message || "Failed to create shipment");
+
+      alert(`Zásilka vytvořena! Packeta ID: ${data.packetaId}`);
       await loadOrder();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create shipment");
@@ -140,13 +147,12 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/packeta/cancel-shipment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+      const supabase = createClient();
+      const { error } = await supabase.functions.invoke('packeta-cancel-shipment', {
+        body: { orderId }
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to cancel shipment");
+
+      if (error) throw new Error(error.message || "Failed to cancel shipment");
 
       alert("Packeta zásilka úspěšně zrušena");
       await loadOrder();
@@ -159,12 +165,15 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
   const printPacketaLabel = async () => {
     try {
-      const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
-        method: "GET",
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-print-label', {
+        body: { orderId }
       });
-      if (!res.ok) throw new Error("Failed to get label");
 
-      const blob = await res.blob();
+      if (error) throw new Error(error.message || "Failed to get label");
+
+      // Assuming the function returns a blob or URL
+      const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -447,6 +456,31 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   </div>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Timeline */}
+      {timeline.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {timeline.map((event, idx) => (
+                <div key={idx} className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                  <div>
+                    <p className="font-medium text-sm">{event.event}</p>
+                    <p className="text-xs text-gray-600">{event.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(event.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

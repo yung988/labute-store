@@ -336,7 +336,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                   <TableCell className="align-top max-w-[260px]">
                     <div className="font-mono font-bold text-blue-600">{formatOrderId(o.id)}</div>
                     <div className="text-xs text-gray-500 break-all">{o.id}</div>
-                  </td>
+                  </TableCell>
                   <TableCell className="align-top max-w-[200px]">
                     {items.length > 0 ? (
                       <div className="text-xs">
@@ -355,7 +355,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                     ) : (
                       <span className="text-gray-400 text-xs">No items</span>
                     )}
-                  </td>
+                  </TableCell>
                   <TableCell className="align-top">{o.customer_email}</TableCell>
                   <TableCell className="align-top">{o.customer_name}</TableCell>
                   <TableCell className="align-top">{o.customer_phone}</TableCell>
@@ -364,20 +364,52 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                       {o.packeta_point_id && <div>Point: {o.packeta_point_id}</div>}
                       {o.packeta_shipment_id && <div className="text-blue-600">Ship: {o.packeta_shipment_id}</div>}
                     </div>
-                  </td>
-                <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
-                  <Badge
-                    variant={
-                      o.status === 'paid' ? 'default' :
-                      o.status === 'shipped' ? 'secondary' :
-                      o.status === 'cancelled' ? 'destructive' :
-                      'outline'
-                    }
-                  >
-                    {o.status}
-                  </Badge>
-                </TableCell>
-                </TableRow>
+                  </TableCell>
+                 <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
+                   <Badge
+                     variant={
+                       o.status === 'paid' ? 'default' :
+                       o.status === 'shipped' ? 'secondary' :
+                       o.status === 'cancelled' ? 'destructive' :
+                       'outline'
+                     }
+                   >
+                     {o.status}
+                   </Badge>
+                 </TableCell>
+                 <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
+                   <div className="flex gap-1 flex-wrap">
+                     {o.packeta_point_id && o.status === "paid" && !o.packeta_shipment_id && (
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => createPacketaShipment(o.id)}
+                         disabled={loading}
+                       >
+                         Create Shipment
+                       </Button>
+                     )}
+                     {o.packeta_shipment_id && (
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => printPacketaLabel(o.id)}
+                         disabled={loading}
+                       >
+                         Print Label
+                       </Button>
+                     )}
+                     <Button
+                       size="sm"
+                       variant="destructive"
+                       onClick={() => onDelete(o.id)}
+                       disabled={loading}
+                     >
+                       Delete
+                     </Button>
+                   </div>
+                 </TableCell>
+                 </TableRow>
               );
             })}
           </TableBody>

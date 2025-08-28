@@ -20,7 +20,7 @@ interface StripeProduct {
 export default function StripeManagement() {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<StripeProduct[]>([]);
-  const [syncResult, setSyncResult] = useState<any>(null);
+  const [syncResult, setSyncResult] = useState<{ created: number; updated: number; errors: number } | null>(null);
 
   const syncProducts = async () => {
     setLoading(true);
@@ -35,8 +35,8 @@ export default function StripeManagement() {
       setSyncResult(data.results);
       alert(`✅ ${data.message}`);
       await loadProducts();
-    } catch (error: any) {
-      alert(`❌ Chyba při synchronizaci: ${error.message}`);
+    } catch (error: unknown) {
+      alert(`❌ Chyba při synchronizaci: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export default function StripeManagement() {
       if (!res.ok) throw new Error(data.error);
 
       setProducts(data.products);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading products:', error);
     }
   };
