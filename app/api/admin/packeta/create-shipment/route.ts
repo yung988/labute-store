@@ -251,14 +251,14 @@ export async function POST(req: NextRequest) {
        const controller = new AbortController();
        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        console.log(`🔄 Making request to: ${xmlApiUrl}/createPacket`);
+        console.log(`🔄 Making request to: ${xmlApiUrl}`);
         console.log(`📨 Headers:`, {
           "Content-Type": "application/xml",
           "Accept": "application/xml",
         });
         console.log(`📦 Body length:`, xmlBody.length);
 
-        packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
+        packetaResponse = await fetch(`${xmlApiUrl}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/xml",
@@ -301,7 +301,7 @@ export async function POST(req: NextRequest) {
            const md5TimeoutId = setTimeout(() => md5Controller.abort(), TIMEOUT_MS);
            
            try {
-             packetaResponse = await fetch(`${xmlApiUrl}/createPacket`, {
+             packetaResponse = await fetch(`${xmlApiUrl}`, {
                method: "POST",
                headers: {
                  "Content-Type": "application/xml",
