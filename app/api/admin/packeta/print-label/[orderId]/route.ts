@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ orderId: string }> },
 ) {
   const { orderId } = await context.params;
+  const { searchParams } = new URL(req.url);
+  const format = searchParams.get('format') || 'A6';
 
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
@@ -53,11 +55,17 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+        // Validate and set format - only A6 formats are allowed since June 2023
+        const allowedFormats = ['A6', 'A6 on A4'];
+        const labelFormat = allowedFormats.includes(format) ? format : 'A6';
+        
+        console.log(`🏷️ Using label format: ${labelFormat}`);
+        
         const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetLabelPdf>
   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
   <packetId>${order.packeta_shipment_id}</packetId>
-  <format>A7 on A4</format>
+  <format>${labelFormat}</format>
   <offset>0</offset>
 </packetLabelPdf>`;
 

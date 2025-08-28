@@ -16,6 +16,7 @@ export default function PacketaManagement() {
   const [shipments, setShipments] = useState<PacketaShipment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
   const loadShipments = async () => {
     setLoading(true);
@@ -36,22 +37,110 @@ export default function PacketaManagement() {
     loadShipments();
   }, []);
 
-  const printLabel = async (orderId: string) => {
+  const printLabel = async (orderId: string, format: string = 'A6') => {
     try {
-      const res = await fetch(`/api/admin/packeta/print-label/${orderId}`);
+      const res = await fetch(`/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}`);
       if (!res.ok) throw new Error("Failed to get label");
       
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packeta-label-${orderId}.pdf`;
+      link.download = `packeta-label-${orderId}-${format.replace(' ', '-')}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to print label");
+    }
+  };
+
+  const showFormatDialog = (orderId: string) => {
+    const format = prompt(
+      "Vyberte formát štítku:\n1 = A6 (1 štítek na stránku)\n2 = A6 on A4 (4 štítky na stránku)\n\nZadejte číslo:",
+      "1"
+    );
+    
+    if (format === null) return; // User cancelled
+    
+    const formatMap: Record<string, string> = {
+      "1": "A6",
+      "2": "A6 on A4"
+    };
+    
+    const selectedFormat = formatMap[format] || "A6";
+    printLabel(orderId, selectedFormat);
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === shipments.length) {
+      setSelectedOrders(new Set());
+    } else {
+      setSelectedOrders(new Set(shipments.map(s => s.order_id)));
+    }
+  };
+
+  const bulkPrintLabels = async () => {
+    if (selectedOrders.size === 0) {
+      alert("Vyberte alespoň jednu objednávku");
+      return;
+    }
+
+    const format = prompt(
+      "Vyberte formát štítku:\n1 = A6 (1 štítek na stránku)\n2 = A6 on A4 (4 štítky na stránku)\n\nZadejte číslo:",
+      "2"
+    );
+    
+    if (format === null) return;
+    
+    const formatMap: Record<string, string> = {
+      "1": "A6",
+      "2": "A6 on A4"
+    };
+    
+    const selectedFormat = formatMap[format] || "A6";
+    
+    try {
+      setLoading(true);
+      const res = await fetch("/api/admin/packeta/bulk-print-labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          orderIds: Array.from(selectedOrders),
+          format: selectedFormat
+        })
+      });
+      
+      if (!res.ok) throw new Error("Failed to get bulk labels");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `packeta-labels-bulk-${selectedFormat.replace(' ', '-')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setSelectedOrders(new Set()); // Clear selection after successful print
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to bulk print labels");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,10 +179,34 @@ export default function PacketaManagement() {
 
   return (
     <div className="flex flex-col gap-6">
+      {selectedOrders.size > 0 && (
+        <div className="bg-blue-50 p-4 rounded-lg border">
+          <div className="flex justify-between items-center">
+            <span>Vybráno {selectedOrders.size} objednávek</span>
+            <div className="flex gap-2">
+              <Button onClick={bulkPrintLabels} disabled={loading}>
+                {loading ? "Připravuji..." : "Hromadný tisk štítků"}
+              </Button>
+              <Button variant="outline" onClick={() => setSelectedOrders(new Set())}>
+                Zrušit výběr
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="overflow-auto">
         <table className="min-w-full border text-sm">
           <thead className="bg-muted">
             <tr>
+              <th className="p-2 border">
+                <input
+                  type="checkbox"
+                  checked={shipments.length > 0 && selectedOrders.size === shipments.length}
+                  onChange={toggleSelectAll}
+                  title="Vybrat vše"
+                />
+              </th>
               <th className="p-2 border">Order ID</th>
               <th className="p-2 border">Packeta ID</th>
               <th className="p-2 border">Customer</th>
@@ -106,6 +219,13 @@ export default function PacketaManagement() {
           <tbody>
             {shipments.map((shipment) => (
               <tr key={shipment.id} className="odd:bg-background even:bg-muted/30">
+                <td className="p-2 border align-top text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.has(shipment.order_id)}
+                    onChange={() => toggleOrderSelection(shipment.order_id)}
+                  />
+                </td>
                 <td className="p-2 border align-top">{shipment.order_id}</td>
                 <td className="p-2 border align-top">{shipment.packeta_shipment_id}</td>
                 <td className="p-2 border align-top">{shipment.customer_name}</td>
@@ -123,7 +243,7 @@ export default function PacketaManagement() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => printLabel(shipment.order_id)}
+                      onClick={() => showFormatDialog(shipment.order_id)}
                     >
                       Print Label
                     </Button>
