@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 
     console.log('📄 XML Request Body:', xmlBody);
     console.log('🔍 Raw XML parts:');
-    console.log('   API Password:', PACKETA_API_PASSWORD ? 'SET' : 'NOT SET');
+    console.log('   API Key:', PACKETA_API_KEY ? 'SET' : 'NOT SET');
     console.log('   Order Number:', packetaOrderId);
     console.log('   Address ID:', order.packeta_point_id);
     console.log('   Eshop ID:', eshopId);

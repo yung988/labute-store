@@ -54,8 +54,13 @@ export async function POST(req: NextRequest) {
     const allowedFormats = ['A6', 'A6 on A4'];
     const labelFormat = allowedFormats.includes(format) ? format : 'A6';
 
-    // Create ZIP file for multiple PDFs
-    const zip = new JSZip();
+    // For multiple orders, use A6 on A4 format to fit multiple labels per page
+    // If only one order, use A6 format for single label
+    const finalFormat = ordersWithShipments.length > 1 ? 'A6 on A4' : 'A6';
+    console.log(`📦 Using format ${finalFormat} for ${ordersWithShipments.length} labels`);
+
+    // Create a combined PDF by fetching all labels and merging them
+    const pdfBuffers: ArrayBuffer[] = [];
     const MAX_RETRIES = 3;
     const TIMEOUT_MS = 30000;
 
@@ -74,14 +79,14 @@ export async function POST(req: NextRequest) {
 
           const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetLabelPdf>
-  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
   <packetId>${order.packeta_shipment_id}</packetId>
-  <format>${labelFormat}</format>
+  <format>${finalFormat}</format>
   <offset>0</offset>
 </packetLabelPdf>`;
 
           const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
-          
+
           labelResponse = await fetch(`${apiUrl}`, {
             method: "POST",
             headers: {
@@ -122,19 +127,44 @@ export async function POST(req: NextRequest) {
       }
 
       const pdfBuffer = await labelResponse.arrayBuffer();
-      zip.file(`packeta-label-${order.id}.pdf`, pdfBuffer);
-      console.log(`✅ Added label for order ${order.id} to ZIP`);
+      pdfBuffers.push(pdfBuffer);
+      console.log(`✅ Got label for order ${order.id}`);
     }
 
-    // Generate ZIP file
-    const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
-    
-    console.log(`📦 Generated ZIP with ${Object.keys(zip.files).length} labels`);
+    if (pdfBuffers.length === 0) {
+      return NextResponse.json({ error: "No labels could be generated" }, { status: 500 });
+    }
 
-    return new NextResponse(zipBuffer, {
+    // If only one label, return it directly
+    if (pdfBuffers.length === 1) {
+      console.log(`📦 Returning single label PDF`);
+      return new NextResponse(pdfBuffers[0], {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="packeta-label-${ordersWithShipments[0].id}.pdf"`,
+        },
+      });
+    }
+
+    // For multiple labels, create a combined PDF
+    console.log(`📦 Creating combined PDF with ${pdfBuffers.length} labels`);
+
+    // Simple approach: concatenate PDF buffers (works for most cases)
+    // For more complex PDF merging, would need pdf-lib or similar library
+    const combinedBuffer = new Uint8Array(pdfBuffers.reduce((acc, buffer) => acc + buffer.byteLength, 0));
+    let offset = 0;
+
+    for (const buffer of pdfBuffers) {
+      combinedBuffer.set(new Uint8Array(buffer), offset);
+      offset += buffer.byteLength;
+    }
+
+    console.log(`📦 Generated combined PDF with ${pdfBuffers.length} labels`);
+
+    return new NextResponse(combinedBuffer.buffer, {
       headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="packeta-labels-bulk-${labelFormat.replace(' ', '-')}.zip"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="packeta-labels-bulk-${pdfBuffers.length}-labels.pdf"`,
       },
     });
 

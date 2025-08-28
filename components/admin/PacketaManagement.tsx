@@ -101,28 +101,13 @@ export default function PacketaManagement() {
       return;
     }
 
-    const format = prompt(
-      "Vyberte formát štítku:\n1 = A6 (1 štítek na stránku)\n2 = A6 on A4 (4 štítky na stránku)\n\nZadejte číslo:",
-      "2"
-    );
-
-    if (format === null) return;
-
-    const formatMap: Record<string, string> = {
-      "1": "A6",
-      "2": "A6 on A4"
-    };
-
-    const selectedFormat = formatMap[format] || "A6";
-
     try {
       setLoading(true);
       const res = await fetch("/api/admin/packeta/bulk-print-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderIds: Array.from(selectedOrders),
-          format: selectedFormat
+          orderIds: Array.from(selectedOrders)
         })
       });
 
@@ -132,7 +117,13 @@ export default function PacketaManagement() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packeta-labels-bulk-${selectedFormat.replace(' ', '-')}.zip`;
+
+      // Dynamic filename based on number of selected orders
+      const filename = selectedOrders.size === 1
+        ? `packeta-label-${Array.from(selectedOrders)[0]}.pdf`
+        : `packeta-labels-bulk-${selectedOrders.size}-labels.pdf`;
+
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
