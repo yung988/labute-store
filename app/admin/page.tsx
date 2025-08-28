@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { InfoIcon } from "lucide-react";
 import OrdersTable from "@/components/admin/OrdersTable";
 import InventoryTable from "@/components/admin/InventoryTable";
@@ -11,10 +12,9 @@ type AdminSection = 'orders' | 'inventory' | 'packeta' | 'order-detail';
 
 export default function AdminPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [currentSection, setCurrentSection] = useState<AdminSection>('orders');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,33 +27,13 @@ export default function AdminPage() {
         return;
       }
 
-      // Check user role
-      const userRole = user.user_metadata?.role || user.app_metadata?.role;
-      if (!userRole || !['shopmanager', 'superadmin'].includes(userRole)) {
-        router.push("/auth/error?message=Unauthorized access");
-        return;
-      }
-
+      // Role check is now handled by middleware, just set user
       setUser(user);
       setLoading(false);
     };
 
     checkAuth();
   }, [router]);
-
-  useEffect(() => {
-    // Handle URL parameters for section navigation
-    const section = searchParams.get('section') as AdminSection;
-    const orderId = searchParams.get('orderId');
-
-    if (section) {
-      setCurrentSection(section);
-    }
-    if (orderId) {
-      setSelectedOrderId(orderId);
-      setCurrentSection('order-detail');
-    }
-  }, [searchParams]);
 
   const navigateToSection = (section: AdminSection, orderId?: string) => {
     setCurrentSection(section);
@@ -163,16 +143,44 @@ export default function AdminPage() {
 
 // Order Detail View Component - Full featured version
 function OrderDetailView({ orderId, onBack }: { orderId: string; onBack: () => void }) {
-  const [order, setOrder] = useState<any>(null);
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [notes, setNotes] = useState<any[]>([]);
+  const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [editedOrder, setEditedOrder] = useState<any>({});
+  const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
 
-  const loadOrder = async () => {
+  type OrderDetail = {
+    id: string;
+    stripe_session_id: string | null;
+    customer_email: string | null;
+    customer_name: string | null;
+    customer_phone: string | null;
+    packeta_point_id: string | null;
+    packeta_shipment_id: string | null;
+    packeta_tracking_url: string | null;
+    items: string | unknown[];
+    status: string;
+    amount_total: number | null;
+    created_at: string;
+    updated_at: string;
+  };
+
+  type TimelineEvent = {
+    timestamp: string;
+    event: string;
+    description: string;
+  };
+
+  type Note = {
+    id: string;
+    note: string;
+    created_at: string;
+  };
+
+  const loadOrder = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -207,11 +215,11 @@ function OrderDetailView({ orderId, onBack }: { orderId: string; onBack: () => v
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
 
   useEffect(() => {
     loadOrder();
-  }, [orderId]);
+  }, [loadOrder]);
 
   const saveOrder = async () => {
     setLoading(true);
