@@ -21,11 +21,11 @@ export async function GET(
 
   const { packetaId } = await context.params;
 
-  // Check if Packeta API key is configured
-  if (!process.env.PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+  // Check if Packeta API password is configured
+  if (!process.env.PACKETA_API_PASSWORD) {
+    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
@@ -33,7 +33,7 @@ export async function GET(
   try {
     console.log(`🔍 Tracking Packeta shipment: ${packetaId}`);
 
-    // Call Packeta XML tracking API with timeout and retry
+    // Call Packeta JSON tracking API with timeout and retry
     const MAX_RETRIES = 3;
     const TIMEOUT_MS = 30000;
     const BASE_BACKOFF_MS = 1000;
@@ -41,15 +41,7 @@ export async function GET(
     let packetaRes: Response | undefined;
     let lastError: Error | null = null;
 
-    // Build XML request for packet status
-    const xmlBody = `
-<packetStatus>
-  <packetId>${packetaId}</packetId>
-</packetStatus>`.trim();
-
-    console.log('📄 XML Tracking Request:', xmlBody);
-
-    const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+    console.log(`🔍 Tracking Packeta shipment via JSON API: ${packetaId}`);
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -58,13 +50,12 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        packetaRes = await fetch(`${apiUrl}/packetStatus`, {
-          method: "POST",
+        packetaRes = await fetch(`https://api.packeta.com/v5/packets/${packetaId}/status`, {
+          method: "GET",
           headers: {
-            "Content-Type": "application/xml",
-            Accept: "application/xml",
+            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
+            "Accept": "application/json",
           },
-          body: xmlBody,
           signal: controller.signal,
         });
 

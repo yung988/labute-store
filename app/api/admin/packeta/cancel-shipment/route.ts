@@ -15,11 +15,11 @@ export async function POST(req: NextRequest) {
   const unauthorized = await requireAuth();
   if (unauthorized) return unauthorized;
 
-  // Check if Packeta API key is configured
-  if (!process.env.PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+  // Check if Packeta API password is configured
+  if (!process.env.PACKETA_API_PASSWORD) {
+    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         cancelResponse = await fetch(`https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/cancel`, {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
             "Content-Type": "application/json",
             "Accept": "application/json",
           },

@@ -7,11 +7,11 @@ export async function GET(
 ) {
   const { orderId } = await context.params;
 
-  // Check if Packeta API key is configured
-  if (!process.env.PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+  // Check if Packeta API password is configured
+  if (!process.env.PACKETA_API_PASSWORD) {
+    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
@@ -56,7 +56,7 @@ export async function GET(
         labelResponse = await fetch(`https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/label`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
+            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
             "Accept": "application/pdf",
           },
           signal: controller.signal
