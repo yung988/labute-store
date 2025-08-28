@@ -22,8 +22,6 @@ import {
 import { formatOrderId } from "@/lib/product-images";
 import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient();
-
 type PacketaShipment = {
   id: string;
   order_id: string;
