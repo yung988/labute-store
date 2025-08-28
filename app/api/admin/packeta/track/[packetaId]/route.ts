@@ -14,6 +14,9 @@ export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ packetaId: string }> },
 ) {
+  const unauthorized = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { packetaId } = await context.params;
 
   // Check if Packeta API key is configured
