@@ -40,7 +40,7 @@ export async function GET(
       lastUpdate: order.updated_at,
       packetaId: order.packeta_shipment_id,
       trackingUrl: order.packeta_tracking_url || (order.packeta_shipment_id 
-        ? `https://www.zasilkovna.cz/sledovani/${order.packeta_shipment_id}` 
+        ? `https://www.zasilkovna.cz/sledovani/Z${order.packeta_shipment_id}` 
         : undefined)
     };
 

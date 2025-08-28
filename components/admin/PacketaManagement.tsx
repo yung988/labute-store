@@ -66,6 +66,25 @@ export default function PacketaManagement() {
     }
   };
 
+  const cancelShipment = async (orderId: string) => {
+    if (!confirm("Are you sure you want to cancel this shipment?")) return;
+    
+    try {
+      const res = await fetch("/api/admin/packeta/cancel-shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to cancel");
+      
+      alert("Shipment cancelled successfully");
+      loadShipments(); // Refresh the list
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to cancel shipment");
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">Error: {error}</div>;
 
@@ -114,6 +133,13 @@ export default function PacketaManagement() {
                       onClick={() => trackShipment(shipment.packeta_shipment_id)}
                     >
                       Track
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => cancelShipment(shipment.order_id)}
+                    >
+                      Cancel
                     </Button>
                   </div>
                 </td>

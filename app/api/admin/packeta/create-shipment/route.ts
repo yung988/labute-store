@@ -413,11 +413,13 @@ export async function POST(req: NextRequest) {
   const barcodeMatch = xmlResponse.match(/<barcode[^>]*>([^<]+)<\/barcode>/i);
   const packetaBarcode = barcodeMatch ? barcodeMatch[1] : null;
 
-  // Generate tracking URL
-  const trackingUrl = `https://www.zasilkovna.cz/sledovani/${packetaId}`;
+  // Generate tracking ID with Z prefix for customer tracking
+  const trackingId = `Z${packetaId}`;
+  const trackingUrl = `https://www.zasilkovna.cz/sledovani/${trackingId}`;
 
   console.log(`📦 Created Packeta shipment with ID: ${packetaId}`);
   console.log(`📦 Packeta barcode: ${packetaBarcode}`);
+  console.log(`🔍 Customer tracking ID: ${trackingId}`);
   console.log(`🔗 Tracking URL: ${trackingUrl}`);
 
   // Update order with Packeta data
@@ -425,7 +427,7 @@ export async function POST(req: NextRequest) {
     .from("orders")
     .update({
       packeta_shipment_id: packetaId,
-      packeta_barcode: packetaBarcode,
+      packeta_barcode: packetaBarcode || trackingId,
       packeta_tracking_url: trackingUrl,
       status: "processing",
     })
@@ -441,9 +443,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     packetaId: packetaId,
+    trackingId: trackingId,
     packetaBarcode: packetaBarcode,
     trackingUrl: trackingUrl,
-    message: `Shipment created successfully with Packeta ID: ${packetaId}${packetaBarcode ? ` (Barcode: ${packetaBarcode})` : ''}`
+    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`
   });
 }
 
