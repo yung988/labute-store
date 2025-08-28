@@ -36,6 +36,7 @@ type OrderDetail = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
+  packeta_barcode: string | null;
   packeta_tracking_url: string | null;
   items: string | unknown[];
   status: string;
@@ -564,12 +565,50 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                 </p>
               </div>
               
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>
-                <p className="text-sm mt-1 font-mono">
-                  {order.packeta_shipment_id || "Nevytvořena"}
-                </p>
-              </div>
+               <div>
+                 <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>
+                 <p className="text-sm mt-1 font-mono">
+                   {order.packeta_shipment_id || "Nevytvořena"}
+                 </p>
+               </div>
+
+               {order.packeta_barcode && (
+                 <div>
+                   <Label className="text-sm font-medium text-muted-foreground">Sledovací číslo</Label>
+                   <p className="text-sm mt-1">
+                     {order.packeta_tracking_url ? (
+                       <a
+                         href={order.packeta_tracking_url}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="font-mono text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                       >
+                         Z{order.packeta_barcode}
+                         <ExternalLink className="w-3 h-3" />
+                       </a>
+                     ) : (
+                       <span className="font-mono">Z{order.packeta_barcode}</span>
+                     )}
+                   </p>
+                 </div>
+               )}
+
+               {order.packeta_tracking_url && (
+                 <div>
+                   <Label className="text-sm font-medium text-muted-foreground">Sledovací URL</Label>
+                   <p className="text-sm mt-1">
+                     <a
+                       href={order.packeta_tracking_url}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                     >
+                       Otevřít sledování
+                       <ExternalLink className="w-3 h-3" />
+                     </a>
+                   </p>
+                 </div>
+               )}
 
               <Separator />
 
