@@ -149,7 +149,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     try {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-create-shipment', {
+      const { data, error } = await supabase.functions.invoke('packeta-create-shipment-fixed', {
         body: { orderId }
       });
 
@@ -168,17 +168,27 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const printPacketaLabel = async (orderId: string) => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label', {
+      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
         body: { orderId }
       });
 
       if (error) throw new Error(error.message || "Failed to get label");
 
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Edge Function returns base64 encoded PDF
+      if (!data?.pdf) throw new Error("No PDF data received");
+
+      // Convert base64 to blob
+      const binaryString = atob(data.pdf);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packeta-label-${orderId}.pdf`;
+      link.download = data.filename || `packeta-label-${orderId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

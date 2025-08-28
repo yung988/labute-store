@@ -103,17 +103,27 @@ export default function PacketaManagement() {
   const printLabel = async (orderId: string, format: string = 'A6') => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label', {
+      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
         body: { orderId, format }
       });
 
       if (error) throw new Error(error.message || "Failed to get label");
       
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Edge Function returns base64 encoded PDF
+      if (!data?.pdf) throw new Error("No PDF data received");
+
+      // Convert base64 to blob
+      const binaryString = atob(data.pdf);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packeta-label-${formatOrderId(orderId)}-${format.replace(' ', '-')}.pdf`;
+      link.download = data.filename || `packeta-label-${formatOrderId(orderId)}-${format.replace(' ', '-')}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

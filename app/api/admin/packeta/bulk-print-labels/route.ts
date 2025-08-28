@@ -72,13 +72,13 @@ export async function POST(req: NextRequest) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-          const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
-<packetLabelPdf>
-  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
-  <packetId>${order.packeta_shipment_id}</packetId>
-  <format>${finalFormat}</format>
-  <offset>0</offset>
-</packetLabelPdf>`;
+           const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+ <packetLabelPdf>
+   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+   <packetId>${order.packeta_shipment_id}</packetId>
+   <format>${finalFormat}</format>
+   <offset>0</offset>
+ </packetLabelPdf>`;
 
           const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 

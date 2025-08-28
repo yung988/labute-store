@@ -43,20 +43,20 @@ export async function POST(req: NextRequest) {
   }
 
     // Check required environment variables
-    const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+    const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
     const senderId = process.env.PACKETA_SENDER_ID;
     const eshopId = process.env.PACKETA_ESHOP_ID;
 
     console.log('🔍 DEBUG: Environment variables check:');
-    console.log('   PACKETA_API_KEY exists:', !!PACKETA_API_KEY);
-    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length);
+    console.log('   PACKETA_API_PASSWORD exists:', !!PACKETA_API_PASSWORD);
+    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length);
     console.log('   PACKETA_SENDER_ID:', senderId);
     console.log('   PACKETA_ESHOP_ID:', eshopId);
 
-    if (!PACKETA_API_KEY) {
-      console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+    if (!PACKETA_API_PASSWORD) {
+      console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
       return NextResponse.json(
-        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
         { status: 500 }
       );
     }
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
     console.log('🔧 Environment variables used:');
     console.log('   PACKETA_SENDER_ID:', senderId);
     console.log('   PACKETA_ESHOP_ID:', eshopId);
-    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length || 0);
+    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length || 0);
 
    console.log('📊 Order data for Packeta:');
    console.log('   Order ID:', packetaOrderId);
@@ -202,15 +202,15 @@ export async function POST(req: NextRequest) {
 
 
 
-    // Use the MD5 hash directly from PACKETA_API_KEY (it's already hashed)
+    // Use the MD5 hash directly from PACKETA_API_PASSWORD (it's already hashed)
     console.log('🔍 API Key:');
-    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY.length);
-    console.log('   PACKETA_API_KEY value:', PACKETA_API_KEY);
+    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD.length);
+    console.log('   PACKETA_API_PASSWORD value:', PACKETA_API_PASSWORD);
     
     // Build XML request - simplified version matching working test
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
-  <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
+  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
   <packetAttributes>
     <number>${xmlEscape(packetaOrderId)}</number>
     <name>${xmlEscape(firstName)}</name>
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 
     console.log('📄 XML Request Body:', xmlBody);
     console.log('🔍 Raw XML parts:');
-    console.log('   API Key:', PACKETA_API_KEY ? 'SET' : 'NOT SET');
+    console.log('   API Key:', PACKETA_API_PASSWORD ? 'SET' : 'NOT SET');
     console.log('   Order Number:', packetaOrderId);
     console.log('   Address ID:', order.packeta_point_id);
     console.log('   Eshop ID:', eshopId);

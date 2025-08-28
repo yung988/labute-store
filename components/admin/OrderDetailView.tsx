@@ -141,16 +141,18 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
 
   const createPacketaShipment = async () => {
+    if (!confirm("Opravdu vytvořit Packeta zásilku?")) return;
+
     try {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-create-shipment', {
+      const { data, error } = await supabase.functions.invoke('packeta-create-shipment-fixed', {
         body: { orderId }
       });
 
       if (error) throw new Error(error.message || "Failed to create shipment");
 
-      alert(`Zásilka vytvořena! Packeta ID: ${data.packetaId}`);
+      alert(`Packeta zásilka vytvořena: ${data?.message || 'Success'}`);
       await loadOrder();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create shipment");
@@ -165,7 +167,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     try {
       setLoading(true);
       const supabase = createClient();
-      const { error } = await supabase.functions.invoke('packeta-cancel-shipment', {
+      const { error } = await supabase.functions.invoke('packeta-cancel-shipment-fixed', {
         body: { orderId }
       });
 
@@ -183,18 +185,27 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const printPacketaLabel = async () => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-print-label', {
+      const { data, error } = await supabase.functions.invoke('packeta-print-label-fixed', {
         body: { orderId }
       });
 
       if (error) throw new Error(error.message || "Failed to get label");
 
-      // Assuming the function returns a blob or URL
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Edge Function returns base64 encoded PDF
+      if (!data?.pdf) throw new Error("No PDF data received");
+
+      // Convert base64 to blob
+      const binaryString = atob(data.pdf);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `packeta-label-${orderId}.pdf`;
+      link.download = data.filename || `packeta-label-${orderId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
