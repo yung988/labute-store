@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { 
   Truck, 
   Package, 
@@ -18,7 +17,6 @@ import {
   MapPin,
   Eye,
   X,
-  Download,
   Filter
 } from "lucide-react";
 import { formatOrderId } from "@/lib/product-images";
@@ -260,7 +258,7 @@ export default function PacketaManagement() {
       counts[status] = shipments.filter(s => s.status === status).length;
     });
     return counts;
-  }, [shipments]);
+  }, [shipments, statuses]);
 
   if (loading && shipments.length === 0) {
     return (

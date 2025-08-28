@@ -24,7 +24,7 @@ import {
   Clock,
   Users
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+// Dialog components removed - not used in this component
 import { createClient } from "@/lib/supabase/client";
 import { formatOrderId } from "@/lib/product-images";
 

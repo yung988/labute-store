@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 // import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { 
   Mail, 
@@ -16,12 +16,10 @@ import {
   Users, 
   MessageCircle,
   RefreshCw,
-  Eye,
   CheckCircle,
   AlertCircle
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { formatOrderId } from "@/lib/product-images";
 
 type Customer = {
   id: string;
@@ -220,7 +218,7 @@ export default function CustomerCommunication() {
       counts[status] = customers.filter(c => c.status === status).length;
     });
     return counts;
-  }, [customers]);
+  }, [customers, statuses]);
 
   if (loading && customers.length === 0) {
     return (

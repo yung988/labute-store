@@ -212,7 +212,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
       counts[status] = orders.filter(o => o.status === status).length;
     });
     return counts;
-  }, [orders]);
+  }, [orders, statuses]);
 
   if (loading && orders.length === 0) {
     return (
@@ -372,7 +372,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                       } else if (Array.isArray(order.items)) {
                         items = order.items;
                       }
-                    } catch (e) {
+                    } catch {
                       items = [];
                     }
 
