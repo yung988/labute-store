@@ -196,22 +196,22 @@ export async function POST(req: NextRequest) {
 
 
 
-  const xmlBody = `
-<createPacket>
-  <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
-  <packetAttributes>
-    <number>${xmlEscape(packetaOrderId)}</number>
-    <firstName>${xmlEscape(firstName)}</firstName>
-    <lastName>${xmlEscape(lastName)}</lastName>
-    <email>${xmlEscape(order.customer_email || '')}</email>
-    <phone>${xmlEscape(formattedPhone)}</phone>
-    <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
-    <weight>${xmlEscape(String(weightInGrams))}</weight>
-    <value>${xmlEscape(String(safeAmount))}</value>
-    <cod>${xmlEscape(String(safeAmount))}</cod>
-    <note>${xmlEscape(`Order ${orderId.slice(-8)}`)}</note>
-  </packetAttributes>
-</createPacket>`.trim();
+   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+ <createPacket>
+   <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
+   <packetAttributes>
+     <number>${xmlEscape(packetaOrderId)}</number>
+     <name>${xmlEscape(firstName)}</name>
+     <surname>${xmlEscape(lastName)}</surname>
+     <email>${xmlEscape(order.customer_email || '')}</email>
+     <phone>${xmlEscape(formattedPhone)}</phone>
+     <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
+     <cod>${xmlEscape(String(safeAmount))}</cod>
+     <value>${xmlEscape(String(safeAmount))}</value>
+     <weight>${xmlEscape(String(weightInGrams))}</weight>
+     <eshop>${xmlEscape(eshopId)}</eshop>
+   </packetAttributes>
+ </createPacket>`;
 
    console.log('📄 XML Request Body:', xmlBody);
 
