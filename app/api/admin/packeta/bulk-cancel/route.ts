@@ -15,11 +15,11 @@ export async function POST() {
   const unauthorized = await requireAuth();
   if (unauthorized) return unauthorized;
 
-  // Check if Packeta API key is configured
-  if (!process.env.PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+  // Check if Packeta API password is configured
+  if (!process.env.PACKETA_API_PASSWORD) {
+    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
@@ -70,15 +70,23 @@ export async function POST() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-            // For bulk cancel, we need to make individual requests in v5
+            // For bulk cancel, we need to make individual XML requests
+            const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+            
             const cancelPromises = packetIds.map(async (packetId) => {
-              return fetch(`https://api.packeta.com/v5/packets/${packetId}/cancel`, {
+              const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetStornoReq>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${packetId}</packetId>
+</packetStornoReq>`;
+
+              return fetch(`${apiUrl}`, {
                 method: "POST",
                 headers: {
-                  "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-                  "Content-Type": "application/json",
-                  "Accept": "application/json",
+                  "Content-Type": "application/xml",
+                  "Accept": "application/xml",
                 },
+                body: xmlBody,
                 signal: controller.signal
               });
             });

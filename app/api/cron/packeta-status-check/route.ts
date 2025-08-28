@@ -72,11 +72,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check if Packeta API key is configured
-  if (!process.env.PACKETA_API_KEY) {
-    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+  // Check if Packeta API password is configured
+  if (!process.env.PACKETA_API_PASSWORD) {
+    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
       { status: 500 }
     );
   }
@@ -115,16 +115,25 @@ export async function GET(req: NextRequest) {
       try {
         console.log(`Checking shipment ${order.packeta_shipment_id} for order ${order.id}`);
 
-        // Call Packeta v5 API to get current status
+        // Call Packeta XML API to get current status
+         const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetStatus>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${order.packeta_shipment_id}</packetId>
+</packetStatus>`;
+
+         const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+         
          const trackingResponse = await fetchWithRetry(
-           `https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/status`,
+           apiUrl,
            {
-             method: "GET",
+             method: "POST",
              headers: {
-               "Authorization": `Bearer ${process.env.PACKETA_API_KEY}`,
-               "Accept": "application/json",
+               "Content-Type": "application/xml",
+               "Accept": "application/xml",
                "User-Agent": "labute-store/cron (Packeta status check)"
              },
+             body: xmlBody,
            },
            { retries: 3, timeoutMs: 20000, backoffMs: 800 }
          );

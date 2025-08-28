@@ -60,13 +60,21 @@ export async function POST(req: NextRequest) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        cancelResponse = await fetch(`https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/cancel`, {
+        const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetStornoReq>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${order.packeta_shipment_id}</packetId>
+</packetStornoReq>`;
+
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+        
+        cancelResponse = await fetch(`${apiUrl}`, {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
+            "Content-Type": "application/xml",
+            "Accept": "application/xml",
           },
+          body: xmlBody,
           signal: controller.signal
         });
 

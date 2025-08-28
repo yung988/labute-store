@@ -53,12 +53,23 @@ export async function GET(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-        labelResponse = await fetch(`https://api.packeta.com/v5/packets/${order.packeta_shipment_id}/label`, {
-          method: "GET",
+        const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetLabelPdf>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${order.packeta_shipment_id}</packetId>
+  <format>A7 on A4</format>
+  <offset>0</offset>
+</packetLabelPdf>`;
+
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+        
+        labelResponse = await fetch(`${apiUrl}`, {
+          method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.PACKETA_API_PASSWORD}`,
+            "Content-Type": "application/xml",
             "Accept": "application/pdf",
           },
+          body: xmlBody,
           signal: controller.signal
         });
 
