@@ -72,6 +72,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Check if Packeta API key is configured
+  if (!process.env.PACKETA_API_KEY) {
+    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+    return NextResponse.json(
+      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { status: 500 }
+    );
+  }
+
   try {
     console.log("🕐 Starting Packeta status check cron job");
 

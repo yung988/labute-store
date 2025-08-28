@@ -145,14 +145,10 @@ export async function POST(req: NextRequest) {
     const packetaOrderId = orderId.slice(-8);
     console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
 
-    // Use environment variables (should be set on Vercel)
-    const PACKETA_API_URL = process.env.PACKETA_API_URL || "https://www.zasilkovna.cz/api/rest";
+    // Use Packeta v5 API like other endpoints (JSON format)
     const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
-    const PACKETA_ESHOP_ID = process.env.PACKETA_ESHOP_ID || "labute-store";
 
-    console.log(`🔗 Using Packeta API URL: ${PACKETA_API_URL}`);
     console.log(`🔑 API Key status: ${PACKETA_API_KEY ? 'Set' : 'NOT SET - THIS IS THE PROBLEM!'}`);
-    console.log(`🏪 Eshop ID: ${PACKETA_ESHOP_ID}`);
 
     if (!PACKETA_API_KEY) {
       console.error('❌ PACKETA_API_KEY is not set on Vercel!');
@@ -162,33 +158,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
-<createPacket>
-  <apiPassword>${PACKETA_API_KEY}</apiPassword>
-  <packetAttributes>
-    <number>${packetaOrderId}</number>
-    <name>${order.customer_name || ""}</name>
-    <surname></surname>
-    <email>${order.customer_email || ""}</email>
-    <phone>${formattedPhone}</phone>
-    <addressId>${order.packeta_point_id}</addressId>
-    <cod>${safeAmount}</cod>
-    <value>${safeAmount}</value>
-    <weight>${totalWeightKg}</weight>
-    <eshop>${PACKETA_ESHOP_ID}</eshop>
-  </packetAttributes>
-</createPacket>`;
+    const requestBody = {
+      packetIds: [], // Will be filled by API
+      senderId: process.env.PACKETA_SENDER_ID || "your-sender-id",
+      recipient: {
+        name: order.customer_name || "",
+        email: order.customer_email || "",
+        phone: formattedPhone,
+      },
+      deliveryPointId: order.packeta_point_id,
+      cod: safeAmount,
+      value: safeAmount,
+      weight: totalWeightKg,
+      eshop: process.env.PACKETA_ESHOP_ID || "labute-store",
+      externalReference: packetaOrderId,
+    };
 
-    console.log('📄 XML Request Body:', xmlBody);
+    console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
 
-    const packetaResponse = await fetch(PACKETA_API_URL, {
-     method: "POST",
-     headers: {
-       "Content-Type": "application/xml",
-       "Accept": "application/xml",
-     },
-     body: xmlBody
-   });
+    const packetaResponse = await fetch("https://api.packeta.com/api/v5/shipments", {
+      method: "POST",
+      headers: {
+        "Authorization": `ApiKey ${PACKETA_API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(requestBody)
+    });
 
    if (!packetaResponse.ok) {
      const errorText = await packetaResponse.text();
@@ -203,24 +199,21 @@ export async function POST(req: NextRequest) {
      );
    }
 
-    const responseText = await packetaResponse.text();
-    console.log("✅ Packeta API success:", responseText);
+    const packetaResult = await packetaResponse.json();
+    console.log("✅ Packeta API success:", packetaResult);
 
-    // Extract packet ID from XML response
-    const packetIdMatch = responseText.match(/<id>(\d+)<\/id>/);
-    if (!packetIdMatch || !packetIdMatch[1]) {
-      console.error("❌ No Packeta ID in response:", responseText);
+    // Extract packet ID from JSON response
+    const packetaId = packetaResult?.packetIds?.[0] || packetaResult?.id;
+    if (!packetaId) {
+      console.error("❌ No Packeta ID in response:", packetaResult);
       return NextResponse.json(
-        { error: `Invalid Packeta response - missing ID: ${responseText}` },
+        { error: `Invalid Packeta response - missing ID: ${JSON.stringify(packetaResult)}` },
         { status: 500 }
       );
     }
 
-    const packetaId = packetIdMatch[1];
-
-    // Extract barcode from XML response (sledovací kód začínající na Z)
-    const barcodeMatch = responseText.match(/<barcode>([^<]+)<\/barcode>/);
-    const packetaBarcode = barcodeMatch ? barcodeMatch[1] : null;
+    // Extract barcode from JSON response (sledovací kód začínající na Z)
+    const packetaBarcode = packetaResult?.barcode || packetaResult?.barcodeText;
 
     // Generate tracking URL
     const trackingUrl = `https://www.zasilkovna.cz/sledovani/${packetaId}`;

@@ -15,6 +15,15 @@ export async function POST(req: NextRequest) {
   const unauthorized = await requireAuth();
   if (unauthorized) return unauthorized;
 
+  // Check if Packeta API key is configured
+  if (!process.env.PACKETA_API_KEY) {
+    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+    return NextResponse.json(
+      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+      { status: 500 }
+    );
+  }
+
   const { orderId } = await req.json();
 
   try {
