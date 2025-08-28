@@ -4,6 +4,18 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export async function POST(req: NextRequest) {
   console.log('🚀 Starting create-shipment for order:', req.url);
 
+  // Check if Packeta API is temporarily disabled
+  if (process.env.PACKETA_API_DISABLED === 'true') {
+    console.log('🚫 Packeta API is temporarily disabled via PACKETA_API_DISABLED=true');
+    return NextResponse.json(
+      {
+        error: "Packeta API is temporarily disabled due to service issues. Please try again later or contact support.",
+        disabled: true
+      },
+      { status: 503 }
+    );
+  }
+
   // Debug environment variables
   console.log('🔧 Environment variables:', {
     PACKETA_API_KEY: process.env.PACKETA_API_KEY ? '✅ Set' : '❌ Missing',
@@ -176,28 +188,124 @@ export async function POST(req: NextRequest) {
 
     console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
 
-    const packetaResponse = await fetch("https://api.packeta.com/api/v5/shipments", {
-      method: "POST",
-      headers: {
-        "Authorization": `ApiKey ${PACKETA_API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(requestBody)
-    });
+     // Add timeout and retry logic for Packeta API calls
+     const PACKETA_TIMEOUT_MS = 10000; // 10 second timeout
+     const MAX_RETRIES = 3;
+     const RETRY_DELAY_MS = 2000; // 2 second delay between retries
 
-   if (!packetaResponse.ok) {
-     const errorText = await packetaResponse.text();
-     console.error("❌ Packeta API error:", {
-       status: packetaResponse.status,
-       statusText: packetaResponse.statusText,
-       error: errorText
-     });
-     return NextResponse.json(
-       { error: `Packeta API error: ${packetaResponse.status} ${errorText}` },
-       { status: 500 }
-     );
-   }
+     let packetaResponse: Response | undefined;
+     let lastError: Error | null = null;
+
+     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+       try {
+         console.log(`🔄 Packeta API attempt ${attempt}/${MAX_RETRIES}`);
+
+         // Create AbortController for timeout
+         const controller = new AbortController();
+         const timeoutId = setTimeout(() => controller.abort(), PACKETA_TIMEOUT_MS);
+
+         packetaResponse = await fetch("https://api.packeta.com/api/v5/shipments", {
+           method: "POST",
+           headers: {
+             "Authorization": `ApiKey ${PACKETA_API_KEY}`,
+             "Content-Type": "application/json",
+             "Accept": "application/json",
+           },
+           body: JSON.stringify(requestBody),
+           signal: controller.signal
+         });
+
+         clearTimeout(timeoutId);
+
+         // If successful (2xx status) or client error (4xx), don't retry
+         if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
+           break;
+         }
+
+         // For server errors (5xx) or timeout, retry
+         if (attempt < MAX_RETRIES) {
+           console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${RETRY_DELAY_MS}ms...`);
+           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+         }
+
+       } catch (error) {
+         lastError = error as Error;
+         if (error instanceof Error && error.name === 'AbortError') {
+           console.log(`⏰ Packeta API timeout on attempt ${attempt}/${MAX_RETRIES}`);
+         } else {
+           console.log(`❌ Packeta API error on attempt ${attempt}/${MAX_RETRIES}:`, error instanceof Error ? error.message : String(error));
+         }
+
+         if (attempt < MAX_RETRIES) {
+           console.log(`⏳ Retrying in ${RETRY_DELAY_MS}ms...`);
+           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+         }
+       }
+     }
+
+     // Check if we have a response
+     if (!packetaResponse) {
+       const errorMsg = lastError ? `All retry attempts failed. Last error: ${lastError.message}` : 'All retry attempts failed with unknown error';
+       console.error('❌ Packeta API failed after all retries:', errorMsg);
+       return NextResponse.json(
+         { error: `Packeta API temporarily unavailable: ${errorMsg}` },
+         { status: 503 }
+       );
+     }
+
+    if (!packetaResponse.ok) {
+      const errorText = await packetaResponse.text();
+      console.error("❌ Packeta API error:", {
+        status: packetaResponse.status,
+        statusText: packetaResponse.statusText,
+        error: errorText
+      });
+
+      // Provide specific error messages for different status codes
+      let userFriendlyError = `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}`;
+
+      switch (packetaResponse.status) {
+        case 400:
+          userFriendlyError = "Invalid shipment data. Please check the order details and try again.";
+          break;
+        case 401:
+          userFriendlyError = "Packeta API authentication failed. Please check API credentials.";
+          break;
+        case 403:
+          userFriendlyError = "Packeta API access forbidden. Please check your account permissions.";
+          break;
+        case 404:
+          userFriendlyError = "Packeta delivery point not found. Please verify the pickup point.";
+          break;
+        case 429:
+          userFriendlyError = "Packeta API rate limit exceeded. Please try again in a few minutes.";
+          break;
+        case 500:
+          userFriendlyError = "Packeta API internal server error. Please try again later.";
+          break;
+        case 502:
+          userFriendlyError = "Packeta API gateway error. Please try again later.";
+          break;
+        case 503:
+          userFriendlyError = "Packeta API service unavailable. Please try again later.";
+          break;
+        case 504:
+          userFriendlyError = "Packeta API timeout. The service is experiencing delays, please try again.";
+          break;
+      }
+
+      return NextResponse.json(
+        {
+          error: userFriendlyError,
+          details: {
+            status: packetaResponse.status,
+            statusText: packetaResponse.statusText,
+            apiError: errorText
+          }
+        },
+        { status: packetaResponse.status >= 500 ? 503 : 400 }
+      );
+    }
 
     const packetaResult = await packetaResponse.json();
     console.log("✅ Packeta API success:", packetaResult);
