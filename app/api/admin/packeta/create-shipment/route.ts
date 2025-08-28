@@ -210,7 +210,21 @@ export async function POST(req: NextRequest) {
     console.log('   Plain text length:', PACKETA_API_PASSWORD.trim().length);
     console.log('   MD5 hash:', md5Password);
     
-    // Try plain text first
+    // Generate unique tracking codes for public and user tracking
+    const generateTrackingCode = () => {
+      return Array.from({length: 16}, () => 
+        Math.random().toString(36).charAt(Math.floor(Math.random() * 36))
+      ).join('').toLowerCase();
+    };
+    
+    const publicTrackingCode = generateTrackingCode();
+    const userTrackingCode = generateTrackingCode();
+    
+    console.log('🔍 Generated tracking codes:');
+    console.log('   Public tracking:', publicTrackingCode);
+    console.log('   User tracking:', userTrackingCode);
+
+    // Build complete XML with all required fields for proper tracking
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD.trim())}</apiPassword>
@@ -222,9 +236,14 @@ export async function POST(req: NextRequest) {
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
     <cod>${xmlEscape(String(safeAmount))}</cod>
+    <currency>CZK</currency>
     <value>${xmlEscape(String(safeAmount))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <eshop>${xmlEscape(eshopId)}</eshop>
+    <adultContent>0</adultContent>
+    <note>${xmlEscape(`Order ${orderId.slice(-8)} from ${eshopId}`)}</note>
+    <allowPublicTracking>1</allowPublicTracking>
+    <allowTrackingForUsers>${xmlEscape(publicTrackingCode + ',' + userTrackingCode)}</allowTrackingForUsers>
   </packetAttributes>
 </createPacket>`;
 
