@@ -44,14 +44,12 @@ export async function POST(req: NextRequest) {
 
    // Check required environment variables
    const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
-   const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
    const senderId = process.env.PACKETA_SENDER_ID;
    const eshopId = process.env.PACKETA_ESHOP_ID;
 
    console.log('🔍 DEBUG: Environment variables check:');
    console.log('   PACKETA_API_PASSWORD exists:', !!PACKETA_API_PASSWORD);
    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length);
-   console.log('   PACKETA_API_KEY exists:', !!PACKETA_API_KEY);
    console.log('   PACKETA_SENDER_ID:', senderId);
    console.log('   PACKETA_ESHOP_ID:', eshopId);
 
@@ -177,7 +175,7 @@ export async function POST(req: NextRequest) {
      value: safeAmount,
      weight: totalWeightKg,
      eshop: eshopId,
-     delivery_point: 6682,
+     addressId: order.packeta_point_id,
      order_number: packetaOrderId,
      note: `Order ${orderId.slice(-8)}`
    };
@@ -188,6 +186,15 @@ export async function POST(req: NextRequest) {
    console.log('   PACKETA_ESHOP_ID:', eshopId);
    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length || 0);
 
+   console.log('📊 Order data for Packeta:');
+   console.log('   Order ID:', packetaOrderId);
+   console.log('   Customer:', `${firstName} ${lastName}`);
+   console.log('   Email:', order.customer_email);
+   console.log('   Phone:', formattedPhone);
+   console.log('   Address ID:', order.packeta_point_id);
+   console.log('   Weight:', totalWeightKg, 'kg');
+   console.log('   Amount:', safeAmount, 'CZK');
+
   // Build XML request for Packeta REST API
   function xmlEscape(v: string) {
     return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
@@ -196,23 +203,28 @@ export async function POST(req: NextRequest) {
 
 
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
- <createPacket>
-   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
-   <packetAttributes>
-     <number>${xmlEscape(packetaOrderId)}</number>
-     <name>${xmlEscape(firstName)}</name>
-     <surname>${xmlEscape(lastName)}</surname>
-     <email>${xmlEscape(order.customer_email || '')}</email>
-     <phone>${xmlEscape(formattedPhone)}</phone>
-     <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
-     <cod>${xmlEscape(String(safeAmount))}</cod>
-     <value>${xmlEscape(String(safeAmount))}</value>
-     <weight>${xmlEscape(String(totalWeightKg))}</weight>
-     <eshop>${xmlEscape(eshopId)}</eshop>
-   </packetAttributes>
- </createPacket>`;
+<createPacket>
+  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
+  <packetAttributes>
+    <number>${xmlEscape(packetaOrderId)}</number>
+    <name>${xmlEscape(firstName)}</name>
+    <surname>${xmlEscape(lastName)}</surname>
+    <email>${xmlEscape(order.customer_email || '')}</email>
+    <phone>${xmlEscape(formattedPhone)}</phone>
+    <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
+    <cod>${xmlEscape(String(safeAmount))}</cod>
+    <value>${xmlEscape(String(safeAmount))}</value>
+    <weight>${xmlEscape(String(totalWeightKg))}</weight>
+    <eshop>${xmlEscape(eshopId)}</eshop>
+  </packetAttributes>
+</createPacket>`;
 
     console.log('📄 XML Request Body:', xmlBody);
+    console.log('🔍 Raw XML parts:');
+    console.log('   API Password:', PACKETA_API_PASSWORD ? 'SET' : 'NOT SET');
+    console.log('   Order Number:', packetaOrderId);
+    console.log('   Address ID:', order.packeta_point_id);
+    console.log('   Eshop ID:', eshopId);
 
     const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
     console.log('🔗 API URL:', xmlApiUrl);
@@ -247,12 +259,15 @@ export async function POST(req: NextRequest) {
           signal: controller.signal
         });
 
-      clearTimeout(timeoutId);
+       clearTimeout(timeoutId);
 
-      // If successful (2xx status) or client error (4xx), don't retry
-      if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
-        break;
-      }
+       console.log(`📡 Packeta response status: ${packetaResponse.status} ${packetaResponse.statusText}`);
+       console.log(`📡 Response headers:`, Object.fromEntries(packetaResponse.headers.entries()));
+
+       // If successful (2xx status) or client error (4xx), don't retry
+       if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
+         break;
+       }
 
       // For server errors (5xx) or timeout, retry
       if (attempt < MAX_RETRIES) {
@@ -316,8 +331,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const xmlResponse = await packetaResponse.text();
-  console.log("✅ Packeta XML API success:", xmlResponse.substring(0, 500));
+   const xmlResponse = await packetaResponse.text();
+   console.log("📡 Packeta XML API response:", xmlResponse);
 
   // Parse XML response to extract packet ID - simple regex parsing
   const idMatch = xmlResponse.match(/<id[^>]*>([^<]+)<\/id>/i);
