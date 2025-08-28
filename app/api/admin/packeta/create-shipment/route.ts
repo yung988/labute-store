@@ -43,24 +43,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
   }
 
-   // Check required environment variables
-   const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
-   const senderId = process.env.PACKETA_SENDER_ID;
-   const eshopId = process.env.PACKETA_ESHOP_ID;
+    // Check required environment variables
+    const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+    const senderId = process.env.PACKETA_SENDER_ID;
+    const eshopId = process.env.PACKETA_ESHOP_ID;
 
-   console.log('🔍 DEBUG: Environment variables check:');
-   console.log('   PACKETA_API_PASSWORD exists:', !!PACKETA_API_PASSWORD);
-   console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length);
-   console.log('   PACKETA_SENDER_ID:', senderId);
-   console.log('   PACKETA_ESHOP_ID:', eshopId);
+    console.log('🔍 DEBUG: Environment variables check:');
+    console.log('   PACKETA_API_KEY exists:', !!PACKETA_API_KEY);
+    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length);
+    console.log('   PACKETA_SENDER_ID:', senderId);
+    console.log('   PACKETA_ESHOP_ID:', eshopId);
 
-   if (!PACKETA_API_PASSWORD) {
-     console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
-     return NextResponse.json(
-       { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable (this is different from PACKETA_API_KEY used for widgets).' },
-       { status: 500 }
-     );
-   }
+    if (!PACKETA_API_KEY) {
+      console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+      return NextResponse.json(
+        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+        { status: 500 }
+      );
+    }
 
    if (!eshopId) {
      console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
@@ -182,10 +182,10 @@ export async function POST(req: NextRequest) {
    };
 
   console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
-   console.log('🔧 Environment variables used:');
-   console.log('   PACKETA_SENDER_ID:', senderId);
-   console.log('   PACKETA_ESHOP_ID:', eshopId);
-   console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length || 0);
+    console.log('🔧 Environment variables used:');
+    console.log('   PACKETA_SENDER_ID:', senderId);
+    console.log('   PACKETA_ESHOP_ID:', eshopId);
+    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY?.length || 0);
 
    console.log('📊 Order data for Packeta:');
    console.log('   Order ID:', packetaOrderId);
@@ -203,31 +203,15 @@ export async function POST(req: NextRequest) {
 
 
 
-    // Try both plain text and MD5 hash of the password
-    const md5Password = crypto.createHash('md5').update(PACKETA_API_PASSWORD.trim()).digest('hex');
+    // Use the MD5 hash directly from PACKETA_API_KEY (it's already hashed)
+    console.log('🔍 API Key:');
+    console.log('   PACKETA_API_KEY length:', PACKETA_API_KEY.length);
+    console.log('   PACKETA_API_KEY value:', PACKETA_API_KEY);
     
-    console.log('🔍 Password formats:');
-    console.log('   Plain text length:', PACKETA_API_PASSWORD.trim().length);
-    console.log('   MD5 hash:', md5Password);
-    
-    // Generate unique tracking codes for public and user tracking
-    const generateTrackingCode = () => {
-      return Array.from({length: 16}, () => 
-        Math.random().toString(36).charAt(Math.floor(Math.random() * 36))
-      ).join('').toLowerCase();
-    };
-    
-    const publicTrackingCode = generateTrackingCode();
-    const userTrackingCode = generateTrackingCode();
-    
-    console.log('🔍 Generated tracking codes:');
-    console.log('   Public tracking:', publicTrackingCode);
-    console.log('   User tracking:', userTrackingCode);
-
-    // Build complete XML with all required fields for proper tracking
+    // Build XML request - simplified version matching working test
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
-  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD.trim())}</apiPassword>
+  <apiPassword>${xmlEscape(PACKETA_API_KEY)}</apiPassword>
   <packetAttributes>
     <number>${xmlEscape(packetaOrderId)}</number>
     <name>${xmlEscape(firstName)}</name>
@@ -236,14 +220,9 @@ export async function POST(req: NextRequest) {
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
     <cod>${xmlEscape(String(safeAmount))}</cod>
-    <currency>CZK</currency>
     <value>${xmlEscape(String(safeAmount))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <eshop>${xmlEscape(eshopId)}</eshop>
-    <adultContent>0</adultContent>
-    <note>${xmlEscape(`Order ${orderId.slice(-8)} from ${eshopId}`)}</note>
-    <allowPublicTracking>1</allowPublicTracking>
-    <allowTrackingForUsers>${xmlEscape(publicTrackingCode + ',' + userTrackingCode)}</allowTrackingForUsers>
   </packetAttributes>
 </createPacket>`;
 
@@ -446,7 +425,14 @@ export async function POST(req: NextRequest) {
     trackingId: trackingId,
     packetaBarcode: packetaBarcode,
     trackingUrl: trackingUrl,
-    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`
+    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`,
+    debug: {
+      xmlRequest: xmlBody,
+      xmlResponse: xmlResponse,
+      apiUrl: xmlApiUrl,
+      eshopId: eshopId,
+      apiKeyLength: PACKETA_API_KEY?.length || 0
+    }
   });
 }
 

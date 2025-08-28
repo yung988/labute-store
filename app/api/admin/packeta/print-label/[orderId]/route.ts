@@ -9,11 +9,11 @@ export async function GET(
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format') || 'A6';
 
-  // Check if Packeta API password is configured
-  if (!process.env.PACKETA_API_PASSWORD) {
-    console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
+  // Check if Packeta API key is configured
+  if (!process.env.PACKETA_API_KEY) {
+    console.error('❌ PACKETA_API_KEY is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
+      { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
       { status: 500 }
     );
   }

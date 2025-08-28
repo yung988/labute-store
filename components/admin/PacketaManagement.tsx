@@ -17,6 +17,7 @@ export default function PacketaManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const loadShipments = async () => {
     setLoading(true);
@@ -93,6 +94,33 @@ export default function PacketaManagement() {
     }
   };
 
+  const createShipment = async (orderId: string) => {
+    try {
+      setLoading(true);
+      setDebugInfo(null);
+      const res = await fetch("/api/admin/packeta/create-shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId })
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error || "Failed to create shipment");
+
+      alert(`✅ Zásilka vytvořena!\n\nPacketa ID: ${result.packetaId}\nTracking: ${result.trackingId}\n\nKlikněte na 'Zobrazit debug' pro podrobnosti.`);
+
+      // Store debug info
+      setDebugInfo(result);
+
+      loadShipments(); // Refresh the list
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to create shipment");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const bulkPrintLabels = async () => {
     if (selectedOrders.size === 0) {
       alert("Vyberte alespoň jednu objednávku");
@@ -103,29 +131,29 @@ export default function PacketaManagement() {
       "Vyberte formát štítku:\n1 = A6 (1 štítek na stránku)\n2 = A6 on A4 (4 štítky na stránku)\n\nZadejte číslo:",
       "2"
     );
-    
+
     if (format === null) return;
-    
+
     const formatMap: Record<string, string> = {
       "1": "A6",
       "2": "A6 on A4"
     };
-    
+
     const selectedFormat = formatMap[format] || "A6";
-    
+
     try {
       setLoading(true);
       const res = await fetch("/api/admin/packeta/bulk-print-labels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           orderIds: Array.from(selectedOrders),
           format: selectedFormat
         })
       });
-      
+
       if (!res.ok) throw new Error("Failed to get bulk labels");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -135,7 +163,7 @@ export default function PacketaManagement() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       setSelectedOrders(new Set()); // Clear selection after successful print
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to bulk print labels");
@@ -239,28 +267,40 @@ export default function PacketaManagement() {
                   {new Date(shipment.created_at).toLocaleString()}
                 </td>
                 <td className="p-2 border align-top whitespace-nowrap">
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => showFormatDialog(shipment.order_id)}
-                    >
-                      Print Label
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => trackShipment(shipment.packeta_shipment_id)}
-                    >
-                      Track
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => cancelShipment(shipment.order_id)}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="flex gap-1 flex-wrap">
+                    {!shipment.packeta_shipment_id ? (
+                      <Button
+                        size="sm"
+                        onClick={() => createShipment(shipment.order_id)}
+                        disabled={loading}
+                      >
+                        {loading ? "..." : "Vytvořit zásilku"}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => showFormatDialog(shipment.order_id)}
+                        >
+                          Print Label
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => trackShipment(shipment.packeta_shipment_id)}
+                        >
+                          Track
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => cancelShipment(shipment.order_id)}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -272,6 +312,48 @@ export default function PacketaManagement() {
       {shipments.length === 0 && (
         <div className="text-center text-muted-foreground py-8">
           No Packeta shipments found
+        </div>
+      )}
+
+      {debugInfo && (
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">🔍 Debug informace</h3>
+            <Button variant="outline" size="sm" onClick={() => setDebugInfo(null)}>
+              Zavřít
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium text-green-700">✅ Úspěch</h4>
+              <p>Packeta ID: <code className="bg-gray-200 px-1 rounded">{debugInfo.packetaId}</code></p>
+              <p>Tracking ID: <code className="bg-gray-200 px-1 rounded">{debugInfo.trackingId}</code></p>
+              <p>Barcode: <code className="bg-gray-200 px-1 rounded">{debugInfo.packetaBarcode}</code></p>
+              <p><a href={debugInfo.trackingUrl} target="_blank" className="text-blue-600 underline">Tracking URL</a></p>
+            </div>
+
+            <div>
+              <h4 className="font-medium text-blue-700">📡 API odpověď</h4>
+              <pre className="bg-gray-800 text-green-400 p-3 rounded text-sm overflow-auto max-h-40">
+                {debugInfo.debug?.xmlResponse || 'N/A'}
+              </pre>
+            </div>
+
+            <div>
+              <h4 className="font-medium text-purple-700">📤 Odeslaný XML</h4>
+              <pre className="bg-gray-800 text-yellow-400 p-3 rounded text-sm overflow-auto max-h-40">
+                {debugInfo.debug?.xmlRequest || 'N/A'}
+              </pre>
+            </div>
+
+            <div>
+              <h4 className="font-medium text-gray-700">⚙️ Konfigurace</h4>
+              <p>API URL: <code className="bg-gray-200 px-1 rounded">{debugInfo.debug?.apiUrl}</code></p>
+              <p>Eshop ID: <code className="bg-gray-200 px-1 rounded">{debugInfo.debug?.eshopId}</code></p>
+              <p>API Key délka: <code className="bg-gray-200 px-1 rounded">{debugInfo.debug?.apiKeyLength}</code></p>
+            </div>
+          </div>
         </div>
       )}
     </div>
