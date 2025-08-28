@@ -4,6 +4,14 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export async function POST(req: NextRequest) {
   console.log('🚀 Starting create-shipment for order:', req.url);
 
+  // Debug environment variables
+  console.log('🔧 Environment variables:', {
+    PACKETA_API_KEY: process.env.PACKETA_API_KEY ? '✅ Set' : '❌ Missing',
+    PACKETA_API_URL: process.env.PACKETA_API_URL || '❌ Missing',
+    PACKETA_ESHOP_ID: process.env.PACKETA_ESHOP_ID || '❌ Missing',
+    PACKETA_SENDER_ID: process.env.PACKETA_SENDER_ID || '❌ Missing'
+  });
+
    // Temporary: Packeta API has outage (504 errors), disable until fixed
    // return NextResponse.json(
    //   { error: "Packeta API temporarily unavailable - try again later" },
@@ -146,7 +154,11 @@ export async function POST(req: NextRequest) {
   </packetAttributes>
 </createPacket>`;
 
-   const packetaResponse = await fetch(process.env.PACKETA_API_URL!, {
+    // Use hardcoded URL for now to debug
+    const PACKETA_API_URL = process.env.PACKETA_API_URL || "https://www.zasilkovna.cz/api/rest";
+    console.log(`🔗 Using Packeta API URL: ${PACKETA_API_URL}`);
+
+    const packetaResponse = await fetch(PACKETA_API_URL, {
      method: "POST",
      headers: {
        "Content-Type": "application/xml",
