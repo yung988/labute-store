@@ -583,11 +583,11 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                          rel="noopener noreferrer"
                          className="font-mono text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
                        >
-                         Z{order.packeta_barcode}
+                         {order.packeta_barcode}
                          <ExternalLink className="w-3 h-3" />
                        </a>
                      ) : (
-                       <span className="font-mono">Z{order.packeta_barcode}</span>
+                       <span className="font-mono">{order.packeta_barcode}</span>
                      )}
                    </p>
                  </div>
