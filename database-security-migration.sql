@@ -173,6 +173,16 @@ WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
 
 -- =====================================================================================
+-- 9. PŘIDAT SLOUPEC STRIPE_INVOICE_ID DO ORDERS
+-- =====================================================================================
+
+-- Přidat sloupec pro Stripe invoice ID
+ALTER TABLE orders ADD COLUMN stripe_invoice_id text;
+
+-- Vytvořit index pro rychlé vyhledávání podle invoice_id
+CREATE INDEX IF NOT EXISTS idx_orders_stripe_invoice_id ON orders(stripe_invoice_id);
+
+-- =====================================================================================
 -- INSTRUKCE PRO SPUŠTĚNÍ:
 -- =====================================================================================
 --

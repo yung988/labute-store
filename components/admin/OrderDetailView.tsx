@@ -31,6 +31,7 @@ import { formatOrderId } from "@/lib/product-images";
 type OrderDetail = {
   id: string;
   stripe_session_id: string | null;
+  stripe_invoice_id: string | null;
   customer_email: string | null;
   customer_name: string | null;
   customer_phone: string | null;
@@ -66,6 +67,8 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
+  const [deliveryMethod, setDeliveryMethod] = useState<string>('pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
 
   // Helper function to truncate long text
   const truncateText = (text: string | null, maxLength: number = 20) => {
@@ -89,7 +92,24 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       if (error) throw new Error(error.message || "Failed to load order");
 
       setOrder(orderData);
-      setEditedOrder(orderData);
+      setEditedOrder({ ...orderData, stripe_invoice_id: orderData.stripe_invoice_id });
+
+      // Fetch delivery method from Stripe session
+      if (orderData.stripe_session_id) {
+        try {
+          const response = await fetch(`/api/admin/orders/${orderId}/delivery-method`, {
+            method: 'GET',
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setDeliveryMethod(data.deliveryMethod || 'pickup');
+            setDeliveryAddress(data.deliveryAddress || '');
+          }
+        } catch (e) {
+          console.warn('Could not fetch delivery method:', e);
+        }
+      }
 
       // Generate timeline from order data
       const timelineEvents: TimelineEvent[] = [
@@ -294,12 +314,16 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       setLoading(true);
       const response = await fetch(`/api/admin/orders/${orderId}/resend-email`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'receipt' }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to send email');
       }
-      
+
       alert('Email byl odeslán zákazníkovi!');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send email');
@@ -435,12 +459,28 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                     {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : "Nezadáno"}
                   </p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Stripe Session ID</Label>
-                  <p className="text-sm mt-1 text-muted-foreground">
-                    {truncateText(order.stripe_session_id, 25)}
-                  </p>
-                </div>
+                 <div>
+                   <Label className="text-sm font-medium text-muted-foreground">Stripe Session ID</Label>
+                   <p className="text-sm mt-1 text-muted-foreground">
+                     {truncateText(order.stripe_session_id, 25)}
+                   </p>
+                 </div>
+                 {order.stripe_invoice_id && (
+                   <div>
+                     <Label className="text-sm font-medium text-muted-foreground">Stripe Faktura</Label>
+                     <p className="text-sm mt-1">
+                       <a
+                         href={`https://dashboard.stripe.com/invoices/${order.stripe_invoice_id}`}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                       >
+                         {truncateText(order.stripe_invoice_id, 25)}
+                         <ExternalLink className="w-3 h-3" />
+                       </a>
+                     </p>
+                   </div>
+                 )}
               </div>
             </CardContent>
           </Card>
@@ -579,13 +619,18 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Výdejní místo</Label>
-                <p className="text-sm mt-1 flex items-center gap-2">
-                  <MapPin className="w-3 h-3" />
-                  {order.packeta_point_id || "Nezadáno"}
-                </p>
-              </div>
+               <div>
+                 <Label className="text-sm font-medium text-muted-foreground">
+                   {deliveryMethod === 'home_delivery' ? 'Adresa doručení' : 'Výdejní místo'}
+                 </Label>
+                 <p className="text-sm mt-1 flex items-center gap-2">
+                   <MapPin className="w-3 h-3" />
+                   {deliveryMethod === 'home_delivery'
+                     ? (deliveryAddress || "Nezadáno")
+                     : (order.packeta_point_id || "Nezadáno")
+                   }
+                 </p>
+               </div>
               
                <div>
                  <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>

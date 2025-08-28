@@ -1,4 +1,6 @@
 // lib/stripe/types.ts
+import Stripe from 'stripe';
+
 export interface StripeCheckoutSession {
     id: string;
     amount_total: number | null;
@@ -22,6 +24,7 @@ export interface StripeCheckoutSession {
             value: string | null;
         };
     }>;
+    invoice?: string | Stripe.Invoice | null;
 }
 
 // Product data for Stripe catalog

@@ -78,9 +78,20 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     itemsCount: normalizedItems.length
   });
   
+  // Extract invoice ID if available
+  let invoiceId = null;
+  if (session.invoice) {
+    if (typeof session.invoice === 'string') {
+      invoiceId = session.invoice;
+    } else if (typeof session.invoice === 'object' && session.invoice.id) {
+      invoiceId = session.invoice.id;
+    }
+  }
+
   const { error } = await supabaseAdmin.from("orders").insert({
     id: orderId,
     stripe_session_id: session.id,
+    stripe_invoice_id: invoiceId,
     customer_email: session.customer_details?.email,
     customer_name: customerName,
     customer_phone: customerPhone,

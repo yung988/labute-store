@@ -217,6 +217,10 @@ function CheckoutForm() {
     postalCode: "",
   });
 
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+
   // Detekce mobilního zařízení
   useEffect(() => {
     const checkIsMobile = () => {
@@ -330,6 +334,107 @@ function CheckoutForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Address autocomplete
+    if (name === 'address' && deliveryMethod === 'home_delivery') {
+      searchAddress(value);
+    }
+  };
+
+  const searchAddress = async (query: string) => {
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearchingAddress(true);
+
+    try {
+      // Use Mapbox Geocoding API for Czech addresses
+      const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoieWVlemV6MjAyMCIsImEiOiJjbGV4YW1xaW0wM3FxM25xbzR5dW1xYW1xIn0.example';
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?country=cz&limit=5&access_token=${MAPBOX_ACCESS_TOKEN}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const suggestions = data.features?.map((feature: any) =>
+          feature.place_name || feature.text
+        ).filter((suggestion: string) => suggestion && suggestion.length > 0) || [];
+
+        setAddressSuggestions(suggestions);
+        setShowSuggestions(suggestions.length > 0);
+      } else {
+        // Fallback to basic Czech city suggestions
+        const basicSuggestions = [
+          'Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc', 'České Budějovice', 'Hradec Králové', 'Pardubice', 'Zlín'
+        ].filter(city =>
+          city.toLowerCase().includes(query.toLowerCase())
+        ).map(city => `${query}, ${city}`);
+
+        setAddressSuggestions(basicSuggestions);
+        setShowSuggestions(basicSuggestions.length > 0);
+      }
+    } catch (error) {
+      console.warn('Address search failed:', error);
+      // Fallback to basic suggestions
+      const basicSuggestions = [
+        'Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec'
+      ].filter(city =>
+        city.toLowerCase().includes(query.toLowerCase())
+      ).map(city => `${query}, ${city}`);
+
+      setAddressSuggestions(basicSuggestions);
+      setShowSuggestions(basicSuggestions.length > 0);
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const selectAddress = (address: string) => {
+    // Parse address to fill city and postal code
+    const parts = address.split(', ');
+    if (parts.length >= 2) {
+      const streetAddress = parts[0];
+      const city = parts[1];
+      const postalCode = parts[2] || '';
+
+      setFormData(prev => ({
+        ...prev,
+        address: streetAddress,
+        city: city,
+        postalCode: postalCode
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        address: address
+      }));
+    }
+
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
+  };
+
+  const validatePostalCode = (postalCode: string) => {
+    // Czech postal code format: 123 45 or 12345
+    const cleanCode = postalCode.replace(/\s/g, '');
+    return /^\d{5}$/.test(cleanCode);
+  };
+
+  const formatPostalCode = (postalCode: string) => {
+    // Format postal code as 123 45
+    const cleanCode = postalCode.replace(/\s/g, '');
+    if (cleanCode.length === 5) {
+      return `${cleanCode.slice(0, 3)} ${cleanCode.slice(3)}`;
+    }
+    return postalCode;
   };
 
   const handleRemoveItem = (lineItemId: string) => {
@@ -539,13 +644,68 @@ function CheckoutForm() {
                         <input type="text" name="firstName" placeholder="Křestní jméno*" value={formData.firstName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                         <input type="text" name="lastName" placeholder="Příjmení*" value={formData.lastName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                       </div>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input type="text" name="address" placeholder="Ulice a číslo popisné*" value={formData.address} onChange={handleInputChange} className="w-full pl-10 pr-4 py-3 border border-gray-300 text-sm focus:border-black focus:outline-none rounded-none" required />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                       <div className="relative">
+                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                         <input
+                           type="text"
+                           name="address"
+                           placeholder="Ulice a číslo popisné*"
+                           value={formData.address}
+                           onChange={handleInputChange}
+                           onFocus={() => formData.address.length >= 3 && setShowSuggestions(true)}
+                           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                           className="w-full pl-10 pr-4 py-3 border border-gray-300 text-sm focus:border-black focus:outline-none rounded-none"
+                           required
+                         />
+                         {isSearchingAddress && (
+                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                           </div>
+                         )}
+                         {showSuggestions && addressSuggestions.length > 0 && (
+                           <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 z-10 max-h-48 overflow-y-auto">
+                             {addressSuggestions.map((suggestion, index) => (
+                               <button
+                                 key={index}
+                                 type="button"
+                                 onClick={() => selectAddress(suggestion)}
+                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                               >
+                                 {suggestion}
+                               </button>
+                             ))}
+                           </div>
+                         )}
+                         {deliveryMethod === 'home_delivery' && (
+                           <p className="text-xs text-gray-500 mt-1">
+                             Začněte psát ulici a město pro automatické dokončení adresy
+                           </p>
+                         )}
+                       </div>
+                       <div className="grid grid-cols-2 gap-4">
                         <input type="text" name="city" placeholder="Město*" value={formData.city} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                        <input type="text" name="postalCode" placeholder="PSČ*" value={formData.postalCode} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
+                        <input
+                          type="text"
+                          name="postalCode"
+                          placeholder="PSČ*"
+                          value={formData.postalCode}
+                          onChange={(e) => {
+                            const formatted = formatPostalCode(e.target.value);
+                            setFormData(prev => ({ ...prev, postalCode: formatted }));
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value && !validatePostalCode(e.target.value)) {
+                              // Could add error state here
+                              console.warn('Invalid postal code format');
+                            }
+                          }}
+                          className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                            formData.postalCode && !validatePostalCode(formData.postalCode)
+                              ? 'border-red-300 focus:border-red-500'
+                              : 'border-gray-300 focus:border-black'
+                          }`}
+                          required
+                        />
                       </div>
                       <input type="tel" name="phone" placeholder="Telefonní číslo*" value={formData.phone} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
                     </div>

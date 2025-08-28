@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
+    // Enable invoice creation for paid orders
+    params.append('invoice_creation[enabled]', 'true');
+
     // Line items - products
     items.forEach((item: { name: string; price: number; quantity: number; image?: string; size?: string }, index: number) => {
       params.append(`line_items[${index}][price_data][currency]`, 'czk');
