@@ -141,8 +141,7 @@ export async function POST() {
         } else if (cancelResponse.ok) {
           const result = await cancelResponse.json();
           console.log("✅ Packeta bulk cancel success:", result);
-          const resultData = await result.json();
-          cancelledCount = resultData.cancelled || packetIds.length;
+          cancelledCount = result.cancelled || packetIds.length;
         } else {
           const errorText = await cancelResponse.text();
           console.error("❌ Packeta bulk cancel error:", {

@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       // If cancel fails, still proceed with database update but warn user
       console.warn("⚠️ Packeta API cancel failed, but continuing with database reset");
     } else {
-      const cancelResult = await cancelResponse.json();
+      const cancelResult = await cancelResponse.text();
       console.log("✅ Packeta shipment cancelled via API:", cancelResult);
     }
 
