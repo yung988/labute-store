@@ -1,11 +1,30 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatOrderId } from "@/lib/product-images";
 import { createClient } from "@/lib/supabase/client";
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  RefreshCw,
+  Eye,
+  Package,
+  Truck,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Mail,
+  Phone,
+  MoreHorizontal,
+  Printer
+} from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Order = {
   id: string;
@@ -15,7 +34,7 @@ type Order = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
-  items: string | unknown[]; // Can be JSON string or array
+  items: string | unknown[];
   status: string;
   amount_total: number | null;
   created_at: string;
@@ -29,38 +48,23 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [newOrder, setNewOrder] = useState<Partial<Order>>({
-    customer_email: "",
-    customer_name: "",
-    customer_phone: "",
-    packeta_point_id: "",
-    amount_total: undefined,
-    status: "new",
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "status">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
       const supabase = createClient();
-
-      // Try to get user info first
-      const { data: userData } = await supabase.auth.getUser();
-      console.log('Current user:', userData.user);
-
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Orders data:', ordersData);
-      console.log('Orders error:', error);
-      console.log('Number of orders:', ordersData?.length || 0);
-
       if (error) {
-        console.error('Supabase error details:', error);
-        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Database error: ${error.message}`);
       }
 
       setOrders(ordersData || []);
@@ -76,24 +80,54 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     load();
   }, []);
 
-  const onCreate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('orders')
-        .insert([newOrder]);
+  const filteredAndSortedOrders = useMemo(() => {
+    let filtered = orders;
 
-      if (error) throw new Error(error.message || "Create failed");
-      setNewOrder({ customer_email: "", customer_name: "", customer_phone: "", packeta_point_id: "", amount_total: undefined, status: "new" });
-      await load();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Create failed");
-    } finally {
-      setLoading(false);
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(order => 
+        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer_phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        formatOrderId(order.id).toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
-  };
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal: number | string, bVal: number | string;
+      
+      switch (sortBy) {
+        case "date":
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+          break;
+        case "amount":
+          aVal = a.amount_total || 0;
+          bVal = b.amount_total || 0;
+          break;
+        case "status":
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        default:
+          aVal = 0;
+          bVal = 0;
+      }
+
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [orders, searchQuery, statusFilter, sortBy, sortOrder]);
 
   const updateStatus = async (id: string, status: string) => {
     try {
@@ -104,31 +138,10 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
         .eq('id', id);
 
       if (error) throw new Error(error.message || "Update failed");
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-
-      // Show success message
-      const order = orders.find(o => o.id === id);
-      if (order?.customer_email) {
-        console.log(`✅ Status updated for ${order.customer_email}`);
-      }
+      
+      setOrders(prev => prev.map(o => (o.id === id ? { ...o, status } : o)));
     } catch (error) {
       setError(error instanceof Error ? error.message : "Update failed");
-    }
-  };
-
-  const onDelete = async (id: string) => {
-    if (!confirm("Smazat objednávku?")) return;
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw new Error(error.message || "Delete failed");
-      setOrders((prev) => prev.filter((o) => o.id !== id));
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Delete failed");
     }
   };
 
@@ -142,49 +155,11 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
       if (error) throw new Error(error.message || "Failed to create shipment");
 
-      // Update order status to shipped
       await updateStatus(orderId, "shipped");
       alert(`Zásilka vytvořena! Packeta ID: ${data.packetaId}`);
+      await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create shipment");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkAllPacketaStatuses = async () => {
-    if (!confirm("Zkontrolovat stavy všech aktivních Packeta zásilek? Toto může chvíli trvat.")) return;
-
-    try {
-      setLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-status-check');
-
-      if (error) throw new Error(error.message || "Status check failed");
-
-      alert(`✅ Zkontrolováno: ${data.checked} zásilek, aktualizováno: ${data.updated} objednávek`);
-      await load();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Status check failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const bulkCancelPacketaShipments = async () => {
-    if (!confirm("Opravdu zrušit VŠECHNY staré Packeta zásilky? Tím se zruší všechny nevyřízené zásilky jak v Packeta systému, tak v databázi.")) return;
-
-    try {
-      setLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-bulk-cancel');
-
-      if (error) throw new Error(error.message || "Bulk cancel failed");
-
-      alert(`✅ Úspěšně zpracováno: ${data.database_reset} objednávek resetováno, ${data.cancelled || 0} zásilek zrušeno v Packeta API`);
-      await load();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Bulk cancel failed");
     } finally {
       setLoading(false);
     }
@@ -199,7 +174,6 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
       if (error) throw new Error(error.message || "Failed to get label");
 
-      // Assuming the function returns a blob or URL
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -214,245 +188,337 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     }
   };
 
-  const statuses = useMemo(
-    () => ["new", "paid", "processing", "shipped", "cancelled", "refunded"],
-    []
-  );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
+      case 'shipped':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Truck className="w-3 h-3 mr-1" />Odesláno</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+      case 'processing':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><Clock className="w-3 h-3 mr-1" />Zpracovává se</Badge>;
+      case 'new':
+        return <Badge variant="outline">Nová</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const statuses = ["new", "paid", "processing", "shipped", "cancelled", "refunded"];
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: orders.length };
+    statuses.forEach(status => {
+      counts[status] = orders.filter(o => o.status === status).length;
+    });
+    return counts;
+  }, [orders]);
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p>Načítání objednávek...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Debug info */}
-      <div className="bg-gray-100 p-4 rounded-lg text-sm">
-        <h3 className="font-semibold mb-2">Debug Info:</h3>
-        <p>Loading: {loading ? 'Yes' : 'No'}</p>
-        <p>Orders count: {orders.length}</p>
-        <p>Error: {error || 'None'}</p>
-        {orders.length > 0 && (
-          <div className="mt-2">
-            <p>Sample order IDs: {orders.slice(0, 3).map(o => o.id).join(', ')}</p>
-          </div>
-        )}
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold">{statusCounts.all}</div>
+            <div className="text-sm text-muted-foreground">Celkem</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-600">{statusCounts.new}</div>
+            <div className="text-sm text-muted-foreground">Nové</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{statusCounts.paid}</div>
+            <div className="text-sm text-muted-foreground">Zaplacené</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-orange-600">{statusCounts.processing}</div>
+            <div className="text-sm text-muted-foreground">Zpracovávají se</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{statusCounts.shipped}</div>
+            <div className="text-sm text-muted-foreground">Odesláno</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">{statusCounts.cancelled}</div>
+            <div className="text-sm text-muted-foreground">Zrušeno</div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Create order (manual)</h2>
-        <div className="flex gap-2 flex-wrap items-end">
-          <div>
-            <label className="text-sm">Email</label>
-            <Input
-              value={newOrder.customer_email as string}
-              onChange={(e) => setNewOrder((s) => ({ ...s, customer_email: e.target.value }))}
-              placeholder="customer@example.com"
-            />
-          </div>
-          <div>
-            <label className="text-sm">Name</label>
-            <Input
-              value={newOrder.customer_name as string}
-              onChange={(e) => setNewOrder((s) => ({ ...s, customer_name: e.target.value }))}
-              placeholder="Name"
-            />
-          </div>
-          <div>
-            <label className="text-sm">Phone</label>
-            <Input
-              value={newOrder.customer_phone as string}
-              onChange={(e) => setNewOrder((s) => ({ ...s, customer_phone: e.target.value }))}
-              placeholder="+420..."
-            />
-          </div>
-          <div>
-            <label className="text-sm">Packeta point ID</label>
-            <Input
-              value={newOrder.packeta_point_id as string}
-              onChange={(e) => setNewOrder((s) => ({ ...s, packeta_point_id: e.target.value }))}
-              placeholder="Z-POINT-ID"
-            />
-          </div>
-          <div>
-            <label className="text-sm">Amount total (CZK)</label>
-            <Input
-              type="number"
-              value={newOrder.amount_total !== undefined ? String(newOrder.amount_total) : ""}
-              onChange={(e) =>
-                setNewOrder((s) => ({
-                  ...s,
-                  amount_total: e.target.value === "" ? undefined : Number(e.target.value),
-                }))
-              }
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="text-sm">Status</label>
-            <select
-              className="border rounded px-2 py-2 h-10"
-              value={newOrder.status as string}
-              onChange={(e) => setNewOrder((s) => ({ ...s, status: e.target.value }))}
-            >
-              {statuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button onClick={onCreate} disabled={loading}>
-            Create
-          </Button>
-        </div>
-      </div>
+      {/* Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Objednávky ({filteredAndSortedOrders.length})</span>
+            <div className="flex gap-2">
+              <Button onClick={load} variant="outline" size="sm" disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Obnovit
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Hledat podle ID, jména, emailu nebo telefonu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full lg:w-48">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filtrovat podle statusu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Všechny ({statusCounts.all})</SelectItem>
+                <SelectItem value="new">Nové ({statusCounts.new})</SelectItem>
+                <SelectItem value="paid">Zaplacené ({statusCounts.paid})</SelectItem>
+                <SelectItem value="processing">Zpracovávají se ({statusCounts.processing})</SelectItem>
+                <SelectItem value="shipped">Odesláno ({statusCounts.shipped})</SelectItem>
+                <SelectItem value="cancelled">Zrušeno ({statusCounts.cancelled})</SelectItem>
+              </SelectContent>
+            </Select>
 
-      {/* Bulk Cancel Section */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-semibold text-yellow-800 mb-2">🗑️ Bulk Cancel Old Packeta Shipments</h3>
-        <p className="text-sm text-yellow-700 mb-3">
-          Zruší všechny nevyřízené Packeta zásilky (status != shipped) jak v API, tak v databázi
-        </p>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={bulkCancelPacketaShipments} 
-            disabled={loading}
-            className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
-          >
-            Cancel All Old Shipments
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={checkAllPacketaStatuses} 
-            disabled={loading}
-            className="border-blue-400 text-blue-800 hover:bg-blue-100"
-          >
-            🔄 Check All Statuses
-          </Button>
-        </div>
-      </div>
+            {/* Sort */}
+            <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
+              const [sort, order] = value.split('-');
+              setSortBy(sort as typeof sortBy);
+              setSortOrder(order as typeof sortOrder);
+            }}>
+              <SelectTrigger className="w-full lg:w-48">
+                <SelectValue placeholder="Řadit podle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-desc">Nejnovější</SelectItem>
+                <SelectItem value="date-asc">Nejstarší</SelectItem>
+                <SelectItem value="amount-desc">Nejvyšší částka</SelectItem>
+                <SelectItem value="amount-asc">Nejnižší částka</SelectItem>
+                <SelectItem value="status-asc">Status A-Z</SelectItem>
+                <SelectItem value="status-desc">Status Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Packeta</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.map((o) => {
-              // Parse items from JSON string if needed
-              let items: unknown[] = [];
-              try {
-                if (typeof o.items === 'string') {
-                  items = JSON.parse(o.items);
-                } else if (Array.isArray(o.items)) {
-                  items = o.items;
-                }
-              } catch (e) {
-                console.error('Failed to parse items:', e);
-                items = [];
-              }
-              
-              return (
-                <TableRow
-                  key={o.id}
-                  className="hover:bg-blue-50 cursor-pointer"
-                  onClick={() => onOrderClick?.(o.id)}
-                >
-                  <TableCell className="align-top max-w-[260px]">
-                    <div className="font-mono font-bold text-blue-600">{formatOrderId(o.id)}</div>
-                    <div className="text-xs text-gray-500 break-all">{o.id}</div>
-                  </TableCell>
-                  <TableCell className="align-top max-w-[200px]">
-                    {items.length > 0 ? (
-                      <div className="text-xs">
-                        {items.map((item: unknown, idx: number) => {
-                          const typedItem = item as { description?: string; name?: string; size?: string; quantity?: number };
-                          const itemName = typedItem.description || typedItem.name || 'Unknown item';
-                          return (
-                            <div key={idx} className="mb-1">
-                              {itemName}
-                              {typedItem.size && <span className="text-gray-500"> ({typedItem.size})</span>}
-                              {typedItem.quantity && <span className="text-blue-600"> x{typedItem.quantity}</span>}
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md mb-4">
+              <AlertCircle className="w-4 h-4 inline mr-2" />
+              {error}
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-32">ID objednávky</TableHead>
+                  <TableHead>Zákazník</TableHead>
+                  <TableHead>Kontakt</TableHead>
+                  <TableHead className="w-32">Status</TableHead>
+                  <TableHead className="w-32">Částka</TableHead>
+                  <TableHead>Packeta</TableHead>
+                  <TableHead className="w-32">Datum</TableHead>
+                  <TableHead className="w-20">Akce</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {searchQuery || statusFilter !== 'all' ? 'Žádné objednávky nenalezeny' : 'Zatím žádné objednávky'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAndSortedOrders.map((order) => {
+                    // Parse items
+                    let items: unknown[] = [];
+                    try {
+                      if (typeof order.items === 'string') {
+                        items = JSON.parse(order.items);
+                      } else if (Array.isArray(order.items)) {
+                        items = order.items;
+                      }
+                    } catch (e) {
+                      items = [];
+                    }
+
+                    return (
+                      <TableRow
+                        key={order.id}
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => onOrderClick?.(order.id)}
+                      >
+                        <TableCell>
+                          <div className="font-mono font-bold text-primary">
+                            {formatOrderId(order.id)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {items.length} položek
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className="font-medium">{order.customer_name || "Nezadáno"}</div>
+                          <div className="text-sm text-muted-foreground">{order.customer_email}</div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm">
+                            {order.customer_email && (
+                              <a
+                                href={`mailto:${order.customer_email}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </a>
+                            )}
+                            {order.customer_phone && (
+                              <a
+                                href={`tel:${order.customer_phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <Phone className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
+                          {order.customer_phone && (
+                            <div className="text-xs text-muted-foreground">
+                              {order.customer_phone}
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-xs">No items</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top">{o.customer_email}</TableCell>
-                  <TableCell className="align-top">{o.customer_name}</TableCell>
-                  <TableCell className="align-top">{o.customer_phone}</TableCell>
-                  <TableCell className="align-top">
-                    <div className="text-xs">
-                      {o.packeta_point_id && <div>Point: {o.packeta_point_id}</div>}
-                      {o.packeta_shipment_id && <div className="text-blue-600">Ship: {o.packeta_shipment_id}</div>}
-                    </div>
-                  </TableCell>
-                 <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
-                   <Badge
-                     variant={
-                       o.status === 'paid' ? 'default' :
-                       o.status === 'shipped' ? 'secondary' :
-                       o.status === 'cancelled' ? 'destructive' :
-                       'outline'
-                     }
-                   >
-                     {o.status}
-                   </Badge>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    {o.amount_total ? `${(o.amount_total / 100).toFixed(2)} CZK` : '-'}
-                  </TableCell>
-                  <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-1 flex-wrap">
-                     {o.packeta_point_id && o.status === "paid" && !o.packeta_shipment_id && (
-                       <Button
-                         size="sm"
-                         variant="outline"
-                         onClick={() => createPacketaShipment(o.id)}
-                         disabled={loading}
-                       >
-                         Create Shipment
-                       </Button>
-                     )}
-                     {o.packeta_shipment_id && (
-                       <Button
-                         size="sm"
-                         variant="outline"
-                         onClick={() => printPacketaLabel(o.id)}
-                         disabled={loading}
-                       >
-                         Print Label
-                       </Button>
-                     )}
-                     <Button
-                       size="sm"
-                       variant="destructive"
-                       onClick={() => onDelete(o.id)}
-                       disabled={loading}
-                     >
-                       Delete
-                     </Button>
-                   </div>
-                 </TableCell>
-                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                          )}
+                        </TableCell>
+
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={order.status}
+                            onValueChange={(status) => updateStatus(order.id, status)}
+                          >
+                            <SelectTrigger className="w-full h-8 text-xs">
+                              <SelectValue asChild>
+                                {getStatusBadge(order.status)}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {statuses.map(status => (
+                                <SelectItem key={status} value={status}>
+                                  {status === 'new' ? 'Nová' :
+                                   status === 'paid' ? 'Zaplaceno' :
+                                   status === 'processing' ? 'Zpracovává se' :
+                                   status === 'shipped' ? 'Odesláno' :
+                                   status === 'cancelled' ? 'Zrušeno' :
+                                   status === 'refunded' ? 'Vráceno' : status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-semibold">
+                            {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : '-'}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            {order.packeta_point_id && (
+                              <div className="flex items-center gap-1">
+                                <Package className="w-3 h-3" />
+                                {order.packeta_point_id}
+                              </div>
+                            )}
+                            {order.packeta_shipment_id && (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <Truck className="w-3 h-3" />
+                                {order.packeta_shipment_id}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="text-sm">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(order.created_at).toLocaleTimeString()}
+                          </div>
+                        </TableCell>
+
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => onOrderClick?.(order.id)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Detail
+                              </DropdownMenuItem>
+                              
+                              {order.packeta_point_id && order.status === "paid" && !order.packeta_shipment_id && (
+                                <DropdownMenuItem onClick={() => createPacketaShipment(order.id)}>
+                                  <Package className="w-4 h-4 mr-2" />
+                                  Vytvořit zásilku
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {order.packeta_shipment_id && (
+                                <DropdownMenuItem onClick={() => printPacketaLabel(order.id)}>
+                                  <Printer className="w-4 h-4 mr-2" />
+                                  Tisknout štítek
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
