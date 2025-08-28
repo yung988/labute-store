@@ -53,7 +53,7 @@ export async function GET(
         error: errorText,
         packetId: packetaId
       });
-      
+
       return NextResponse.json(
         { error: `Failed to get tracking info: ${packetaRes.status} ${errorText}` },
         { status: packetaRes.status }

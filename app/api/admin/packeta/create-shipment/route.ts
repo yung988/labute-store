@@ -188,21 +188,16 @@ export async function POST(req: NextRequest) {
 
     console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
 
-     // Add timeout and retry logic for Packeta API calls
-     const PACKETA_TIMEOUT_MS = 10000; // 10 second timeout
+     // Simple timeout and retry for Packeta API
      const MAX_RETRIES = 3;
-     const RETRY_DELAY_MS = 2000; // 2 second delay between retries
+     const TIMEOUT_MS = 15000; // 15 second timeout
 
      let packetaResponse: Response | undefined;
-     let lastError: Error | null = null;
 
      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
        try {
-         console.log(`🔄 Packeta API attempt ${attempt}/${MAX_RETRIES}`);
-
-         // Create AbortController for timeout
          const controller = new AbortController();
-         const timeoutId = setTimeout(() => controller.abort(), PACKETA_TIMEOUT_MS);
+         const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
          packetaResponse = await fetch("https://api.packeta.com/api/v5/shipments", {
            method: "POST",
@@ -216,41 +211,23 @@ export async function POST(req: NextRequest) {
          });
 
          clearTimeout(timeoutId);
-
-         // If successful (2xx status) or client error (4xx), don't retry
-         if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
-           break;
-         }
-
-         // For server errors (5xx) or timeout, retry
-         if (attempt < MAX_RETRIES) {
-           console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${RETRY_DELAY_MS}ms...`);
-           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-         }
+         break; // Success, exit retry loop
 
        } catch (error) {
-         lastError = error as Error;
-         if (error instanceof Error && error.name === 'AbortError') {
-           console.log(`⏰ Packeta API timeout on attempt ${attempt}/${MAX_RETRIES}`);
-         } else {
-           console.log(`❌ Packeta API error on attempt ${attempt}/${MAX_RETRIES}:`, error instanceof Error ? error.message : String(error));
+         const err = error as Error;
+         console.log(`Packeta API attempt ${attempt} failed:`, err.message);
+
+         if (attempt === MAX_RETRIES) {
+           throw new Error(`Packeta API failed after ${MAX_RETRIES} attempts: ${err.message}`);
          }
 
-         if (attempt < MAX_RETRIES) {
-           console.log(`⏳ Retrying in ${RETRY_DELAY_MS}ms...`);
-           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-         }
+         // Wait before retry (exponential backoff)
+         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
        }
      }
 
-     // Check if we have a response
      if (!packetaResponse) {
-       const errorMsg = lastError ? `All retry attempts failed. Last error: ${lastError.message}` : 'All retry attempts failed with unknown error';
-       console.error('❌ Packeta API failed after all retries:', errorMsg);
-       return NextResponse.json(
-         { error: `Packeta API temporarily unavailable: ${errorMsg}` },
-         { status: 503 }
-       );
+       throw new Error('Packeta API failed: no response received');
      }
 
     if (!packetaResponse.ok) {
@@ -261,49 +238,17 @@ export async function POST(req: NextRequest) {
         error: errorText
       });
 
-      // Provide specific error messages for different status codes
-      let userFriendlyError = `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}`;
-
-      switch (packetaResponse.status) {
-        case 400:
-          userFriendlyError = "Invalid shipment data. Please check the order details and try again.";
-          break;
-        case 401:
-          userFriendlyError = "Packeta API authentication failed. Please check API credentials.";
-          break;
-        case 403:
-          userFriendlyError = "Packeta API access forbidden. Please check your account permissions.";
-          break;
-        case 404:
-          userFriendlyError = "Packeta delivery point not found. Please verify the pickup point.";
-          break;
-        case 429:
-          userFriendlyError = "Packeta API rate limit exceeded. Please try again in a few minutes.";
-          break;
-        case 500:
-          userFriendlyError = "Packeta API internal server error. Please try again later.";
-          break;
-        case 502:
-          userFriendlyError = "Packeta API gateway error. Please try again later.";
-          break;
-        case 503:
-          userFriendlyError = "Packeta API service unavailable. Please try again later.";
-          break;
-        case 504:
-          userFriendlyError = "Packeta API timeout. The service is experiencing delays, please try again.";
-          break;
+      // Return user-friendly error messages
+      if (packetaResponse.status === 504) {
+        return NextResponse.json(
+          { error: "Packeta API is temporarily unavailable. Please try again in a few minutes." },
+          { status: 503 }
+        );
       }
 
       return NextResponse.json(
-        {
-          error: userFriendlyError,
-          details: {
-            status: packetaResponse.status,
-            statusText: packetaResponse.statusText,
-            apiError: errorText
-          }
-        },
-        { status: packetaResponse.status >= 500 ? 503 : 400 }
+        { error: `Packeta API error: ${packetaResponse.status} ${packetaResponse.statusText}` },
+        { status: 500 }
       );
     }
 
