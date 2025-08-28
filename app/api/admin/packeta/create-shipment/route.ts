@@ -12,6 +12,14 @@ export async function POST(req: NextRequest) {
     PACKETA_SENDER_ID: process.env.PACKETA_SENDER_ID || '❌ Missing'
   });
 
+  // Debug actual values
+  console.log('🔧 Actual values:', {
+    PACKETA_API_KEY: process.env.PACKETA_API_KEY,
+    PACKETA_API_URL: process.env.PACKETA_API_URL,
+    PACKETA_ESHOP_ID: process.env.PACKETA_ESHOP_ID,
+    PACKETA_SENDER_ID: process.env.PACKETA_SENDER_ID
+  });
+
    // Temporary: Packeta API has outage (504 errors), disable until fixed
    // return NextResponse.json(
    //   { error: "Packeta API temporarily unavailable - try again later" },
@@ -130,16 +138,33 @@ export async function POST(req: NextRequest) {
    }
    console.log(`📞 Original phone: ${order.customer_phone}, Formatted: ${formattedPhone}`);
 
-   // Create shipment via Packeta REST/XML API
-   console.log(`📦 Creating Packeta shipment for order ${orderId}`);
+    // Create shipment via Packeta REST/XML API
+    console.log(`📦 Creating Packeta shipment for order ${orderId}`);
 
-   // Use shorter ID for Packeta (last 8 characters of UUID)
-   const packetaOrderId = orderId.slice(-8);
-   console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
+    // Use shorter ID for Packeta (last 8 characters of UUID)
+    const packetaOrderId = orderId.slice(-8);
+    console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
 
-   const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+    // Use environment variables (should be set on Vercel)
+    const PACKETA_API_URL = process.env.PACKETA_API_URL || "https://www.zasilkovna.cz/api/rest";
+    const PACKETA_API_KEY = process.env.PACKETA_API_KEY;
+    const PACKETA_ESHOP_ID = process.env.PACKETA_ESHOP_ID || "labute-store";
+
+    console.log(`🔗 Using Packeta API URL: ${PACKETA_API_URL}`);
+    console.log(`🔑 API Key status: ${PACKETA_API_KEY ? 'Set' : 'NOT SET - THIS IS THE PROBLEM!'}`);
+    console.log(`🏪 Eshop ID: ${PACKETA_ESHOP_ID}`);
+
+    if (!PACKETA_API_KEY) {
+      console.error('❌ PACKETA_API_KEY is not set on Vercel!');
+      return NextResponse.json(
+        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_KEY environment variable.' },
+        { status: 500 }
+      );
+    }
+
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
-  <apiPassword>${process.env.PACKETA_API_KEY}</apiPassword>
+  <apiPassword>${PACKETA_API_KEY}</apiPassword>
   <packetAttributes>
     <number>${packetaOrderId}</number>
     <name>${order.customer_name || ""}</name>
@@ -150,13 +175,11 @@ export async function POST(req: NextRequest) {
     <cod>${safeAmount}</cod>
     <value>${safeAmount}</value>
     <weight>${totalWeightKg}</weight>
-    <eshop>${process.env.PACKETA_ESHOP_ID || "labute-store"}</eshop>
+    <eshop>${PACKETA_ESHOP_ID}</eshop>
   </packetAttributes>
 </createPacket>`;
 
-    // Use hardcoded URL for now to debug
-    const PACKETA_API_URL = process.env.PACKETA_API_URL || "https://www.zasilkovna.cz/api/rest";
-    console.log(`🔗 Using Packeta API URL: ${PACKETA_API_URL}`);
+    console.log('📄 XML Request Body:', xmlBody);
 
     const packetaResponse = await fetch(PACKETA_API_URL, {
      method: "POST",
