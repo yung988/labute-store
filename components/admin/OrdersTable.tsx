@@ -18,7 +18,11 @@ type Order = {
   created_at: string;
 };
 
-export default function OrdersTable() {
+interface OrdersTableProps {
+  onOrderClick?: (orderId: string) => void;
+}
+
+export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -322,10 +326,10 @@ export default function OrdersTable() {
               }
               
               return (
-                <tr 
-                  key={o.id} 
+                <tr
+                  key={o.id}
                   className="odd:bg-background even:bg-muted/30 hover:bg-blue-50 cursor-pointer"
-                  onClick={() => window.open(`/admin/orders/${o.id}`, '_blank')}
+                  onClick={() => onOrderClick?.(o.id) || window.open(`/admin/orders/${o.id}`, '_blank')}
                 >
                   <td className="p-2 border align-top max-w-[260px]">
                     <div className="font-mono font-bold text-blue-600">{formatOrderId(o.id)}</div>

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+interface AdminLayoutProps {
+  children: ReactNode;
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-svh flex flex-col">
       <header className="border-b bg-background">
@@ -9,17 +13,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Link href="/admin" className="font-semibold text-lg">
             Admin
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/admin" className="hover:underline">
-              Orders
-            </Link>
-            <Link href="/admin/inventory" className="hover:underline">
-              Inventory
-            </Link>
-            <Link href="/admin/packeta" className="hover:underline">
-              Packeta
-            </Link>
-          </nav>
           <div className="ml-auto text-sm">
             <Link href="/" className="hover:underline">
               Back to store
