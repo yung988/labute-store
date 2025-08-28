@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatOrderId } from "@/lib/product-images";
+import { createClient } from "@/lib/supabase/client";
 
 type Order = {
   id: string;
@@ -42,12 +43,16 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/orders");
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load");
-      setOrders(json.orders);
+      const supabase = createClient();
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(error.message || "Failed to load orders");
+      setOrders(ordersData || []);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : "Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -61,13 +66,12 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newOrder),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Create failed");
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('orders')
+        .insert([newOrder]);
+
+      if (error) throw new Error(error.message || "Create failed");
       setNewOrder({ customer_email: "", customer_name: "", customer_phone: "", packeta_point_id: "", amount_total: undefined, status: "new" });
       await load();
     } catch (e: unknown) {
@@ -79,19 +83,19 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Update failed");
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw new Error(error.message || "Update failed");
       setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
-      
+
       // Show success message
       const order = orders.find(o => o.id === id);
       if (order?.customer_email) {
-        console.log(`✅ Status updated and email sent to ${order.customer_email}`);
+        console.log(`✅ Status updated for ${order.customer_email}`);
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Update failed");
@@ -100,26 +104,33 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const onDelete = async (id: string) => {
     if (!confirm("Smazat objednávku?")) return;
-    const res = await fetch(`/api/admin/orders/${id}`, { method: "DELETE" });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || "Delete failed");
-    setOrders((prev) => prev.filter((o) => o.id !== id));
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw new Error(error.message || "Delete failed");
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Delete failed");
+    }
   };
 
   const createPacketaShipment = async (orderId: string) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/packeta/create-shipment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-create-shipment', {
+        body: { orderId }
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to create shipment");
-      
+
+      if (error) throw new Error(error.message || "Failed to create shipment");
+
       // Update order status to shipped
       await updateStatus(orderId, "shipped");
-      alert(`Zásilka vytvořena! Packeta ID: ${json.packetaId}`);
+      alert(`Zásilka vytvořena! Packeta ID: ${data.packetaId}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create shipment");
     } finally {
@@ -129,19 +140,15 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const checkAllPacketaStatuses = async () => {
     if (!confirm("Zkontrolovat stavy všech aktivních Packeta zásilek? Toto může chvíli trvat.")) return;
-    
+
     try {
       setLoading(true);
-      const res = await fetch("/api/cron/packeta-status-check", {
-        method: "GET",
-        headers: { 
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'manual-check'}` 
-        },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Status check failed");
-      
-      alert(`✅ Zkontrolováno: ${json.checked} zásilek, aktualizováno: ${json.updated} objednávek`);
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-status-check');
+
+      if (error) throw new Error(error.message || "Status check failed");
+
+      alert(`✅ Zkontrolováno: ${data.checked} zásilek, aktualizováno: ${data.updated} objednávek`);
       await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Status check failed");
@@ -152,17 +159,15 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const bulkCancelPacketaShipments = async () => {
     if (!confirm("Opravdu zrušit VŠECHNY staré Packeta zásilky? Tím se zruší všechny nevyřízené zásilky jak v Packeta systému, tak v databázi.")) return;
-    
+
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/packeta/bulk-cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Bulk cancel failed");
-      
-      alert(`✅ Úspěšně zpracováno: ${json.database_reset} objednávek resetováno, ${json.cancelled || 0} zásilek zrušeno v Packeta API`);
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-bulk-cancel');
+
+      if (error) throw new Error(error.message || "Bulk cancel failed");
+
+      alert(`✅ Úspěšně zpracováno: ${data.database_reset} objednávek resetováno, ${data.cancelled || 0} zásilek zrušeno v Packeta API`);
       await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Bulk cancel failed");
@@ -173,12 +178,15 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const printPacketaLabel = async (orderId: string) => {
     try {
-      const res = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
-        method: "GET",
+      const supabase = createClient();
+      const { data, error } = await supabase.functions.invoke('packeta-print-label', {
+        body: { orderId }
       });
-      if (!res.ok) throw new Error("Failed to get label");
-      
-      const blob = await res.blob();
+
+      if (error) throw new Error(error.message || "Failed to get label");
+
+      // Assuming the function returns a blob or URL
+      const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -376,9 +384,12 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                    >
                      {o.status}
                    </Badge>
-                 </TableCell>
-                 <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
-                   <div className="flex gap-1 flex-wrap">
+                  </TableCell>
+                  <TableCell className="align-top">
+                    {o.amount_total ? `${(o.amount_total / 100).toFixed(2)} CZK` : '-'}
+                  </TableCell>
+                  <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1 flex-wrap">
                      {o.packeta_point_id && o.status === "paid" && !o.packeta_shipment_id && (
                        <Button
                          size="sm"
