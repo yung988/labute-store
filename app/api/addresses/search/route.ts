@@ -63,7 +63,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q');
 
+  console.log(`Address search request: "${query}"`);
+
   if (!query || query.length < 3) {
+    console.log('Query too short or missing, returning empty results');
     return NextResponse.json({ addresses: [] });
   }
 
@@ -102,16 +105,24 @@ export async function GET(req: NextRequest) {
       url.searchParams.set('query', searchQuery);
       url.searchParams.set('limit', '10');
       url.searchParams.set('lang', 'cs');
+      url.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
+      url.searchParams.set('apikey', apiKey);
 
       try {
-        const response = await fetch(url.toString(), {
-          headers: { 'X-Mapy-Api-Key': apiKey },
-        });
+        console.log(`Searching for: "${searchQuery}" at URL: ${url.toString()}`);
+        const response = await fetch(url.toString());
+
+        console.log(`Response status: ${response.status} for query: "${searchQuery}"`);
 
         if (response.ok) {
           const data: { items?: MapyItem[] } = await response.json();
+          console.log(`Raw API response for "${searchQuery}":`, JSON.stringify(data, null, 2));
           const items = Array.isArray(data.items) ? data.items : [];
+          console.log(`Found ${items.length} items for query: "${searchQuery}"`);
           allSourceItems = allSourceItems.concat(items);
+        } else {
+          const errorText = await response.text();
+          console.error(`API error for query "${searchQuery}": ${response.status} - ${errorText}`);
         }
       } catch (error) {
         console.error(`Error fetching for query "${searchQuery}":`, error);
@@ -134,10 +145,10 @@ export async function GET(req: NextRequest) {
         broadUrl.searchParams.set('query', streetName);
         broadUrl.searchParams.set('limit', '15');
         broadUrl.searchParams.set('lang', 'cs');
+        broadUrl.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
+        broadUrl.searchParams.set('apikey', apiKey);
 
-        const broadResponse = await fetch(broadUrl.toString(), {
-          headers: { 'X-Mapy-Api-Key': apiKey },
-        });
+        const broadResponse = await fetch(broadUrl.toString());
 
         if (broadResponse.ok) {
           const broadData: { items?: MapyItem[] } = await broadResponse.json();
@@ -318,6 +329,9 @@ export async function GET(req: NextRequest) {
         };
       })
       .filter(addr => addr.street); // Only return addresses with street (city can be empty and filled by user)
+
+    console.log(`Final processed addresses count: ${addresses.length}`);
+    console.log('Final addresses:', JSON.stringify(addresses, null, 2));
 
     return NextResponse.json({ addresses });
 
