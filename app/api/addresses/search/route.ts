@@ -137,6 +137,33 @@ export async function GET(req: NextRequest) {
 
     let sourceItems = uniqueItems;
 
+    // If still nothing and the user typed street + number, try Suggest endpoint
+    if (sourceItems.length === 0 && streetNumberMatch) {
+      try {
+        const suggestUrl = new URL('https://api.mapy.com/v1/suggest');
+        suggestUrl.searchParams.set('query', query);
+        suggestUrl.searchParams.set('limit', '10');
+        suggestUrl.searchParams.set('lang', 'cs');
+        suggestUrl.searchParams.set('type', 'regional.address,regional.street');
+
+        console.log(`Fallback Suggest URL: ${suggestUrl.toString()}`);
+        const suggestRes = await fetch(suggestUrl.toString(), {
+          headers: { 'X-Mapy-Api-Key': apiKey },
+        });
+        if (suggestRes.ok) {
+          const suggestData: { items?: MapyItem[] } = await suggestRes.json();
+          const suggestItems = Array.isArray(suggestData.items) ? suggestData.items : [];
+          if (suggestItems.length > 0) {
+            sourceItems = suggestItems;
+          }
+        } else {
+          console.error('Suggest fallback failed with status', suggestRes.status);
+        }
+      } catch (e) {
+        console.error('Suggest fallback error:', e);
+      }
+    }
+
     // If no results found, try a broader search without the house number
     if (sourceItems.length === 0 && streetNumberMatch) {
       const streetName = streetNumberMatch[1].trim();
@@ -161,10 +188,10 @@ export async function GET(req: NextRequest) {
             const itemName = (item.name || '').toLowerCase();
             const itemLocation = (item.location || '').toLowerCase();
             const streetLower = streetName.toLowerCase();
-            
+
             return (itemName.includes(streetLower) || itemLocation.includes(streetLower)) &&
-                   (item.type === 'address' || item.type === 'address.point' || 
-                    (item.type === 'regional.municipality_part' && item.name && item.name.match(/\d/)));
+                   (item.type === 'regional.address' || item.type === 'regional.street' ||
+                    (item.type === 'regional.municipality_part' && item.name && /\d/.test(item.name)));
           });
 
           sourceItems = relevantItems;
