@@ -762,7 +762,7 @@ function CheckoutForm() {
                              value={formData.address}
                              onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
                              onAddressSelect={handleAddressSelect}
-                             onManualMode={setManualAddressMode}
+                              onManualEntry={() => setManualAddressMode(true)}
                              placeholder="Ulice a číslo popisné*"
                              className={`w-full ${
                                validationErrors.address 

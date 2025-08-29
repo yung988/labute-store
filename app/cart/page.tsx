@@ -498,8 +498,12 @@ function CartForm() {
                             postalCode: address.postalCode || prev.postalCode
                           }));
                         }}
+                        onManualEntry={() => {
+                          // Pro cart page zatím jen prázdná funkce - můžeme implementovat později
+                        }}
                         placeholder="Ulice a číslo popisné*"
                         className="required"
+                        showManualEntry={false}
                       />
                       {/* City and PSČ are derived from AddressAutocomplete selection and stored internally */}
                       <input 
