@@ -10,6 +10,7 @@ type MapyItem = {
   bbox?: number[];
   type?: string;
   location?: string;
+  zip?: string;
   regionalStructure?: Array<{
     name: string;
     type: string;
@@ -241,6 +242,11 @@ export async function GET(req: NextRequest) {
         // Extract city and postal code from regional structure
         let city = '';
         let postalCode = '';
+        
+        // First try to get postal code from zip field (most reliable)
+        if (item.zip) {
+          postalCode = item.zip.replace(/\s/g, ''); // Remove spaces for consistency
+        }
         
         if (item.regionalStructure) {
           // Find municipality (city)
