@@ -493,7 +493,7 @@ function CartForm() {
                         onAddressSelect={(address) => {
                           setFormData(prev => ({
                             ...prev,
-                            address: address.street || address.fullAddress,
+                            address: address.fullAddress || address.street || '',
                             city: address.city || prev.city,
                             postalCode: address.postalCode || prev.postalCode
                           }));

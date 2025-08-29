@@ -403,7 +403,7 @@ function CheckoutForm() {
   }) => {
     setFormData(prev => ({
       ...prev,
-      address: address.street || address.fullAddress || '',
+      address: address.fullAddress || address.street || '',
       city: address.city || '',
       postalCode: address.postalCode ? formatPostalCode(address.postalCode) : ''
     }));

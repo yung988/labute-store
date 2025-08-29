@@ -30,6 +30,7 @@ export default function AddressAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   useEffect(() => {
     const searchAddresses = async () => {
@@ -38,6 +39,16 @@ export default function AddressAutocomplete({
         setShowSuggestions(false);
         setError(null);
         return;
+      }
+
+      // Don't search if the current value matches a previously selected address
+      if (selectedAddress && value === selectedAddress.fullAddress) {
+        return;
+      }
+
+      // Reset selected address if user is typing something different
+      if (selectedAddress && value !== selectedAddress.fullAddress) {
+        setSelectedAddress(null);
       }
 
       setIsLoading(true);
@@ -77,12 +88,14 @@ export default function AddressAutocomplete({
 
     const timeoutId = setTimeout(searchAddresses, 300); // Debounce
     return () => clearTimeout(timeoutId);
-  }, [value]);
+  }, [value, selectedAddress]);
 
   const handleAddressSelect = (address: Address) => {
     onChange(address.fullAddress);
     onAddressSelect(address);
+    setSelectedAddress(address);
     setShowSuggestions(false);
+    setSuggestions([]);
     setError(null);
   };
 
