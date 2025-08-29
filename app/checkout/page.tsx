@@ -219,6 +219,10 @@ function CheckoutForm() {
     postalCode: "",
   });
 
+  const [autoFilledFields, setAutoFilledFields] = useState<{
+    city?: boolean;
+    postalCode?: boolean;
+  }>({});
 
   const [validationErrors, setValidationErrors] = useState<{
     email?: string;
@@ -372,6 +376,14 @@ function CheckoutForm() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
+    // Clear auto-filled indicators when user manually types
+    if (name === 'city' && autoFilledFields.city) {
+      setAutoFilledFields(prev => ({ ...prev, city: false }));
+    }
+    if (name === 'postalCode' && autoFilledFields.postalCode) {
+      setAutoFilledFields(prev => ({ ...prev, postalCode: false }));
+    }
+
     // Clear validation error when user starts typing
     if (validationErrors[name as keyof typeof validationErrors]) {
       setValidationErrors(prev => ({ ...prev, [name]: undefined }));
@@ -393,8 +405,19 @@ function CheckoutForm() {
       ...prev,
       address: address.street || address.fullAddress || '',
       city: address.city || '',
-      postalCode: address.postalCode || ''
+      postalCode: address.postalCode ? formatPostalCode(address.postalCode) : ''
     }));
+
+    // Set auto-filled indicators
+    setAutoFilledFields({
+      city: !!address.city,
+      postalCode: !!address.postalCode
+    });
+
+    // Clear auto-filled indicators after 3 seconds
+    setTimeout(() => {
+      setAutoFilledFields({});
+    }, 3000);
 
     // Clear validation errors when address is selected from autocomplete
     setValidationErrors(prev => ({
@@ -752,21 +775,25 @@ function CheckoutForm() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                          <div>
-                           <input 
-                             type="text" 
-                             name="city" 
-                             placeholder="Město*" 
-                             value={formData.city} 
-                             onChange={handleInputChange} 
+                           <input
+                             type="text"
+                             name="city"
+                             placeholder="Město*"
+                             value={formData.city}
+                             onChange={handleInputChange}
                              className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                               validationErrors.city 
-                                 ? 'border-red-300 focus:border-red-500' 
-                                 : 'border-gray-300 focus:border-black'
+                               validationErrors.city
+                                 ? 'border-red-300 focus:border-red-500'
+                                 : autoFilledFields.city
+                                   ? 'border-green-300 focus:border-black'
+                                   : 'border-gray-300 focus:border-black'
                              }`}
-                             required 
+                             required
                            />
-                           {validationErrors.city && (
+                           {validationErrors.city ? (
                              <p className="text-red-500 text-xs mt-1">{validationErrors.city}</p>
+                           ) : autoFilledFields.city && (
+                             <p className="text-green-600 text-xs mt-1">✓ Město vyplněno automaticky</p>
                            )}
                          </div>
                          <div>
@@ -791,12 +818,16 @@ function CheckoutForm() {
                              className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
                                validationErrors.postalCode
                                  ? 'border-red-300 focus:border-red-500'
-                                 : 'border-gray-300 focus:border-black'
+                                 : autoFilledFields.postalCode
+                                   ? 'border-green-300 focus:border-black'
+                                   : 'border-gray-300 focus:border-black'
                              }`}
                              required
                            />
-                           {validationErrors.postalCode && (
+                           {validationErrors.postalCode ? (
                              <p className="text-red-500 text-xs mt-1">{validationErrors.postalCode}</p>
+                           ) : autoFilledFields.postalCode && (
+                             <p className="text-green-600 text-xs mt-1">✓ PSČ vyplněno automaticky</p>
                            )}
                          </div>
                        </div>
