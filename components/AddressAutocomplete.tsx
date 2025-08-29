@@ -50,17 +50,20 @@ export default function AddressAutocomplete({
         }
         
         const data = await response.json();
-        
+
         if (data.error) {
           throw new Error(data.error);
         }
-        
-        const addresses = data.addresses || [];
+
+        const addresses = Array.isArray(data.addresses) ? data.addresses : [];
+        console.log('AddressAutocomplete: results', { query: value, count: addresses.length, sample: addresses[0] });
         setSuggestions(addresses);
         setShowSuggestions(addresses.length > 0);
-        
+
         if (addresses.length === 0 && value.length >= 3) {
           setError('Žádné adresy nenalezeny. Zkuste jiný výraz.');
+        } else {
+          setError(null);
         }
       } catch (error) {
         console.error('Address search failed:', error);
@@ -104,9 +107,9 @@ export default function AddressAutocomplete({
         )}
       </div>
 
-      {((showSuggestions && suggestions.length > 0) || error) && (
+      {(showSuggestions || (error && !showSuggestions)) && (
         <div className="absolute z-50 w-full bg-white border border-gray-300 shadow-lg max-h-60 overflow-y-auto mt-1">
-          {error ? (
+          {error && suggestions.length === 0 ? (
             <div className="px-4 py-3 text-sm text-red-600 bg-red-50 border-b border-red-100">
               {error}
             </div>
