@@ -231,14 +231,25 @@ export async function GET(req: NextRequest) {
         }
 
         // Parse street and house number from name
-        let street = name;
+        let street = '';
         let houseNumber = '';
 
-        // Try to extract house number from the end of the name
-        const houseNumberMatch = name.match(/^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)$/);
-        if (houseNumberMatch) {
-          street = houseNumberMatch[1].trim();
-          houseNumber = houseNumberMatch[2];
+        // For addresses (regional.address), extract street and house number
+        if (item.type === 'regional.address') {
+          // Try to extract house number from the end of the name
+          const houseNumberMatch = name.match(/^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)$/);
+          if (houseNumberMatch) {
+            street = houseNumberMatch[1].trim();
+            houseNumber = houseNumberMatch[2];
+          } else {
+            street = name;
+          }
+        } else if (item.type === 'regional.street') {
+          // For streets, use the name as street
+          street = name;
+        } else if (item.type === 'regional.municipality' || item.type === 'regional.municipality_part') {
+          // For municipalities, we'll use the name as a general location
+          // Don't set street, but we'll allow it through the filter
         }
 
         // Enhanced city and postal code extraction
@@ -285,6 +296,28 @@ export async function GET(req: NextRequest) {
               }
             }
           }
+
+          // For municipalities without postal code, try to get a default one
+          if (!postalCode && (item.type === 'regional.municipality' || item.type === 'regional.municipality_part')) {
+            const cityName = city.toLowerCase();
+            // Basic postal codes for major Czech cities
+            const cityPostalCodes: { [key: string]: string } = {
+              'znojmo': '66902',
+              'praha': '11000',
+              'brno': '60200',
+              'ostrava': '70200',
+              'plzeň': '30100',
+              'liberec': '46001',
+              'olomouc': '77900',
+              'ústí nad labem': '40001',
+              'hradec králové': '50003',
+              'pardubice': '53002'
+            };
+
+            if (cityPostalCodes[cityName]) {
+              postalCode = cityPostalCodes[cityName];
+            }
+          }
         }
 
         // If we don't have both city and postal code, try fallback parsing
@@ -302,14 +335,25 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Create formatted address for Packeta compatibility
-        const streetWithNumber = houseNumber ? `${street} ${houseNumber}` : street;
-        const fullAddress = `${streetWithNumber}, ${city}${postalCode ? ', ' + postalCode : ''}`;
+        // Create formatted address - always show street + city for selection
+        let streetWithNumber = '';
+        let fullAddress = '';
+
+        if (item.type === 'regional.address' || item.type === 'regional.street') {
+          // For addresses and streets - show street with house number, then city
+          streetWithNumber = houseNumber ? `${street} ${houseNumber}` : street;
+          fullAddress = `${streetWithNumber}${city ? ', ' + city : ''}${postalCode ? ' ' + postalCode : ''}`;
+        } else if (item.type === 'regional.municipality' || item.type === 'regional.municipality_part') {
+          // For municipalities when searching just city name
+          streetWithNumber = city || name;
+          fullAddress = `${city || name}${postalCode ? ' ' + postalCode : ''}`;
+        }
 
         // Debug logging for address parsing (can be removed in production)
         if (process.env.NODE_ENV === 'development') {
           console.log('Address parsing:', {
             originalName: name,
+            type: item.type,
             location: location,
             parsed: {
               street,
@@ -322,7 +366,7 @@ export async function GET(req: NextRequest) {
         }
 
         return {
-          address: streetWithNumber, // Street with house number for Packeta
+          address: streetWithNumber, // Street with house number for form field
           street: streetWithNumber,  // Same as address for compatibility
           city: city,
           postalCode: postalCode,
@@ -330,7 +374,7 @@ export async function GET(req: NextRequest) {
           score: 1,
         };
       })
-      .filter(addr => addr.street); // Only return addresses with street (city can be empty and filled by user)
+      .filter(addr => addr.street || addr.city); // Return addresses with street OR city (for municipalities)
 
     console.log(`Final processed addresses count: ${addresses.length}`);
     console.log('Final addresses:', JSON.stringify(addresses, null, 2));
