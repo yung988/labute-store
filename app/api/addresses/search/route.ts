@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch results for all search queries
     for (const searchQuery of searchQueries) {
-      const url = new URL('https://api.mapy.cz/v1/geocode');
+      const url = new URL('https://api.mapy.com/v1/geocode');
       url.searchParams.set('query', searchQuery);
       url.searchParams.set('limit', '10');
       url.searchParams.set('lang', 'cs');
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
       const streetName = streetNumberMatch[1].trim();
       
       try {
-        const broadUrl = new URL('https://api.mapy.cz/v1/geocode');
+        const broadUrl = new URL('https://api.mapy.com/v1/geocode');
         broadUrl.searchParams.set('query', streetName);
         broadUrl.searchParams.set('limit', '15');
         broadUrl.searchParams.set('lang', 'cs');
