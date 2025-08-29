@@ -202,9 +202,13 @@ export async function GET(req: NextRequest) {
     }
     const addresses = sourceItems
       .filter((item: MapyItem) => {
-        // Only include addresses and address points, not just municipalities
-        const isValidType = item.type === 'address' || item.type === 'address.point' ||
-                           (item.type === 'regional.municipality_part' && item.name && item.name.match(/\d/));
+        // Include addresses, streets, and municipalities
+        const isValidType = item.type === 'regional.address' || 
+                           item.type === 'regional.street' || 
+                           item.type === 'regional.municipality' ||
+                           item.type === 'regional.municipality_part' ||
+                           item.type === 'address' || 
+                           item.type === 'address.point';
 
         if (!isValidType) return false;
 
