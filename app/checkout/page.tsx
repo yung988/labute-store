@@ -224,6 +224,8 @@ function CheckoutForm() {
     postalCode?: boolean;
   }>({});
 
+  const [manualAddressMode, setManualAddressMode] = useState(false);
+
   const [validationErrors, setValidationErrors] = useState<{
     email?: string;
     firstName?: string;
@@ -662,8 +664,9 @@ function CheckoutForm() {
                          {validationErrors.email && (
                            <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
                          )}
-                       </div>
-                       <div className="grid grid-cols-2 gap-4">
+                         </div>
+                         {manualAddressMode && (
+                           <div className="grid grid-cols-2 gap-4">
                          <div>
                            <input 
                              type="text" 
@@ -699,9 +702,10 @@ function CheckoutForm() {
                            {validationErrors.lastName && (
                              <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
                            )}
-                         </div>
-                        </div>
-                       <div>
+                          </div>
+                           </div>
+                         )}
+                        <div>
                          <input 
                            type="tel" 
                            name="phone" 
@@ -754,24 +758,25 @@ function CheckoutForm() {
                        </div>
 
                         <div className="relative">
-                          <AddressAutocomplete
-                            value={formData.address}
-                            onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
-                            onAddressSelect={handleAddressSelect}
-                            placeholder="Ulice a číslo popisné*"
-                            className={`w-full ${
-                              validationErrors.address 
-                                ? 'border-red-300 focus:border-red-500' 
-                                : 'border-gray-300 focus:border-black'
-                            }`}
-                          />
+                           <AddressAutocomplete
+                             value={formData.address}
+                             onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                             onAddressSelect={handleAddressSelect}
+                             onManualMode={setManualAddressMode}
+                             placeholder="Ulice a číslo popisné*"
+                             className={`w-full ${
+                               validationErrors.address 
+                                 ? 'border-red-300 focus:border-red-500' 
+                                 : 'border-gray-300 focus:border-black'
+                             }`}
+                           />
                           {validationErrors.address ? (
                             <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>
-                          ) : deliveryMethod === 'home_delivery' && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Začněte psát ulici a město pro automatické dokončení adresy
-                            </p>
-                          )}
+                           ) : deliveryMethod === 'home_delivery' && !manualAddressMode && (
+                             <p className="text-xs text-gray-500 mt-1">
+                               Začněte psát ulici pro automatické dokončení adresy
+                             </p>
+                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                          <div>
@@ -859,7 +864,7 @@ function CheckoutForm() {
                 <h2 className="text-xs font-medium tracking-wide uppercase mb-6">Platba</h2>
                  {(formData.email && formData.firstName && formData.lastName && formData.phone &&
                    ((deliveryMethod === "pickup" && selectedPickupPoint) ||
-                     (deliveryMethod === "home_delivery" && formData.address && formData.city && formData.postalCode)) &&
+                      (deliveryMethod === "home_delivery" && formData.address && (manualAddressMode ? (formData.city && formData.postalCode) : true))) &&
                    Object.keys(validationErrors).length === 0) ? (
                   <div>
                     <StripePaymentElement
@@ -893,7 +898,7 @@ function CheckoutForm() {
                              ? "Pro platbu kartou vyplňte všechny povinné údaje"
                              : deliveryMethod === "pickup" && !selectedPickupPoint
                                ? "Pro platbu kartou vyberte výdejní místo"
-                               : deliveryMethod === "home_delivery" && (!formData.address || !formData.city || !formData.postalCode)
+                                : deliveryMethod === "home_delivery" && (!formData.address || (manualAddressMode && (!formData.city || !formData.postalCode)))
                                  ? "Vyplňte prosím adresu doručení"
                                  : "Formulář je připraven k odeslání"}
                        </p>

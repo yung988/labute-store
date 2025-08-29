@@ -15,6 +15,7 @@ interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onAddressSelect: (address: Address) => void;
+  onManualMode?: (enabled: boolean) => void;
   placeholder?: string;
   className?: string;
 }
@@ -23,7 +24,8 @@ export default function AddressAutocomplete({
   value,
   onChange,
   onAddressSelect,
-  placeholder = "Začněte psát adresu...",
+  onManualMode,
+  placeholder = "Ulice a číslo popisné*",
   className = ""
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Address[]>([]);
@@ -157,6 +159,15 @@ export default function AddressAutocomplete({
           )}
         </div>
       )}
+      
+      {/* Manual input button */}
+      <button
+        type="button"
+        onClick={() => onManualMode?.(true)}
+        className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline bg-transparent border-none p-0"
+      >
+        Vyplnit adresu ručně
+      </button>
     </div>
   );
 }
