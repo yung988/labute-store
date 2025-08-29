@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-type MapyAddress = {
-  street?: string;
-  houseNumber?: string;
-  municipality?: string;
-  town?: string;
-  postcode?: string;
-  country?: string;
-};
-
 type MapyItem = {
-  title?: string;
-  address?: MapyAddress;
-  score?: number;
+  name?: string;
+  label?: string;
+  position?: {
+    lon: number;
+    lat: number;
+  };
+  bbox?: number[];
+  type?: string;
+  location?: string;
+  regionalStructure?: Array<{
+    name: string;
+    type: string;
+    isoCode?: string;
+  }>;
 };
 
 export async function GET(req: NextRequest) {
@@ -46,24 +48,37 @@ export async function GET(req: NextRequest) {
     }
 
     const data: { items?: MapyItem[] } = await response.json();
-    // Expected shape: { items: [{ title, address?: { street, houseNumber, municipality, postcode, country }, score }] }
     const sourceItems: MapyItem[] = Array.isArray(data.items) ? data.items : [];
     const addresses = sourceItems.map((item: MapyItem) => {
-      const a: MapyAddress = item.address ?? {};
-      const street = [a.street, a.houseNumber].filter(Boolean).join(' ').trim();
-      const city = a.municipality || a.town || '';
-      const postal = a.postcode || '';
-      const country = a.country || '';
-      const fullLine = [street, [postal, city].filter(Boolean).join(' '), country]
-        .filter(Boolean)
-        .join(', ');
+      const name = item.name || '';
+      const location = item.location || '';
+
+      // Extract city from regional structure or location
+      let city = '';
+      if (item.regionalStructure) {
+        const municipality = item.regionalStructure.find(rs => rs.type === 'regional.municipality');
+        if (municipality) {
+          city = municipality.name;
+        }
+      }
+
+      // For addresses, try to extract street and number from name
+      const fullAddress = name;
+      let street = name;
+      const postalCode = '';
+
+      // If it's a municipality part, it might contain district info
+      if (item.type === 'regional.municipality_part' && city) {
+        street = name.replace(city, '').trim();
+      }
+
       return {
-        address: fullLine || item.title || '',
-        street,
-        city,
-        postalCode: postal,
-        fullAddress: fullLine || item.title || '',
-        score: typeof item.score === 'number' ? item.score : 0,
+        address: fullAddress,
+        street: street,
+        city: city || location.split(',')[0] || '',
+        postalCode: postalCode,
+        fullAddress: fullAddress,
+        score: 1, // Mapy.cz doesn't provide scores, so we use 1
       };
     });
 

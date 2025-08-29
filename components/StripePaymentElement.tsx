@@ -46,7 +46,7 @@ export default function StripePaymentElement({
       const cartItems = storedCart ? JSON.parse(storedCart) : [];
 
       if (cartItems.length === 0) {
-        setError("Košík je prázdný");
+        setError("Košík je prázdný. Přidejte produkty do košíku před pokračováním k platbě.");
         return;
       }
 
@@ -84,7 +84,8 @@ export default function StripePaymentElement({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Chyba při vytváření platby");
+        const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       const { url } = await response.json();
@@ -96,7 +97,21 @@ export default function StripePaymentElement({
       }
     } catch (err) {
       console.error("Payment error:", err);
-      setError(err instanceof Error ? err.message : "Došlo k chybě při zpracování platby");
+      let errorMessage = "Došlo k neočekávané chybě při zpracování platby";
+      
+      if (err instanceof Error) {
+        if (err.message.includes("HTTP 400")) {
+          errorMessage = "Neplatné údaje objednávky. Zkontrolujte prosím všechny povinné údaje.";
+        } else if (err.message.includes("HTTP 500")) {
+          errorMessage = "Chyba serveru. Zkuste to prosím za chvíli znovu.";
+        } else if (err.message.includes("network") || err.message.includes("fetch")) {
+          errorMessage = "Problém s připojením. Zkontrolujte internetové připojení a zkuste znovu.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

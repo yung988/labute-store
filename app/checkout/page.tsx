@@ -1,12 +1,13 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
 import { useSpreeCart } from "@/context/CartContext";
 import StripePaymentElement from "@/components/StripePaymentElement";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 import type { PacketaPoint } from "@/lib/packeta";
 
@@ -204,6 +205,7 @@ function CheckoutForm() {
   const [isMobile, setIsMobile] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(true);
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
+  const [isChangingDelivery, setIsChangingDelivery] = useState(false);
   const [showEmptyModal, setShowEmptyModal] = useState(false);
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
 
@@ -217,9 +219,16 @@ function CheckoutForm() {
     postalCode: "",
   });
 
-  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+
+  const [validationErrors, setValidationErrors] = useState<{
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    phone?: string;
+  }>({});
 
   // Detekce mobilního zařízení
   useEffect(() => {
@@ -331,95 +340,69 @@ function CheckoutForm() {
     }
   };
 
+  const handleDeliveryMethodChange = async (method: "pickup" | "home_delivery") => {
+    setIsChangingDelivery(true);
+    try {
+      setDeliveryMethod(method);
+      
+      // Clear form data when switching methods
+      if (method === "pickup") {
+        setFormData(prev => ({
+          ...prev,
+          address: "",
+          city: "",
+          postalCode: ""
+        }));
+        setValidationErrors(prev => ({
+          ...prev,
+          address: undefined,
+          city: undefined,
+          postalCode: undefined
+        }));
+      } else {
+        setSelectedPickupPoint(null);
+        await clearPacketaBranch();
+      }
+    } finally {
+      setIsChangingDelivery(false);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Address autocomplete
-    if (name === 'address' && deliveryMethod === 'home_delivery') {
-      searchAddress(value);
+    // Clear validation error when user starts typing
+    if (validationErrors[name as keyof typeof validationErrors]) {
+      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+
+    // Real-time validation for specific fields
+    if (name === 'phone' && value && !validatePhone(value)) {
+      setValidationErrors(prev => ({ ...prev, phone: 'Neplatné telefonní číslo' }));
     }
   };
 
-  const searchAddress = async (query: string) => {
-    if (query.length < 3) {
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
+  const handleAddressSelect = (address: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    fullAddress?: string;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      address: address.street || address.fullAddress || '',
+      city: address.city || '',
+      postalCode: address.postalCode || ''
+    }));
 
-    setIsSearchingAddress(true);
-
-    try {
-      // Use Mapbox Geocoding API for Czech addresses
-      const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoieWVlemV6MjAyMCIsImEiOiJjbGV4YW1xaW0wM3FxM25xbzR5dW1xYW1xIn0.example';
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?country=cz&limit=5&access_token=${MAPBOX_ACCESS_TOKEN}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const suggestions = data.features?.map((feature: any) =>
-          feature.place_name || feature.text
-        ).filter((suggestion: string) => suggestion && suggestion.length > 0) || [];
-
-        setAddressSuggestions(suggestions);
-        setShowSuggestions(suggestions.length > 0);
-      } else {
-        // Fallback to basic Czech city suggestions
-        const basicSuggestions = [
-          'Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc', 'České Budějovice', 'Hradec Králové', 'Pardubice', 'Zlín'
-        ].filter(city =>
-          city.toLowerCase().includes(query.toLowerCase())
-        ).map(city => `${query}, ${city}`);
-
-        setAddressSuggestions(basicSuggestions);
-        setShowSuggestions(basicSuggestions.length > 0);
-      }
-    } catch (error) {
-      console.warn('Address search failed:', error);
-      // Fallback to basic suggestions
-      const basicSuggestions = [
-        'Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec'
-      ].filter(city =>
-        city.toLowerCase().includes(query.toLowerCase())
-      ).map(city => `${query}, ${city}`);
-
-      setAddressSuggestions(basicSuggestions);
-      setShowSuggestions(basicSuggestions.length > 0);
-    } finally {
-      setIsSearchingAddress(false);
-    }
-  };
-
-  const selectAddress = (address: string) => {
-    // Parse address to fill city and postal code
-    const parts = address.split(', ');
-    if (parts.length >= 2) {
-      const streetAddress = parts[0];
-      const city = parts[1];
-      const postalCode = parts[2] || '';
-
-      setFormData(prev => ({
-        ...prev,
-        address: streetAddress,
-        city: city,
-        postalCode: postalCode
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        address: address
-      }));
-    }
-
-    setShowSuggestions(false);
-    setAddressSuggestions([]);
+    // Clear validation errors when address is selected from autocomplete
+    setValidationErrors(prev => ({
+      ...prev,
+      address: undefined,
+      city: undefined,
+      postalCode: undefined
+    }));
   };
 
   const validatePostalCode = (postalCode: string) => {
@@ -427,6 +410,35 @@ function CheckoutForm() {
     const cleanCode = postalCode.replace(/\s/g, '');
     return /^\d{5}$/.test(cleanCode);
   };
+
+  // Validation functions for future use
+  // const validateAddress = (address: string) => {
+  //   const trimmed = address.trim();
+  //   if (trimmed.length < 5) return false;
+  //   const hasNumber = /\d/.test(trimmed);
+  //   const hasLetter = /[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/.test(trimmed);
+  //   return hasNumber && hasLetter;
+  // };
+
+  // const validateCity = (city: string) => {
+  //   const trimmed = city.trim();
+  //   return trimmed.length >= 2 && /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s\-]+$/.test(trimmed);
+  // };
+
+  const validatePhone = (phone: string) => {
+    // Czech phone number validation - should be 9 digits (without +420)
+    const cleanPhone = phone.replace(/[\s\-\+]/g, '');
+    // Accept both formats: 420123456789 or 123456789
+    return /^(420)?[1-9]\d{8}$/.test(cleanPhone);
+  };
+
+  // Validation function for future use
+  // const validateForm = () => {
+  //   const errors: typeof validationErrors = {};
+  //   // ... validation logic
+  //   setValidationErrors(errors);
+  //   return Object.keys(errors).length === 0;
+  // };
 
   const formatPostalCode = (postalCode: string) => {
     // Format postal code as 123 45
@@ -541,26 +553,34 @@ function CheckoutForm() {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <button
                     type="button"
-                    onClick={() => setDeliveryMethod("home_delivery")}
-                    className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${deliveryMethod === "home_delivery"
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
-                      }`}
+                    onClick={() => handleDeliveryMethodChange("home_delivery")}
+                    disabled={isChangingDelivery}
+                    className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${
+                      deliveryMethod === "home_delivery"
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    } ${isChangingDelivery ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <Package className="w-4 h-4" />
-                    <span className="text-sm font-medium">Doručit domů</span>
+                    <span className="text-sm font-medium">
+                      {isChangingDelivery && deliveryMethod !== "home_delivery" ? "Načítám..." : "Doručit domů"}
+                    </span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setDeliveryMethod("pickup")}
-                    className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${deliveryMethod === "pickup"
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
-                      }`}
+                    onClick={() => handleDeliveryMethodChange("pickup")}
+                    disabled={isChangingDelivery}
+                    className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${
+                      deliveryMethod === "pickup"
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    } ${isChangingDelivery ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-medium">Výdejní místo</span>
+                    <span className="text-sm font-medium">
+                      {isChangingDelivery && deliveryMethod !== "pickup" ? "Načítám..." : "Výdejní místo"}
+                    </span>
                   </button>
                 </div>
 
@@ -602,21 +622,81 @@ function CheckoutForm() {
                     )}
                     {/* Kontaktní údaje pro vyzvednutí */}
                     <div className="space-y-4 mt-6">
-                      <input
-                        type="email"
-                        name="email"
-                        placeholder="E-mail*"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
-                        required
-                      />
-                      <div className="grid grid-cols-2 gap-4">
-                        <input type="text" name="firstName" placeholder="Křestní jméno*" value={formData.firstName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                        <input type="text" name="lastName" placeholder="Příjmení*" value={formData.lastName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                      </div>
-                      <input type="tel" name="phone" placeholder="Telefonní číslo*" value={formData.phone} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                    </div>
+                       <div>
+                         <input
+                           type="email"
+                           name="email"
+                           placeholder="E-mail*"
+                           value={formData.email}
+                           onChange={handleInputChange}
+                           className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                             validationErrors.email 
+                               ? 'border-red-300 focus:border-red-500' 
+                               : 'border-gray-300 focus:border-black'
+                           }`}
+                           required
+                         />
+                         {validationErrors.email && (
+                           <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
+                         )}
+                       </div>
+                       <div className="grid grid-cols-2 gap-4">
+                         <div>
+                           <input 
+                             type="text" 
+                             name="firstName" 
+                             placeholder="Křestní jméno*" 
+                             value={formData.firstName} 
+                             onChange={handleInputChange} 
+                             className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                               validationErrors.firstName 
+                                 ? 'border-red-300 focus:border-red-500' 
+                                 : 'border-gray-300 focus:border-black'
+                             }`}
+                             required 
+                           />
+                           {validationErrors.firstName && (
+                             <p className="text-red-500 text-xs mt-1">{validationErrors.firstName}</p>
+                           )}
+                         </div>
+                         <div>
+                           <input 
+                             type="text" 
+                             name="lastName" 
+                             placeholder="Příjmení*" 
+                             value={formData.lastName} 
+                             onChange={handleInputChange} 
+                             className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                               validationErrors.lastName 
+                                 ? 'border-red-300 focus:border-red-500' 
+                                 : 'border-gray-300 focus:border-black'
+                             }`}
+                             required 
+                           />
+                           {validationErrors.lastName && (
+                             <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
+                           )}
+                         </div>
+                        </div>
+                       <div>
+                         <input 
+                           type="tel" 
+                           name="phone" 
+                           placeholder="Telefonní číslo*" 
+                           value={formData.phone} 
+                           onChange={handleInputChange} 
+                           className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                             validationErrors.phone 
+                               ? 'border-red-300 focus:border-red-500' 
+                               : 'border-gray-300 focus:border-black'
+                           }`}
+                           required 
+                         />
+                         {validationErrors.phone && (
+                           <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                         )}
+                       </div>
+                     </div>
                   </div>
                 ) : (
                   <div>
@@ -630,84 +710,114 @@ function CheckoutForm() {
                         <div className="text-right"><p className="font-medium text-xs">{deliveryPrice.toLocaleString("cs-CZ")} Kč</p></div>
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      <input
-                        type="email"
-                        name="email"
-                        placeholder="E-mail*"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
-                        required
-                      />
-                      <div className="grid grid-cols-2 gap-4">
-                        <input type="text" name="firstName" placeholder="Křestní jméno*" value={formData.firstName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                        <input type="text" name="lastName" placeholder="Příjmení*" value={formData.lastName} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                      </div>
-                       <div className="relative">
-                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                     <div className="space-y-4">
+                       <div>
                          <input
-                           type="text"
-                           name="address"
-                           placeholder="Ulice a číslo popisné*"
-                           value={formData.address}
+                           type="email"
+                           name="email"
+                           placeholder="E-mail*"
+                           value={formData.email}
                            onChange={handleInputChange}
-                           onFocus={() => formData.address.length >= 3 && setShowSuggestions(true)}
-                           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                           className="w-full pl-10 pr-4 py-3 border border-gray-300 text-sm focus:border-black focus:outline-none rounded-none"
+                           className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                             validationErrors.email 
+                               ? 'border-red-300 focus:border-red-500' 
+                               : 'border-gray-300 focus:border-black'
+                           }`}
                            required
                          />
-                         {isSearchingAddress && (
-                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                           </div>
-                         )}
-                         {showSuggestions && addressSuggestions.length > 0 && (
-                           <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 z-10 max-h-48 overflow-y-auto">
-                             {addressSuggestions.map((suggestion, index) => (
-                               <button
-                                 key={index}
-                                 type="button"
-                                 onClick={() => selectAddress(suggestion)}
-                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                               >
-                                 {suggestion}
-                               </button>
-                             ))}
-                           </div>
-                         )}
-                         {deliveryMethod === 'home_delivery' && (
-                           <p className="text-xs text-gray-500 mt-1">
-                             Začněte psát ulici a město pro automatické dokončení adresy
-                           </p>
+                         {validationErrors.email && (
+                           <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>
                          )}
                        </div>
-                       <div className="grid grid-cols-2 gap-4">
-                        <input type="text" name="city" placeholder="Město*" value={formData.city} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
-                        <input
-                          type="text"
-                          name="postalCode"
-                          placeholder="PSČ*"
-                          value={formData.postalCode}
-                          onChange={(e) => {
-                            const formatted = formatPostalCode(e.target.value);
-                            setFormData(prev => ({ ...prev, postalCode: formatted }));
-                          }}
-                          onBlur={(e) => {
-                            if (e.target.value && !validatePostalCode(e.target.value)) {
-                              // Could add error state here
-                              console.warn('Invalid postal code format');
-                            }
-                          }}
-                          className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                            formData.postalCode && !validatePostalCode(formData.postalCode)
-                              ? 'border-red-300 focus:border-red-500'
-                              : 'border-gray-300 focus:border-black'
-                          }`}
-                          required
-                        />
-                      </div>
-                      <input type="tel" name="phone" placeholder="Telefonní číslo*" value={formData.phone} onChange={handleInputChange} className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" required />
+
+                        <div className="relative">
+                          <AddressAutocomplete
+                            value={formData.address}
+                            onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                            onAddressSelect={handleAddressSelect}
+                            placeholder="Ulice a číslo popisné*"
+                            className={`w-full ${
+                              validationErrors.address 
+                                ? 'border-red-300 focus:border-red-500' 
+                                : 'border-gray-300 focus:border-black'
+                            }`}
+                          />
+                          {validationErrors.address ? (
+                            <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>
+                          ) : deliveryMethod === 'home_delivery' && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Začněte psát ulici a město pro automatické dokončení adresy
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                         <div>
+                           <input 
+                             type="text" 
+                             name="city" 
+                             placeholder="Město*" 
+                             value={formData.city} 
+                             onChange={handleInputChange} 
+                             className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                               validationErrors.city 
+                                 ? 'border-red-300 focus:border-red-500' 
+                                 : 'border-gray-300 focus:border-black'
+                             }`}
+                             required 
+                           />
+                           {validationErrors.city && (
+                             <p className="text-red-500 text-xs mt-1">{validationErrors.city}</p>
+                           )}
+                         </div>
+                         <div>
+                           <input
+                             type="text"
+                             name="postalCode"
+                             placeholder="PSČ*"
+                             value={formData.postalCode}
+                             onChange={(e) => {
+                               const formatted = formatPostalCode(e.target.value);
+                               setFormData(prev => ({ ...prev, postalCode: formatted }));
+                               // Clear validation error when user types
+                               if (validationErrors.postalCode) {
+                                 setValidationErrors(prev => ({ ...prev, postalCode: undefined }));
+                               }
+                             }}
+                             onBlur={(e) => {
+                               if (e.target.value && !validatePostalCode(e.target.value)) {
+                                 setValidationErrors(prev => ({ ...prev, postalCode: 'Neplatné PSČ (formát: 123 45)' }));
+                               }
+                             }}
+                             className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                               validationErrors.postalCode
+                                 ? 'border-red-300 focus:border-red-500'
+                                 : 'border-gray-300 focus:border-black'
+                             }`}
+                             required
+                           />
+                           {validationErrors.postalCode && (
+                             <p className="text-red-500 text-xs mt-1">{validationErrors.postalCode}</p>
+                           )}
+                         </div>
+                       </div>
+                       <div>
+                         <input 
+                           type="tel" 
+                           name="phone" 
+                           placeholder="Telefonní číslo*" 
+                           value={formData.phone} 
+                           onChange={handleInputChange} 
+                           className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
+                             validationErrors.phone 
+                               ? 'border-red-300 focus:border-red-500' 
+                               : 'border-gray-300 focus:border-black'
+                           }`}
+                           required 
+                         />
+                         {validationErrors.phone && (
+                           <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                         )}
+                       </div>
                     </div>
                   </div>
                 )}
@@ -716,9 +826,10 @@ function CheckoutForm() {
               {/* Platba */}
               <div className="pt-6">
                 <h2 className="text-xs font-medium tracking-wide uppercase mb-6">Platba</h2>
-                {(formData.email && formData.firstName && formData.lastName && formData.phone &&
-                  ((deliveryMethod === "pickup") ||
-                    (deliveryMethod === "home_delivery" && formData.address && formData.city && formData.postalCode))) ? (
+                 {(formData.email && formData.firstName && formData.lastName && formData.phone &&
+                   ((deliveryMethod === "pickup" && selectedPickupPoint) ||
+                     (deliveryMethod === "home_delivery" && formData.address && formData.city && formData.postalCode)) &&
+                   Object.keys(validationErrors).length === 0) ? (
                   <div>
                     <StripePaymentElement
                       billingData={{
@@ -744,13 +855,17 @@ function CheckoutForm() {
                 ) : (
                   <div className="opacity-50 pointer-events-none">
                     <div className="bg-gray-100 p-6 text-center rounded-none">
-                      <p className="text-xs text-gray-500">
-                        {(!formData.email || !formData.firstName || !formData.lastName || !formData.phone)
-                          ? "Pro platbu kartou vyplňte všechny povinné údaje"
-                          : deliveryMethod === "pickup"
-                            ? "Pro platbu kartou vyberte výdejní místo"
-                            : "Vyplňte prosím adresu doručení"}
-                      </p>
+                       <p className="text-xs text-gray-500">
+                         {Object.keys(validationErrors).length > 0
+                           ? "Opravte chyby ve formuláři"
+                           : (!formData.email || !formData.firstName || !formData.lastName || !formData.phone)
+                             ? "Pro platbu kartou vyplňte všechny povinné údaje"
+                             : deliveryMethod === "pickup" && !selectedPickupPoint
+                               ? "Pro platbu kartou vyberte výdejní místo"
+                               : deliveryMethod === "home_delivery" && (!formData.address || !formData.city || !formData.postalCode)
+                                 ? "Vyplňte prosím adresu doručení"
+                                 : "Formulář je připraven k odeslání"}
+                       </p>
                     </div>
                   </div>
                 )}

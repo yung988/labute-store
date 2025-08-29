@@ -34,6 +34,11 @@ type Order = {
   customer_phone: string | null;
   packeta_point_id: string | null;
   packeta_shipment_id: string | null;
+  delivery_method: string | null;
+  delivery_address: string | null;
+  delivery_city: string | null;
+  delivery_postal_code: string | null;
+  delivery_country: string | null;
   items: string | unknown[];
   status: string;
   amount_total: number | null;
@@ -359,7 +364,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                   <TableHead>Kontakt</TableHead>
                   <TableHead className="w-32">Status</TableHead>
                   <TableHead className="w-32">Částka</TableHead>
-                  <TableHead>Packeta</TableHead>
+                  <TableHead>Doručení</TableHead>
                   <TableHead className="w-32">Datum</TableHead>
                   <TableHead className="w-20">Akce</TableHead>
                 </TableRow>
@@ -466,16 +471,41 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
                         <TableCell>
                           <div className="text-xs space-y-1">
-                            {order.packeta_point_id && (
-                              <div className="flex items-center gap-1">
-                                <Package className="w-3 h-3" />
-                                {order.packeta_point_id}
-                              </div>
+                            {/* Delivery method indicator */}
+                            <div className="flex items-center gap-1">
+                              {order.delivery_method === 'home_delivery' ? (
+                                <>
+                                  <Truck className="w-3 h-3 text-green-600" />
+                                  <span className="text-green-600">Domů</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Package className="w-3 h-3 text-blue-600" />
+                                  <span className="text-blue-600">Výdejní místo</span>
+                                </>
+                              )}
+                            </div>
+                            
+                            {/* Address or pickup point */}
+                            {order.delivery_method === 'home_delivery' ? (
+                              order.delivery_address && (
+                                <div className="text-muted-foreground">
+                                  {order.delivery_address}, {order.delivery_city} {order.delivery_postal_code}
+                                </div>
+                              )
+                            ) : (
+                              order.packeta_point_id && (
+                                <div className="text-muted-foreground">
+                                  ID: {order.packeta_point_id}
+                                </div>
+                              )
                             )}
+                            
+                            {/* Shipment ID if exists */}
                             {order.packeta_shipment_id && (
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <Truck className="w-3 h-3" />
-                                {order.packeta_shipment_id}
+                              <div className="flex items-center gap-1 text-orange-600">
+                                <CheckCircle className="w-3 h-3" />
+                                <span>#{order.packeta_shipment_id}</span>
                               </div>
                             )}
                           </div>

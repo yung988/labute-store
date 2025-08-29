@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
-  console.log('🚀 Starting create-shipment for order:', req.url);
-
   // Check if Packeta API is temporarily disabled
   if (process.env.PACKETA_API_DISABLED === 'true') {
-    console.log('🚫 Packeta API is temporarily disabled via PACKETA_API_DISABLED=true');
     return NextResponse.json(
       {
         error: "Packeta API is temporarily disabled due to service issues. Please try again later or contact support.",
@@ -19,7 +16,6 @@ export async function POST(req: NextRequest) {
   const { orderId } = await req.json();
 
   // Get order details
-  console.log('📋 Getting order details for:', orderId);
   const { data: order, error: orderError } = await supabaseAdmin
     .from("orders")
     .select("*")
@@ -27,44 +23,34 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (orderError || !order) {
-    console.error('❌ Order not found:', orderError);
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  console.log('✅ Order found:', {
-    id: order.id,
-    amount_total: order.amount_total,
-    packeta_point_id: order.packeta_point_id,
-    items_length: order.items?.length || 0
-  });
-
-  if (!order.packeta_point_id) {
-    return NextResponse.json({ error: "No Packeta point selected for this order" }, { status: 400 });
+  // Check if it's pickup or home delivery
+  const isHomeDelivery = order.delivery_method === 'home_delivery';
+  
+  if (!isHomeDelivery && !order.packeta_point_id) {
+    return NextResponse.json({ error: "No Packeta point selected for this pickup order" }, { status: 400 });
+  }
+  
+  if (isHomeDelivery && (!order.delivery_address || !order.delivery_city || !order.delivery_postal_code)) {
+    return NextResponse.json({ error: "Missing delivery address for home delivery order" }, { status: 400 });
   }
 
     // Check required environment variables
     const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
-    const senderId = process.env.PACKETA_SENDER_ID;
     const eshopId = process.env.PACKETA_ESHOP_ID;
 
-    console.log('🔍 DEBUG: Environment variables check:');
-    console.log('   PACKETA_API_PASSWORD exists:', !!PACKETA_API_PASSWORD);
-    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length);
-    console.log('   PACKETA_SENDER_ID:', senderId);
-    console.log('   PACKETA_ESHOP_ID:', eshopId);
-
     if (!PACKETA_API_PASSWORD) {
-      console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
       return NextResponse.json(
-        { error: 'Packeta API key is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
+        { error: 'Packeta API key is not configured. Please set PACKETA_API_PASSWORD environment variable.' },
         { status: 500 }
       );
     }
 
    if (!eshopId) {
-     console.error('❌ PACKETA_ESHOP_ID is not set on Vercel!');
      return NextResponse.json(
-       { error: 'Packeta eshop ID is not configured on Vercel. Please set PACKETA_ESHOP_ID environment variable.' },
+       { error: 'Packeta eshop ID is not configured. Please set PACKETA_ESHOP_ID environment variable.' },
        { status: 500 }
      );
    }
@@ -79,19 +65,14 @@ export async function POST(req: NextRequest) {
         amount_total: number;
       }>;
 
-      console.log(`🔍 Processing ${items.length} items for weight calculation`);
-
       if (items.length > 0) {
         let calculatedWeightKg = 0;
 
         for (const item of items) {
-          console.log(`📦 Processing item: "${item.description}", qty: ${item.quantity}, amount: ${item.amount_total}`);
-
           // Skip shipping items
           if (item.description?.toLowerCase().includes('shipping') ||
               item.description?.toLowerCase().includes('doprava') ||
               item.description?.toLowerCase().includes('zásilkovna')) {
-            console.log(`⏭️ Skipping shipping item: ${item.description}`);
             continue;
           }
 
@@ -103,7 +84,6 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (productError) {
-            console.warn(`⚠️ Product not found for: "${item.description}"`, productError);
             continue;
           }
 
@@ -111,38 +91,23 @@ export async function POST(req: NextRequest) {
             // Weight is already in kg, just multiply by quantity
             const itemWeightKg = product.weight_kg * item.quantity;
             calculatedWeightKg += itemWeightKg;
-            console.log(`✅ Found product: "${product.name}", weight_kg: ${product.weight_kg}, quantity: ${item.quantity}, item weight: ${itemWeightKg}kg, running total: ${calculatedWeightKg}kg`);
-          } else {
-            console.warn(`⚠️ Product "${product?.name}" found but no weight_kg`);
           }
         }
-
-        console.log(`📊 Total calculated weight before capping: ${calculatedWeightKg}kg`);
 
         if (calculatedWeightKg > 0) {
           // Cap weight at 30kg (Packeta limit) and ensure minimum 0.1kg
           totalWeightKg = Math.max(0.1, Math.min(30, calculatedWeightKg));
-          console.log(`✂️ Weight after capping: ${totalWeightKg}kg`);
-        } else {
-          console.log(`⚠️ No valid products found, using default weight: ${totalWeightKg}kg`);
         }
       }
-    } else {
-      console.log(`⚠️ No items found in order, using default weight: ${totalWeightKg}kg`);
     }
-  } catch (error) {
-    console.warn('⚠️ Could not calculate weight from items, using default:', error);
-    console.error('Error details:', error);
+  } catch {
+    // Use default weight on error
   }
-
-  console.log(`📦 Final weight for order ${orderId}: ${totalWeightKg}kg`);
 
   // Convert amount from cents to CZK and cap values for Packeta limits
   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
   const maxAllowedValue = 50000; // Packeta limit for COD/value
   const safeAmount = Math.min(amountCZK, maxAllowedValue);
-
-  console.log(`💰 Order amount: ${amountCZK} CZK, using safe amount: ${safeAmount} CZK`);
 
   // Format phone number for Packeta API (must have +420 prefix)
   let formattedPhone = order.customer_phone || "";
@@ -150,11 +115,9 @@ export async function POST(req: NextRequest) {
     // If phone doesn't start with +, assume it's Czech number and add +420
     formattedPhone = `+420${formattedPhone}`;
   }
-  console.log(`📞 Original phone: ${order.customer_phone}, Formatted: ${formattedPhone}`);
 
   // Use shorter ID for Packeta (last 8 characters of UUID)
   const packetaOrderId = orderId.slice(-8);
-  console.log(`📝 Using Packeta order ID: ${packetaOrderId} (from ${orderId})`);
 
   // Split customer name into first name and last name
   const customerName = order.customer_name || "";
@@ -164,36 +127,7 @@ export async function POST(req: NextRequest) {
 
    // Weight is already in kg for Packeta XML API (no conversion needed)
 
-   const requestBody = {
-     number: packetaOrderId,
-     name: firstName,
-     surname: lastName,
-     email: order.customer_email || "",
-     phone: formattedPhone,
-     currency: "CZK",
-     cod: safeAmount,
-     value: safeAmount,
-     weight: totalWeightKg,
-     eshop: eshopId,
-     addressId: order.packeta_point_id,
-     order_number: packetaOrderId,
-     note: `Order ${orderId.slice(-8)}`
-   };
 
-  console.log('📄 JSON Request Body:', JSON.stringify(requestBody, null, 2));
-    console.log('🔧 Environment variables used:');
-    console.log('   PACKETA_SENDER_ID:', senderId);
-    console.log('   PACKETA_ESHOP_ID:', eshopId);
-    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD?.length || 0);
-
-   console.log('📊 Order data for Packeta:');
-   console.log('   Order ID:', packetaOrderId);
-   console.log('   Customer:', `${firstName} ${lastName}`);
-   console.log('   Email:', order.customer_email);
-   console.log('   Phone:', formattedPhone);
-   console.log('   Address ID:', order.packeta_point_id);
-   console.log('   Weight:', totalWeightKg, 'kg');
-   console.log('   Amount:', safeAmount, 'CZK');
 
   // Build XML request for Packeta REST API
   function xmlEscape(v: string) {
@@ -203,12 +137,34 @@ export async function POST(req: NextRequest) {
 
 
     // Use the MD5 hash directly from PACKETA_API_PASSWORD (it's already hashed)
-    console.log('🔍 API Key:');
-    console.log('   PACKETA_API_PASSWORD length:', PACKETA_API_PASSWORD.length);
-    console.log('   PACKETA_API_PASSWORD value:', PACKETA_API_PASSWORD);
     
-    // Build XML request - simplified version matching working test
-    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+    // Build XML request - different structure for pickup vs home delivery
+    let xmlBody: string;
+    
+    if (isHomeDelivery) {
+      // Home delivery XML structure
+      xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<createPacket>
+  <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
+  <packetAttributes>
+    <number>${xmlEscape(packetaOrderId)}</number>
+    <name>${xmlEscape(firstName)}</name>
+    <surname>${xmlEscape(lastName)}</surname>
+    <email>${xmlEscape(order.customer_email || '')}</email>
+    <phone>${xmlEscape(formattedPhone)}</phone>
+    <addressId>106</addressId>
+    <street>${xmlEscape(order.delivery_address || '')}</street>
+    <city>${xmlEscape(order.delivery_city || '')}</city>
+    <zip>${xmlEscape(order.delivery_postal_code || '')}</zip>
+    <cod>${xmlEscape(String(safeAmount))}</cod>
+    <value>${xmlEscape(String(safeAmount))}</value>
+    <weight>${xmlEscape(String(totalWeightKg))}</weight>
+    <eshop>${xmlEscape(eshopId)}</eshop>
+  </packetAttributes>
+</createPacket>`;
+    } else {
+      // Pickup point XML structure
+      xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
   <packetAttributes>
@@ -224,16 +180,9 @@ export async function POST(req: NextRequest) {
     <eshop>${xmlEscape(eshopId)}</eshop>
   </packetAttributes>
 </createPacket>`;
-
-    console.log('📄 XML Request Body:', xmlBody);
-    console.log('🔍 Raw XML parts:');
-    console.log('   API Key:', PACKETA_API_PASSWORD ? 'SET' : 'NOT SET');
-    console.log('   Order Number:', packetaOrderId);
-    console.log('   Address ID:', order.packeta_point_id);
-    console.log('   Eshop ID:', eshopId);
+    }
 
     const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
-    console.log('🔗 API URL:', xmlApiUrl);
 
    // Simple timeout and retry for Packeta XML API
    const MAX_RETRIES = 3;
@@ -241,59 +190,45 @@ export async function POST(req: NextRequest) {
 
    let packetaResponse: Response | undefined;
 
-   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-     try {
-       console.log(`🔄 Packeta XML API attempt ${attempt}/${MAX_RETRIES}`);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-       const controller = new AbortController();
-       const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+         packetaResponse = await fetch(`${xmlApiUrl}`, {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/xml",
+             "Accept": "application/xml",
+           },
+           body: xmlBody,
+           signal: controller.signal
+         });
 
-        console.log(`🔄 Making request to: ${xmlApiUrl}`);
-        console.log(`📨 Headers:`, {
-          "Content-Type": "application/xml",
-          "Accept": "application/xml",
-        });
-        console.log(`📦 Body length:`, xmlBody.length);
+        clearTimeout(timeoutId);
 
-        packetaResponse = await fetch(`${xmlApiUrl}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/xml",
-            "Accept": "application/xml",
-          },
-          body: xmlBody,
-          signal: controller.signal
-        });
+        // If successful (2xx status) or client error (4xx), don't retry
+        if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
+          break;
+        }
 
-       clearTimeout(timeoutId);
-
-       console.log(`📡 Packeta response status: ${packetaResponse.status} ${packetaResponse.statusText}`);
-       console.log(`📡 Response headers:`, Object.fromEntries(packetaResponse.headers.entries()));
-
-       // If successful (2xx status) or client error (4xx), don't retry
-       if (packetaResponse.ok || (packetaResponse.status >= 400 && packetaResponse.status < 500)) {
-         break;
-       }
-
-       // For server errors (5xx) or timeout, retry
-       if (attempt < MAX_RETRIES) {
-         console.log(`⏳ Packeta API returned ${packetaResponse.status}, retrying in ${Math.pow(2, attempt)}s...`);
-         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-       }
+        // For server errors (5xx) or timeout, retry
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        }
        
 
 
-    } catch (error) {
-      const err = error as Error;
-      console.log(`❌ Packeta API attempt ${attempt} failed:`, err.message);
+     } catch (error) {
+       const err = error as Error;
 
-      if (attempt === MAX_RETRIES) {
-        throw new Error(`Packeta API failed after ${MAX_RETRIES} attempts: ${err.message}`);
-      }
+       if (attempt === MAX_RETRIES) {
+         throw new Error(`Packeta API failed after ${MAX_RETRIES} attempts: ${err.message}`);
+       }
 
-      // Wait before retry (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-    }
+       // Wait before retry (exponential backoff)
+       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+     }
   }
 
   // Check if we got any response
@@ -304,11 +239,6 @@ export async function POST(req: NextRequest) {
   // Handle non-2xx responses
   if (!packetaResponse.ok) {
     const errorText = await packetaResponse.text();
-    console.error("❌ Packeta XML API error:", {
-      status: packetaResponse.status,
-      statusText: packetaResponse.statusText,
-      error: errorText.substring(0, 200)
-    });
 
     // Return user-friendly error messages
     if (packetaResponse.status === 504) {
@@ -328,7 +258,7 @@ export async function POST(req: NextRequest) {
       );
     } else if (packetaResponse.status === 400) {
       return NextResponse.json(
-        { error: "Invalid shipment data. Please check the order details and try again." },
+        { error: `Invalid shipment data: ${errorText.substring(0, 200)}` },
         { status: 400 }
       );
     }
@@ -340,14 +270,12 @@ export async function POST(req: NextRequest) {
   }
 
    const xmlResponse = await packetaResponse.text();
-   console.log("📡 Packeta XML API response:", xmlResponse);
 
   // Parse XML response to extract packet ID - simple regex parsing
   const idMatch = xmlResponse.match(/<id[^>]*>([^<]+)<\/id>/i);
   const packetaId = idMatch ? idMatch[1] : null;
 
   if (!packetaId) {
-    console.error("❌ No Packeta ID in XML response:", xmlResponse);
     return NextResponse.json(
       { error: `Invalid Packeta response - missing ID. Response: ${xmlResponse.substring(0, 200)}` },
       { status: 500 }
@@ -362,11 +290,6 @@ export async function POST(req: NextRequest) {
   const trackingId = `Z${packetaId}`;
   const trackingUrl = `https://www.zasilkovna.cz/sledovani/${trackingId}`;
 
-  console.log(`📦 Created Packeta shipment with ID: ${packetaId}`);
-  console.log(`📦 Packeta barcode: ${packetaBarcode}`);
-  console.log(`🔍 Customer tracking ID: ${trackingId}`);
-  console.log(`🔗 Tracking URL: ${trackingUrl}`);
-
   // Update order with Packeta data
   const { error: updateError } = await supabaseAdmin
     .from("orders")
@@ -379,19 +302,19 @@ export async function POST(req: NextRequest) {
     .eq("id", orderId);
 
   if (updateError) {
-    console.error("❌ Database update error:", updateError);
     return NextResponse.json({ error: "Failed to update order" }, { status: 500 });
   }
 
-  console.log(`✅ Order ${orderId} updated with Packeta ID ${packetaId}`);
-
+  const deliveryTypeText = isHomeDelivery ? 'home delivery' : 'pickup point';
+  
   return NextResponse.json({
     success: true,
     packetaId: packetaId,
     trackingId: trackingId,
     packetaBarcode: packetaBarcode,
     trackingUrl: trackingUrl,
-    message: `Shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`
+    deliveryMethod: order.delivery_method,
+    message: `${deliveryTypeText} shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`
   });
 }
 

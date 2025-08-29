@@ -39,6 +39,11 @@ type OrderDetail = {
   packeta_shipment_id: string | null;
   packeta_barcode: string | null;
   packeta_tracking_url: string | null;
+  delivery_method: string | null;
+  delivery_address: string | null;
+  delivery_city: string | null;
+  delivery_postal_code: string | null;
+  delivery_country: string | null;
   items: string | unknown[];
   status: string;
   amount_total: number | null;
@@ -67,8 +72,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
-  const [deliveryMethod, setDeliveryMethod] = useState<string>('pickup');
-  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+
 
   // Helper function to truncate long text
   const truncateText = (text: string | null, maxLength: number = 20) => {
@@ -94,22 +98,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       setOrder(orderData);
       setEditedOrder({ ...orderData, stripe_invoice_id: orderData.stripe_invoice_id });
 
-      // Fetch delivery method from Stripe session
-      if (orderData.stripe_session_id) {
-        try {
-          const response = await fetch(`/api/admin/orders/${orderId}/delivery-method`, {
-            method: 'GET',
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            setDeliveryMethod(data.deliveryMethod || 'pickup');
-            setDeliveryAddress(data.deliveryAddress || '');
-          }
-        } catch (e) {
-          console.warn('Could not fetch delivery method:', e);
-        }
-      }
+      // Delivery method is now stored directly in the order data
 
       // Generate timeline from order data
       const timelineEvents: TimelineEvent[] = [
@@ -621,14 +610,46 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
             <CardContent className="space-y-4">
                <div>
                  <Label className="text-sm font-medium text-muted-foreground">
-                   {deliveryMethod === 'home_delivery' ? 'Adresa doručení' : 'Výdejní místo'}
+                   Způsob doručení
                  </Label>
                  <p className="text-sm mt-1 flex items-center gap-2">
-                   <MapPin className="w-3 h-3" />
-                   {deliveryMethod === 'home_delivery'
-                     ? (deliveryAddress || "Nezadáno")
-                     : (order.packeta_point_id || "Nezadáno")
-                   }
+                   {order.delivery_method === 'home_delivery' ? (
+                     <>
+                       <Truck className="w-3 h-3 text-green-600" />
+                       <span className="text-green-600">Doručení domů</span>
+                     </>
+                   ) : (
+                     <>
+                       <Package className="w-3 h-3 text-blue-600" />
+                       <span className="text-blue-600">Výdejní místo</span>
+                     </>
+                   )}
+                 </p>
+               </div>
+
+               <div>
+                 <Label className="text-sm font-medium text-muted-foreground">
+                   {order.delivery_method === 'home_delivery' ? 'Adresa doručení' : 'Výdejní místo'}
+                 </Label>
+                 <p className="text-sm mt-1 flex items-start gap-2">
+                   <MapPin className="w-3 h-3 mt-0.5" />
+                   {order.delivery_method === 'home_delivery' ? (
+                     order.delivery_address ? (
+                       <div>
+                         <div>{order.delivery_address}</div>
+                         <div className="text-muted-foreground">
+                           {order.delivery_city} {order.delivery_postal_code}
+                         </div>
+                         <div className="text-muted-foreground text-xs">
+                           {order.delivery_country || 'CZ'}
+                         </div>
+                       </div>
+                     ) : (
+                       "Nezadáno"
+                     )
+                   ) : (
+                     order.packeta_point_id || "Nezadáno"
+                   )}
                  </p>
                </div>
               
@@ -665,7 +686,9 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
               <Separator />
 
               <div className="space-y-2">
-                {order.packeta_point_id && order.status === "paid" && !order.packeta_shipment_id && (
+                {((order.packeta_point_id && order.delivery_method !== 'home_delivery') || 
+                  (order.delivery_method === 'home_delivery' && order.delivery_address)) && 
+                  order.status === "paid" && !order.packeta_shipment_id && (
                   <Button
                     onClick={createPacketaShipment}
                     disabled={loading}

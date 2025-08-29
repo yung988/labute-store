@@ -29,24 +29,44 @@ export default function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const searchAddresses = async () => {
       if (value.length < 3) {
         setSuggestions([]);
         setShowSuggestions(false);
+        setError(null);
         return;
       }
 
       setIsLoading(true);
+      setError(null);
       try {
         const response = await fetch(`/api/addresses/search?q=${encodeURIComponent(value)}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
-        setSuggestions(data.addresses || []);
-        setShowSuggestions(true);
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        const addresses = data.addresses || [];
+        setSuggestions(addresses);
+        setShowSuggestions(addresses.length > 0);
+        
+        if (addresses.length === 0 && value.length >= 3) {
+          setError('Žádné adresy nenalezeny. Zkuste jiný výraz.');
+        }
       } catch (error) {
         console.error('Address search failed:', error);
         setSuggestions([]);
+        setShowSuggestions(false);
+        setError(error instanceof Error ? error.message : 'Chyba při vyhledávání adres');
       } finally {
         setIsLoading(false);
       }
@@ -60,6 +80,7 @@ export default function AddressAutocomplete({
     onChange(address.fullAddress);
     onAddressSelect(address);
     setShowSuggestions(false);
+    setError(null);
   };
 
   return (
@@ -83,21 +104,27 @@ export default function AddressAutocomplete({
         )}
       </div>
 
-      {showSuggestions && suggestions.length > 0 && (
+      {((showSuggestions && suggestions.length > 0) || error) && (
         <div className="absolute z-50 w-full bg-white border border-gray-300 shadow-lg max-h-60 overflow-y-auto mt-1">
-          {suggestions.map((address, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => handleAddressSelect(address)}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-900"
-            >
-              <div className="text-sm font-medium text-gray-900">{address.fullAddress}</div>
-              {address.city && address.postalCode && (
-                <div className="text-xs text-gray-600">{address.city}, {address.postalCode}</div>
-              )}
-            </button>
-          ))}
+          {error ? (
+            <div className="px-4 py-3 text-sm text-red-600 bg-red-50 border-b border-red-100">
+              {error}
+            </div>
+          ) : (
+            suggestions.map((address, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleAddressSelect(address)}
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-900"
+              >
+                <div className="text-sm font-medium text-gray-900">{address.fullAddress}</div>
+                {address.city && address.postalCode && (
+                  <div className="text-xs text-gray-600">{address.city}, {address.postalCode}</div>
+                )}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

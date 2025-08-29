@@ -18,15 +18,29 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
     setIsSubmitting(true);
 
     try {
-      // TODO: Implementace odeslání na newsletter API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          phone: phone.trim() || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Chyba při přihlašování');
+      }
 
       setIsSubmitted(true);
       setEmail("");
       setPhone("");
     } catch (error) {
       console.error("Newsletter signup error:", error);
-      alert("Došlo k chybě. Zkuste to prosím znovu.");
+      alert(error instanceof Error ? error.message : "Došlo k chybě. Zkuste to prosím znovu.");
     } finally {
       setIsSubmitting(false);
     }

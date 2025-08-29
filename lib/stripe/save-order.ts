@@ -18,6 +18,9 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   const customerName = firstName && lastName ? `${toTitle(firstName)} ${toTitle(lastName)}` : null;
   const customerPhone = session.metadata?.customer_phone;
   
+  // Extract delivery method and address info from metadata
+  const deliveryMethod = session.metadata?.delivery_method || 'pickup';
+  
   // Extract pickup point ID from custom fields or metadata
   let packetaPointId = null;
   
@@ -33,6 +36,11 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   if (!packetaPointId && session.metadata?.packeta_point_id) {
     packetaPointId = session.metadata.packeta_point_id;
   }
+
+  // Extract home delivery address from metadata
+  const deliveryAddress = session.metadata?.delivery_address;
+  const deliveryCity = session.metadata?.delivery_city;
+  const deliveryPostalCode = session.metadata?.delivery_postal_code;
 
   // Fetch line items from Stripe (authoritative source)
   type StripeCheckoutLineItem = {
@@ -74,7 +82,11 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     customFields: session.custom_fields,
     customerName,
     customerPhone,
+    deliveryMethod,
     packetaPointId,
+    deliveryAddress,
+    deliveryCity,
+    deliveryPostalCode,
     itemsCount: normalizedItems.length
   });
   
@@ -96,6 +108,11 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     customer_name: customerName,
     customer_phone: customerPhone,
     packeta_point_id: packetaPointId,
+    delivery_method: deliveryMethod,
+    delivery_address: deliveryAddress,
+    delivery_city: deliveryCity,
+    delivery_postal_code: deliveryPostalCode,
+    delivery_country: 'CZ',
     status: "paid",
     items: JSON.stringify(normalizedItems),
     amount_total: session.amount_total,
