@@ -106,11 +106,12 @@ export async function GET(req: NextRequest) {
       url.searchParams.set('limit', '10');
       url.searchParams.set('lang', 'cs');
       url.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
-      url.searchParams.set('apikey', apiKey);
 
       try {
         console.log(`Searching for: "${searchQuery}" at URL: ${url.toString()}`);
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+          headers: { 'X-Mapy-Api-Key': apiKey },
+        });
 
         console.log(`Response status: ${response.status} for query: "${searchQuery}"`);
 
@@ -146,9 +147,10 @@ export async function GET(req: NextRequest) {
         broadUrl.searchParams.set('limit', '15');
         broadUrl.searchParams.set('lang', 'cs');
         broadUrl.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
-        broadUrl.searchParams.set('apikey', apiKey);
 
-        const broadResponse = await fetch(broadUrl.toString());
+        const broadResponse = await fetch(broadUrl.toString(), {
+          headers: { 'X-Mapy-Api-Key': apiKey },
+        });
 
         if (broadResponse.ok) {
           const broadData: { items?: MapyItem[] } = await broadResponse.json();
