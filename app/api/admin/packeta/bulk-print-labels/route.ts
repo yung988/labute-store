@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { PDFDocument } from 'pdf-lib';
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -50,162 +49,177 @@ export async function POST(req: NextRequest) {
 
     console.log(`📦 Bulk printing ${ordersWithShipments.length} labels in format: ${format}`);
 
-    // For multiple orders, use A6 on A4 format to fit multiple labels per page
-    // If only one order, use A6 format for single label
-    const finalFormat = ordersWithShipments.length > 1 ? 'A6 on A4' : 'A6';
+    // Use A6 on A4 format for bulk printing - Packeta will automatically arrange multiple labels per page
+    const finalFormat = 'A6 on A4';
     console.log(`📦 Using format ${finalFormat} for ${ordersWithShipments.length} labels`);
 
-    // Create a combined PDF by fetching all labels and merging them
-    const pdfBuffers: ArrayBuffer[] = [];
-    const MAX_RETRIES = 3;
-    const TIMEOUT_MS = 30000;
-
-    // Fetch each label PDF
-    for (const order of ordersWithShipments) {
-      console.log(`📄 Getting label for order ${order.id}, shipment ${order.packeta_shipment_id}`);
-
-      let labelResponse: Response | undefined;
-      let lastError: Error | null = null;
-
-      // Retry logic for each label
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-          const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+    // Create batch XML request with all packetIds
+    const packetIds = ordersWithShipments.map(order => order.packeta_shipment_id);
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetLabelPdf>
   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
-  <packetId>${order.packeta_shipment_id}</packetId>
+${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
   <format>${finalFormat}</format>
   <offset>0</offset>
 </packetLabelPdf>`;
 
-          const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+    console.log(`📡 Sending batch request to Packeta API with ${packetIds.length} packets:`, {
+      packetIds,
+      format: finalFormat
+    });
 
-          labelResponse = await fetch(`${apiUrl}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/xml",
-              "Accept": "application/pdf",
-            },
-            body: xmlBody,
-            signal: controller.signal
-          });
+    // Single API call for all labels with retry logic
+    const MAX_RETRIES = 3;
+    const TIMEOUT_MS = 60000; // Increased timeout for batch requests
+    const BASE_BACKOFF_MS = 1000;
 
-          clearTimeout(timeoutId);
+    let labelResponse: Response | undefined;
+    let lastError: Error | null = null;
 
-          if (labelResponse.ok || labelResponse.status < 500) {
-            break; // Success or client error - exit retry loop
-          }
-
-          if (attempt < MAX_RETRIES) {
-            const backoffTime = 1000 * Math.pow(2, attempt - 1);
-            console.log(`⏳ Waiting ${backoffTime}ms before retry for order ${order.id}...`);
-            await new Promise(resolve => setTimeout(resolve, backoffTime));
-          }
-
-        } catch (error) {
-          lastError = error as Error;
-          console.log(`❌ Attempt ${attempt} failed for order ${order.id}:`, lastError.message);
-
-          if (attempt < MAX_RETRIES) {
-            const backoffTime = 1000 * Math.pow(2, attempt - 1);
-            await new Promise(resolve => setTimeout(resolve, backoffTime));
-          }
-        }
-      }
-
-      // Handle response for this order
-      if (!labelResponse || !labelResponse.ok) {
-        console.warn(`⚠️ Failed to get label for order ${order.id}, skipping...`);
-        continue; // Skip this order, continue with others
-      }
-
-      // Parse XML response to get PDF data
-      const responseText = await labelResponse.text();
-      let pdfBuffer: ArrayBuffer;
-
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        // Check if response is XML with base64 PDF
-        if (responseText.includes('<result>') && responseText.includes('</result>')) {
-          console.log(`📄 Response contains base64 PDF data for order ${order.id}`);
-          const resultMatch = responseText.match(/<result>([^<]*)<\/result>/);
-          if (!resultMatch || !resultMatch[1]) {
-            console.error(`❌ No PDF data found in XML response for order ${order.id}`);
-            continue;
-          }
+        console.log(`🔄 Packeta batch API attempt ${attempt}/${MAX_RETRIES}`);
 
-          // Decode base64 PDF
-          const base64Data = resultMatch[1];
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          pdfBuffer = bytes.buffer;
-        } else {
-          // Fallback: treat as direct PDF
-          console.log(`📄 Treating response as direct PDF for order ${order.id}`);
-          pdfBuffer = new TextEncoder().encode(responseText).buffer;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+
+        labelResponse = await fetch(`${apiUrl}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/xml",
+            "Accept": "application/pdf",
+          },
+          body: xmlBody,
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        // Check if response is successful (2xx) or client error (4xx) - don't retry these
+        if (labelResponse.ok || labelResponse.status < 500) {
+          break; // Success or client error - exit retry loop
         }
-      } catch (parseError) {
-        console.error(`❌ Error parsing Packeta response for order ${order.id}:`, parseError);
-        continue;
+
+        // For server errors (5xx including 504), retry
+        const errorText = await labelResponse.text();
+        console.log(`⏳ Packeta batch API returned ${labelResponse.status}, will retry: ${errorText.substring(0, 100)}...`);
+
+        if (attempt < MAX_RETRIES) {
+          const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+          console.log(`⏳ Waiting ${backoffTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+
+      } catch (error) {
+        const err = error as Error;
+        lastError = err;
+        console.log(`❌ Packeta batch API attempt ${attempt} failed:`, err.message);
+
+        if (attempt < MAX_RETRIES) {
+          const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
+          console.log(`⏳ Network error, waiting ${backoffTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+      }
+    }
+
+    // Check if we got any response
+    if (!labelResponse) {
+      const errorMsg = lastError ? lastError.message : 'Unknown network error';
+      console.error('❌ Packeta batch API failed after all retries:', errorMsg);
+      return NextResponse.json(
+        { error: `Packeta batch API is temporarily unavailable after ${MAX_RETRIES} attempts. Please try again in a few minutes.` },
+        { status: 503 }
+      );
+    }
+
+    if (!labelResponse.ok) {
+      const errorText = await labelResponse.text();
+      console.error("Packeta batch API error:", {
+        status: labelResponse.status,
+        statusText: labelResponse.statusText,
+        error: errorText,
+        packetIds
+      });
+
+      // Return user-friendly error messages
+      if (labelResponse.status === 504) {
+        return NextResponse.json(
+          { error: "Packeta batch API is temporarily unavailable (gateway timeout). Please try again in a few minutes." },
+          { status: 503 }
+        );
+      } else if (labelResponse.status >= 500) {
+        return NextResponse.json(
+          { error: "Packeta batch API is experiencing server issues. Please try again in a few minutes." },
+          { status: 503 }
+        );
+      } else if (labelResponse.status === 404) {
+        return NextResponse.json(
+          { error: "One or more shipments not found. Please check if all shipments exist in Packeta system." },
+          { status: 404 }
+        );
       }
 
-      pdfBuffers.push(pdfBuffer);
-      console.log(`✅ Got label for order ${order.id}`);
+      return NextResponse.json(
+        { error: `Failed to get batch labels from Packeta: ${labelResponse.status} ${labelResponse.statusText}` },
+        { status: 500 }
+      );
     }
 
-    if (pdfBuffers.length === 0) {
-      return NextResponse.json({ error: "No labels could be generated" }, { status: 500 });
+    const responseText = await labelResponse.text();
+    console.log(`📄 Packeta batch response received, size: ${responseText.length} bytes`);
+
+    // Debug: Check if response is empty
+    if (!responseText || responseText.trim() === '') {
+      console.error('❌ Packeta batch API returned empty response');
+      return NextResponse.json(
+        { error: "Packeta batch API returned empty response" },
+        { status: 502 }
+      );
     }
 
+    // Parse XML response to get PDF data
     let finalPdfBuffer: ArrayBuffer;
-    let fileName: string;
-
-    // If only one label, use it directly
-    if (pdfBuffers.length === 1) {
-      console.log(`📦 Using single label PDF`);
-      finalPdfBuffer = pdfBuffers[0];
-      fileName = `packeta-label-${ordersWithShipments[0].id}.pdf`;
-    } else {
-      // For multiple labels, merge PDFs using pdf-lib
-      console.log(`📦 Merging ${pdfBuffers.length} PDFs using pdf-lib`);
-
-      try {
-        const mergedPdf = await PDFDocument.create();
-
-        for (let i = 0; i < pdfBuffers.length; i++) {
-          const pdfBuffer = pdfBuffers[i];
-          console.log(`📄 Processing PDF ${i + 1}/${pdfBuffers.length}`);
-          
-          try {
-            const pdf = await PDFDocument.load(pdfBuffer);
-            const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-            
-            pages.forEach((page) => {
-              mergedPdf.addPage(page);
-            });
-            
-            console.log(`✅ Added ${pages.length} pages from PDF ${i + 1}`);
-          } catch (pdfError) {
-            console.error(`❌ Error processing PDF ${i + 1}:`, pdfError);
-            // Continue with other PDFs
-          }
+    try {
+      // Check if response is XML with base64 PDF
+      if (responseText.includes('<result>') && responseText.includes('</result>')) {
+        console.log('📄 Batch response contains base64 PDF data');
+        const resultMatch = responseText.match(/<result>([^<]*)<\/result>/);
+        if (!resultMatch || !resultMatch[1]) {
+          console.error('❌ No PDF data found in batch XML response');
+          return NextResponse.json(
+            { error: "No PDF data found in Packeta batch response", details: responseText.substring(0, 500) },
+            { status: 502 }
+          );
         }
 
-        const mergedPdfBytes = await mergedPdf.save();
-        finalPdfBuffer = new Uint8Array(mergedPdfBytes).buffer;
-        fileName = `packeta-labels-bulk-${pdfBuffers.length}-labels.pdf`;
-        
-        console.log(`✅ Successfully merged ${pdfBuffers.length} PDFs into one document`);
-      } catch (mergeError) {
-        console.error(`❌ Error merging PDFs:`, mergeError);
-        return NextResponse.json({ error: "Failed to merge PDF labels" }, { status: 500 });
+        // Decode base64 PDF
+        const base64Data = resultMatch[1];
+        console.log(`📄 Base64 data length: ${base64Data.length} characters`);
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        finalPdfBuffer = bytes.buffer;
+        console.log(`📄 Decoded batch PDF buffer size: ${finalPdfBuffer.byteLength} bytes`);
+      } else {
+        // Fallback: treat as direct PDF
+        console.log('📄 Treating batch response as direct PDF');
+        finalPdfBuffer = new TextEncoder().encode(responseText).buffer;
       }
+    } catch (parseError) {
+      console.error('❌ Error parsing Packeta batch response:', parseError);
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      return NextResponse.json(
+        { error: "Error parsing Packeta batch response", details: errorMessage },
+        { status: 502 }
+      );
     }
+
+    const fileName = `packeta-labels-bulk-${ordersWithShipments.length}-labels.pdf`;
 
     // Upload PDF to Supabase storage bucket
     console.log(`📤 Uploading bulk PDF to storage: ${fileName}`);
@@ -250,7 +264,7 @@ export async function POST(req: NextRequest) {
 
     // Update print tracking for all successfully printed orders
     try {
-      const printedOrderIds = ordersWithShipments.slice(0, pdfBuffers.length).map(o => o.id);
+      const printedOrderIds = ordersWithShipments.map(o => o.id);
       const { error: updateError } = await supabaseAdmin
         .from('orders')
         .update({
@@ -273,7 +287,7 @@ export async function POST(req: NextRequest) {
       success: true,
       url: publicUrlData.publicUrl,
       fileName: fileName,
-      labelCount: pdfBuffers.length
+      labelCount: ordersWithShipments.length
     });
 
   } catch (error) {
