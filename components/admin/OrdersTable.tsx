@@ -25,6 +25,8 @@ import {
   Printer
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from "@/components/ui/context-menu";
 
 type Order = {
   id: string;
@@ -43,6 +45,8 @@ type Order = {
   status: string;
   amount_total: number | null;
   created_at: string;
+  label_printed_at: string | null;
+  label_printed_count: number | null;
 };
 
 interface OrdersTableProps {
@@ -57,6 +61,8 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "status">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -65,7 +71,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
       const supabase = createClient();
       const { data: ordersData, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, label_printed_at, label_printed_count')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -170,35 +176,105 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     }
   };
 
-    const printPacketaLabel = async (orderId: string) => {
-      try {
-        // Call the Next.js API route instead of edge function
-        const response = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+   const printPacketaLabel = async (orderId: string) => {
+     try {
+       // Call the Next.js API route instead of edge function
+       const response = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
+         method: 'GET',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+       });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-        }
+       if (!response.ok) {
+         const errorData = await response.json().catch(() => ({}));
+         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+       }
 
-        const data = await response.json();
+       const data = await response.json();
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
+       if (data.error) {
+         throw new Error(data.error);
+       }
 
-        if (!data.success || !data.url) {
-          throw new Error("Invalid response from server");
-        }
+       if (!data.success || !data.url) {
+         throw new Error("Invalid response from server");
+       }
 
-        // Open the PDF URL in a new tab/window
-        window.open(data.url, '_blank');
-      } catch (e: unknown) {
+       // Open the PDF URL in a new tab/window
+       window.open(data.url, '_blank');
+     } catch (e: unknown) {
        setError(e instanceof Error ? e.message : "Failed to print label");
+     }
+   };
+
+   const toggleOrderSelection = (orderId: string) => {
+     setSelectedOrders(prev => {
+       const newSet = new Set(prev);
+       if (newSet.has(orderId)) {
+         newSet.delete(orderId);
+       } else {
+         newSet.add(orderId);
+       }
+       return newSet;
+     });
+   };
+
+   const toggleSelectAll = () => {
+     const filteredOrderIds = filteredAndSortedOrders.map(o => o.id);
+     if (selectedOrders.size === filteredOrderIds.length) {
+       setSelectedOrders(new Set());
+     } else {
+       setSelectedOrders(new Set(filteredOrderIds));
+     }
+   };
+
+   const bulkPrintLabels = async () => {
+     if (selectedOrders.size === 0) {
+       alert("Vyberte alespoň jednu objednávku");
+       return;
+     }
+
+     try {
+       setBulkLoading(true);
+       console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
+
+       const response = await fetch('/api/admin/packeta/bulk-print-labels', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           orderIds: Array.from(selectedOrders),
+           format: 'A6'
+         }),
+       });
+
+       if (!response.ok) {
+         const errorData = await response.json().catch(() => ({}));
+         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+       }
+
+       const data = await response.json();
+
+       if (data.error) {
+         throw new Error(data.error);
+       }
+
+       if (data.success && data.url) {
+         // Open the combined PDF in a new tab
+         window.open(data.url, '_blank');
+         
+         // Clear selection after successful print
+         setSelectedOrders(new Set());
+         
+         // Reload orders to update print indicators
+         await load();
+       }
+     } catch (e: unknown) {
+       setError(e instanceof Error ? e.message : "Failed to bulk print labels");
+     } finally {
+       setBulkLoading(false);
      }
    };
 
@@ -281,11 +357,36 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
         </Card>
       </div>
 
-      {/* Controls */}
+          {/* Controls */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Objednávky ({filteredAndSortedOrders.length})</span>
+            <div className="flex items-center gap-4">
+              <span>Objednávky ({filteredAndSortedOrders.length})</span>
+              {selectedOrders.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Vybráno: {selectedOrders.size}
+                  </span>
+                  <Button 
+                    onClick={bulkPrintLabels} 
+                    variant="default" 
+                    size="sm" 
+                    disabled={bulkLoading}
+                  >
+                    <Printer className={`w-4 h-4 mr-2 ${bulkLoading ? 'animate-spin' : ''}`} />
+                    {bulkLoading ? 'Tisknu...' : 'Tisknout štítky'}
+                  </Button>
+                  <Button 
+                    onClick={() => setSelectedOrders(new Set())} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Zrušit výběr
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button onClick={load} variant="outline" size="sm" disabled={loading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -359,6 +460,13 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedOrders.size === filteredAndSortedOrders.length && filteredAndSortedOrders.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Vybrat všechny objednávky"
+                    />
+                  </TableHead>
                   <TableHead className="w-32">ID objednávky</TableHead>
                   <TableHead>Zákazník</TableHead>
                   <TableHead>Kontakt</TableHead>
@@ -372,7 +480,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
               <TableBody>
                 {filteredAndSortedOrders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {searchQuery || statusFilter !== 'all' ? 'Žádné objednávky nenalezeny' : 'Zatím žádné objednávky'}
                     </TableCell>
                   </TableRow>
@@ -391,19 +499,43 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                     }
 
                     return (
-                      <TableRow
-                        key={order.id}
-                        className="hover:bg-muted/50 cursor-pointer"
-                        onClick={() => onOrderClick?.(order.id)}
-                      >
-                        <TableCell>
-                          <div className="font-mono font-bold text-primary">
-                            {formatOrderId(order.id)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {items.length} položek
-                          </div>
-                        </TableCell>
+                      <ContextMenu key={order.id}>
+                        <ContextMenuTrigger asChild>
+                          <TableRow
+                            className={`hover:bg-muted/50 cursor-pointer ${selectedOrders.has(order.id) ? 'bg-muted/30' : ''}`}
+                            onClick={(e) => {
+                              // Don't trigger row click if clicking on checkbox
+                              if ((e.target as HTMLElement).closest('[role="checkbox"]')) {
+                                return;
+                              }
+                              onOrderClick?.(order.id);
+                            }}
+                          >
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedOrders.has(order.id)}
+                                onCheckedChange={() => toggleOrderSelection(order.id)}
+                                aria-label={`Vybrat objednávku ${order.id}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <div className="font-mono font-bold text-primary">
+                                    {formatOrderId(order.id)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {items.length} položek
+                                  </div>
+                                </div>
+                                {order.label_printed_at && (
+                                  <div className="flex items-center gap-1 text-green-600" title={`Štítek vytisknut: ${new Date(order.label_printed_at).toLocaleString()}`}>
+                                    <Printer className="w-3 h-3" />
+                                    <span className="text-xs">✓</span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
                         
                         <TableCell>
                           <div className="font-medium">{order.customer_name || "Nezadáno"}</div>
@@ -520,36 +652,68 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                           </div>
                         </TableCell>
 
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onOrderClick?.(order.id)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Detail
-                              </DropdownMenuItem>
-                              
-                              {order.packeta_point_id && order.status === "paid" && !order.packeta_shipment_id && (
-                                <DropdownMenuItem onClick={() => createPacketaShipment(order.id)}>
-                                  <Package className="w-4 h-4 mr-2" />
-                                  Vytvořit zásilku
-                                </DropdownMenuItem>
-                              )}
-                              
-                              {order.packeta_shipment_id && (
-                                <DropdownMenuItem onClick={() => printPacketaLabel(order.id)}>
-                                  <Printer className="w-4 h-4 mr-2" />
-                                  Tisknout štítek
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => onOrderClick?.(order.id)}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Detail
+                                  </DropdownMenuItem>
+                                  
+                                  {order.packeta_point_id && order.status === "paid" && !order.packeta_shipment_id && (
+                                    <DropdownMenuItem onClick={() => createPacketaShipment(order.id)}>
+                                      <Package className="w-4 h-4 mr-2" />
+                                      Vytvořit zásilku
+                                    </DropdownMenuItem>
+                                  )}
+                                  
+                                  {order.packeta_shipment_id && (
+                                    <DropdownMenuItem onClick={() => printPacketaLabel(order.id)}>
+                                      <Printer className="w-4 h-4 mr-2" />
+                                      Tisknout štítek
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => onOrderClick?.(order.id)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Detail objednávky
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => toggleOrderSelection(order.id)}>
+                            <Checkbox className="w-4 h-4 mr-2" />
+                            {selectedOrders.has(order.id) ? 'Odebrat z výběru' : 'Přidat do výběru'}
+                          </ContextMenuItem>
+                          {selectedOrders.size > 0 && (
+                            <ContextMenuItem onClick={bulkPrintLabels} disabled={bulkLoading}>
+                              <Printer className="w-4 h-4 mr-2" />
+                              Tisknout vybrané štítky ({selectedOrders.size})
+                            </ContextMenuItem>
+                          )}
+                          <ContextMenuSeparator />
+                          {order.packeta_point_id && order.status === "paid" && !order.packeta_shipment_id && (
+                            <ContextMenuItem onClick={() => createPacketaShipment(order.id)}>
+                              <Package className="w-4 h-4 mr-2" />
+                              Vytvořit zásilku
+                            </ContextMenuItem>
+                          )}
+                          {order.packeta_shipment_id && (
+                            <ContextMenuItem onClick={() => printPacketaLabel(order.id)}>
+                              <Printer className="w-4 h-4 mr-2" />
+                              Tisknout štítek
+                            </ContextMenuItem>
+                          )}
+                        </ContextMenuContent>
+                      </ContextMenu>
                     );
                   })
                 )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { PDFDocument } from 'pdf-lib';
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -72,13 +73,13 @@ export async function POST(req: NextRequest) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-           const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
- <packetLabelPdf>
-   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
-   <packetId>${order.packeta_shipment_id}</packetId>
-   <format>${finalFormat}</format>
-   <offset>0</offset>
- </packetLabelPdf>`;
+          const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<packetLabelPdf>
+  <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
+  <packetId>${order.packeta_shipment_id}</packetId>
+  <format>${finalFormat}</format>
+  <offset>0</offset>
+</packetLabelPdf>`;
 
           const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 
@@ -121,7 +122,38 @@ export async function POST(req: NextRequest) {
         continue; // Skip this order, continue with others
       }
 
-      const pdfBuffer = await labelResponse.arrayBuffer();
+      // Parse XML response to get PDF data
+      const responseText = await labelResponse.text();
+      let pdfBuffer: ArrayBuffer;
+
+      try {
+        // Check if response is XML with base64 PDF
+        if (responseText.includes('<result>') && responseText.includes('</result>')) {
+          console.log(`📄 Response contains base64 PDF data for order ${order.id}`);
+          const resultMatch = responseText.match(/<result>([^<]*)<\/result>/);
+          if (!resultMatch || !resultMatch[1]) {
+            console.error(`❌ No PDF data found in XML response for order ${order.id}`);
+            continue;
+          }
+
+          // Decode base64 PDF
+          const base64Data = resultMatch[1];
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          pdfBuffer = bytes.buffer;
+        } else {
+          // Fallback: treat as direct PDF
+          console.log(`📄 Treating response as direct PDF for order ${order.id}`);
+          pdfBuffer = new TextEncoder().encode(responseText).buffer;
+        }
+      } catch (parseError) {
+        console.error(`❌ Error parsing Packeta response for order ${order.id}:`, parseError);
+        continue;
+      }
+
       pdfBuffers.push(pdfBuffer);
       console.log(`✅ Got label for order ${order.id}`);
     }
@@ -139,22 +171,40 @@ export async function POST(req: NextRequest) {
       finalPdfBuffer = pdfBuffers[0];
       fileName = `packeta-label-${ordersWithShipments[0].id}.pdf`;
     } else {
-      // For multiple labels, create a combined PDF
-      console.log(`📦 Creating combined PDF with ${pdfBuffers.length} labels`);
+      // For multiple labels, merge PDFs using pdf-lib
+      console.log(`📦 Merging ${pdfBuffers.length} PDFs using pdf-lib`);
 
-      // Simple approach: concatenate PDF buffers (works for most cases)
-      // For more complex PDF merging, would need pdf-lib or similar library
-      const combinedBuffer = new Uint8Array(pdfBuffers.reduce((acc, buffer) => acc + buffer.byteLength, 0));
-      let offset = 0;
+      try {
+        const mergedPdf = await PDFDocument.create();
 
-      for (const buffer of pdfBuffers) {
-        combinedBuffer.set(new Uint8Array(buffer), offset);
-        offset += buffer.byteLength;
+        for (let i = 0; i < pdfBuffers.length; i++) {
+          const pdfBuffer = pdfBuffers[i];
+          console.log(`📄 Processing PDF ${i + 1}/${pdfBuffers.length}`);
+          
+          try {
+            const pdf = await PDFDocument.load(pdfBuffer);
+            const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            
+            pages.forEach((page) => {
+              mergedPdf.addPage(page);
+            });
+            
+            console.log(`✅ Added ${pages.length} pages from PDF ${i + 1}`);
+          } catch (pdfError) {
+            console.error(`❌ Error processing PDF ${i + 1}:`, pdfError);
+            // Continue with other PDFs
+          }
+        }
+
+        const mergedPdfBytes = await mergedPdf.save();
+        finalPdfBuffer = new Uint8Array(mergedPdfBytes).buffer;
+        fileName = `packeta-labels-bulk-${pdfBuffers.length}-labels.pdf`;
+        
+        console.log(`✅ Successfully merged ${pdfBuffers.length} PDFs into one document`);
+      } catch (mergeError) {
+        console.error(`❌ Error merging PDFs:`, mergeError);
+        return NextResponse.json({ error: "Failed to merge PDF labels" }, { status: 500 });
       }
-
-      console.log(`📦 Generated combined PDF with ${pdfBuffers.length} labels`);
-      finalPdfBuffer = combinedBuffer.buffer;
-      fileName = `packeta-labels-bulk-${pdfBuffers.length}-labels.pdf`;
     }
 
     // Upload PDF to Supabase storage bucket
@@ -197,6 +247,26 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`✅ Labels saved to storage: ${publicUrlData.publicUrl}`);
+
+    // Update print tracking for all successfully printed orders
+    try {
+      const printedOrderIds = ordersWithShipments.slice(0, pdfBuffers.length).map(o => o.id);
+      const { error: updateError } = await supabaseAdmin
+        .from('orders')
+        .update({
+          label_printed_at: new Date().toISOString(),
+          label_printed_count: 1
+        })
+        .in('id', printedOrderIds);
+
+      if (updateError) {
+        console.warn(`⚠️ Failed to update bulk print tracking:`, updateError);
+      } else {
+        console.log(`✅ Updated print tracking for ${printedOrderIds.length} orders`);
+      }
+    } catch (trackingError) {
+      console.warn(`⚠️ Error updating bulk print tracking:`, trackingError);
+    }
 
     // Return the public URL instead of the PDF buffer
     return NextResponse.json({

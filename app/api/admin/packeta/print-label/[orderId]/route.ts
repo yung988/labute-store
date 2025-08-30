@@ -355,6 +355,25 @@ export async function GET(
 
     console.log(`✅ Label saved to storage: ${publicUrlData.publicUrl}`);
 
+    // Update print tracking in database
+    try {
+      const { error: updateError } = await supabaseAdmin
+        .from('orders')
+        .update({
+          label_printed_at: new Date().toISOString(),
+          label_printed_count: 1
+        })
+        .eq('id', orderId);
+
+      if (updateError) {
+        console.warn(`⚠️ Failed to update print tracking for order ${orderId}:`, updateError);
+      } else {
+        console.log(`✅ Updated print tracking for order ${orderId}`);
+      }
+    } catch (trackingError) {
+      console.warn(`⚠️ Error updating print tracking:`, trackingError);
+    }
+
     // Debug: Return PDF directly if requested
     if (returnDirect) {
       console.log('🔧 Debug mode: Returning PDF directly');
