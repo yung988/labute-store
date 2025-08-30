@@ -162,13 +162,22 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta_create_shipment', {
-        body: { orderId }
+      
+      // Call the Next.js API route instead of edge function
+      const response = await fetch('/api/admin/packeta/create-shipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId })
       });
 
-      if (error) throw new Error(error.message || "Failed to create shipment");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
+      const data = await response.json();
       alert(`Packeta zásilka vytvořena: ${data?.message || 'Success'}`);
       await loadOrder();
     } catch (e: unknown) {
@@ -183,14 +192,22 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { error } = await supabase.functions.invoke('packeta_cancel_shipment', {
-        body: { orderId }
+      
+      // Call the Next.js API route instead of edge function
+      const response = await fetch('/api/admin/packeta/cancel-shipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId })
       });
 
-      if (error) throw new Error(error.message || "Failed to cancel shipment");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
-      alert("Packeta zásilka úspěšně zrušena");
+      alert("Packeta zásilka zrušena");
       await loadOrder();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to cancel shipment");

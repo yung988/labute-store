@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
     <surname>${xmlEscape(lastName)}</surname>
     <email>${xmlEscape(order.customer_email || '')}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
-    <addressId>106</addressId>
+    <addressId>161</addressId>
     <street>${xmlEscape(order.delivery_address || '')}</street>
     <city>${xmlEscape(order.delivery_city || '')}</city>
     <zip>${xmlEscape(order.delivery_postal_code || '')}</zip>

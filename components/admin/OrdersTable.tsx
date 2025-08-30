@@ -159,13 +159,22 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const createPacketaShipment = async (orderId: string) => {
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta_create_shipment', {
-        body: { orderId }
+      
+      // Call the Next.js API route instead of edge function
+      const response = await fetch('/api/admin/packeta/create-shipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId })
       });
 
-      if (error) throw new Error(error.message || "Failed to create shipment");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
+      const data = await response.json();
       await updateStatus(orderId, "shipped");
       alert(`Zásilka vytvořena! Packeta ID: ${data.packetaId}`);
       await load();

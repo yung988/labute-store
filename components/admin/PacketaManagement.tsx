@@ -269,10 +269,21 @@ export default function PacketaManagement() {
 
     try {
       setLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke('packeta-status-check');
+      
+      // Call the Next.js API route instead of edge function
+      const response = await fetch('/api/admin/run-packeta-cron', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) throw new Error(error.message || "Status check failed");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
 
       alert(`✅ Zkontrolováno: ${data.checked} zásilek, aktualizováno: ${data.updated} objednávek`);
       loadShipments();
