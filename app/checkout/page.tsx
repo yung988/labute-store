@@ -565,7 +565,7 @@ function CheckoutForm() {
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-0">
         {/* Levá strana - Formulář */}
-        <div className="lg:overflow-y-auto lg:h-screen p-6 lg:p-12">
+        <div className={`overflow-y-auto p-6 lg:p-12 ${isMobile ? 'h-[calc(100vh-80px)]' : 'h-screen'}`}>
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-2xl font-medium tracking-wide uppercase">YEEZUZ2020</h1>
