@@ -37,6 +37,7 @@ interface CartItem {
   quantity: number;
   size?: string;
   image?: string;
+  productId?: string;
 }
 
 interface CartSummaryProps {
@@ -508,7 +509,9 @@ function CheckoutForm() {
     // 1. Product obrázky (mohou být spolehlivější)
     // 2. Variant obrázky (pokud product nemá)
     // 3. undefined jako fallback (zobrazí se Package ikona)
-    image: item.product.images?.[0]?.url || item.variant.images?.[0]?.url || undefined
+    image: item.product.images?.[0]?.url || item.variant.images?.[0]?.url || undefined,
+    // Používáme productId z cart context
+    productId: (item as { productId?: string }).productId
   })) || [];
 
   // Ceny pro UI v CZK (ne v haléřích)

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { StripeCheckoutSession } from "./types";
+import { decreaseInventory, type CartItemForInventory } from "@/lib/inventory";
 
 export default async function saveOrderToDb(session: StripeCheckoutSession) {
   // Generate unique order ID
@@ -43,17 +44,24 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   const deliveryPostalCode = session.metadata?.delivery_postal_code;
 
   // Fetch line items from Stripe (authoritative source)
+  type StripeProduct = {
+    id: string;
+    name?: string;
+    metadata?: Record<string, string>;
+  };
+  
   type StripeCheckoutLineItem = {
     description?: string | null;
     quantity?: number | null;
     amount_total?: number | null;
     price?: {
-      product?: string;
+      product?: string | StripeProduct;
       nickname?: string;
     };
   };
   type StripeList<T> = { data?: T[] };
-  let normalizedItems: Array<{ description: string; quantity: number; amount_total: number } > = [];
+  let normalizedItems: Array<{ description: string; quantity: number; amount_total: number; productId?: string; size?: string } > = [];
+  
   try {
     const res = await fetch(
       `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items?expand[]=data.price.product`,
@@ -64,11 +72,47 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     if (res.ok) {
       const json = (await res.json()) as StripeList<StripeCheckoutLineItem>;
       const data: StripeCheckoutLineItem[] = Array.isArray(json?.data) ? json.data : [];
-      normalizedItems = data.map((li) => ({
-        description: li.description || li.price?.product || li.price?.nickname || 'Unknown product',
-        quantity: typeof li.quantity === 'number' ? li.quantity : 0,
-        amount_total: typeof li.amount_total === 'number' ? li.amount_total : 0,
-      }));
+      normalizedItems = data
+        .filter(li => {
+          // Filtrujeme shipping položky (obsahují "Zásilkovna" nebo "doručení")
+          const description = li.description || (typeof li.price?.product === 'object' ? li.price.product.name : li.price?.product) || li.price?.nickname || '';
+          return !description.toLowerCase().includes('zásilkovna') && 
+                 !description.toLowerCase().includes('doručení') &&
+                 !description.toLowerCase().includes('doprava');
+        })
+        .map((li) => {
+          const productObj = typeof li.price?.product === 'object' ? li.price.product : null;
+          const productName = typeof li.price?.product === 'string' ? li.price.product : productObj?.name;
+          const description = li.description || productName || li.price?.nickname || 'Unknown product';
+          
+          // Extrahujeme velikost z description (formát: "Velikost: M")
+          const sizeMatch = typeof description === 'string' ? description.match(/Velikost:\s*([A-Z]+)/i) : null;
+          let size = sizeMatch ? sizeMatch[1] : undefined;
+          
+          // Extrahujeme product ID a size z metadata pokud jsou dostupné
+          let productId: string | undefined;
+          if (productObj?.metadata) {
+            productId = productObj.metadata.product_id;
+            size = productObj.metadata.size || size;
+          }
+          
+          // Fallback - pokusíme se extrahovat product ID z názvu
+          if (!productId && typeof description === 'string') {
+            if (description.toLowerCase().includes('polo')) {
+              productId = 'POLO';
+            } else if (description.toLowerCase().includes('hood') || description.toLowerCase().includes('mikina')) {
+              productId = 'HOOD';
+            }
+          }
+          
+          return {
+            description: typeof description === 'string' ? description : 'Unknown product',
+            quantity: typeof li.quantity === 'number' ? li.quantity : 0,
+            amount_total: typeof li.amount_total === 'number' ? li.amount_total : 0,
+            productId,
+            size
+          };
+        });
     } else {
       console.error('⚠️ Failed to fetch Stripe line_items', await res.text());
     }
@@ -100,6 +144,7 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     }
   }
 
+  // Uložíme objednávku do databáze
   const { error } = await supabaseAdmin.from("orders").insert({
     id: orderId,
     stripe_session_id: session.id,
@@ -123,4 +168,47 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
   }
 
   console.log("✅ Order saved:", session.id);
+
+  // Snížíme sklad pro objednané položky
+  let inventoryItems: CartItemForInventory[] = [];
+  
+  // Nejdříve zkusíme použít cart_items z metadata (přesnější)
+  if (session.metadata?.cart_items) {
+    try {
+      const cartItems = JSON.parse(session.metadata.cart_items);
+      inventoryItems = cartItems.filter((item: { productId?: string; size?: string }) => item.productId && item.size);
+      console.log("📦 Using cart items from metadata:", inventoryItems);
+    } catch (e) {
+      console.error("⚠️ Failed to parse cart_items from metadata:", e);
+    }
+  }
+  
+  // Fallback na parsování Stripe line items
+  if (inventoryItems.length === 0) {
+    inventoryItems = normalizedItems
+      .filter(item => item.productId && item.size) // Pouze položky s product ID a velikostí
+      .map(item => ({
+        productId: item.productId!,
+        size: item.size!,
+        quantity: item.quantity,
+        name: item.description
+      }));
+    console.log("📦 Using parsed line items for inventory:", inventoryItems);
+  }
+
+  if (inventoryItems.length > 0) {
+    console.log("📦 Updating inventory for items:", inventoryItems);
+    
+    const inventoryResult = await decreaseInventory(inventoryItems);
+    
+    if (!inventoryResult.success) {
+      console.error("❌ Failed to update inventory:", inventoryResult.error);
+      // Poznámka: Objednávka je již uložena, ale sklad se neaktualizoval
+      // V produkci bychom mohli chtít rollback nebo notifikaci admina
+    } else {
+      console.log("✅ Inventory updated successfully:", inventoryResult.updatedItems);
+    }
+  } else {
+    console.warn("⚠️ No inventory items found to update (missing productId or size)");
+  }
 }

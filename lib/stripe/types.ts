@@ -17,6 +17,7 @@ export interface StripeCheckoutSession {
         delivery_city?: string;
         delivery_postal_code?: string;
         packeta_point_id?: string;
+        cart_items?: string; // JSON string s cart items pro inventory
     } | null;
     custom_fields?: Array<{
         key: string;

@@ -216,6 +216,36 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     }
   };
 
+  const rollbackInventory = async () => {
+    if (!confirm("Opravdu chcete vrátit položky zpět do skladu a zrušit objednávku?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`/api/admin/orders/${orderId}/rollback-inventory`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      alert(`Inventář vrácen: ${result.message}`);
+      await loadOrder();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to rollback inventory");
+    } finally {
+      setLoading(false);
+    }
+  };
+
       const printPacketaLabel = async () => {
         try {
           // Call the Next.js API route with direct=true to get PDF directly
@@ -728,19 +758,33 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                       <Printer className="w-4 h-4 mr-2" />
                       Tisknout štítek
                     </Button>
-                    <Button
-                      onClick={cancelPacketaShipment}
-                      variant="destructive"
-                      className="w-full"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      Zrušit zásilku
-                    </Button>
-                  </div>
-                )}
-              </div>
+                     <Button
+                       onClick={cancelPacketaShipment}
+                       variant="destructive"
+                       className="w-full"
+                       size="sm"
+                       disabled={loading}
+                     >
+                       <AlertCircle className="w-4 h-4 mr-2" />
+                       Zrušit zásilku
+                     </Button>
+                   </div>
+                 )}
+                 
+                 {/* Rollback inventáře - pouze pro zaplacené objednávky */}
+                 {(order.status === "paid" || order.status === "shipped") && (
+                   <Button
+                     onClick={rollbackInventory}
+                     variant="destructive"
+                     className="w-full"
+                     size="sm"
+                     disabled={loading}
+                   >
+                     <AlertCircle className="w-4 h-4 mr-2" />
+                     Vrátit do skladu & Zrušit
+                   </Button>
+                 )}
+               </div>
             </CardContent>
           </Card>
 

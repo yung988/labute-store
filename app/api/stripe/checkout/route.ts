@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkInventoryAvailability, type CartItemForInventory } from '@/lib/inventory';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +29,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Chybí adresa doručení' }, { status: 400 });
     }
 
+    // Validace dostupnosti skladu před vytvořením Stripe session
+    const inventoryItems: CartItemForInventory[] = items
+      .filter((item: { productId?: string; size?: string }) => item.productId && item.size)
+      .map((item: { productId: string; size: string; quantity: number; name: string }) => ({
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity,
+        name: item.name
+      }));
+
+    if (inventoryItems.length > 0) {
+      const availabilityCheck = await checkInventoryAvailability(inventoryItems);
+      
+      if (!availabilityCheck.available) {
+        return NextResponse.json({ 
+          error: `Nedostatek zásob: ${availabilityCheck.errors.join(', ')}` 
+        }, { status: 400 });
+      }
+      
+      // Logujeme varování o nízkých zásobách
+      if (availabilityCheck.warnings.length > 0) {
+        console.warn("⚠️ Low stock warnings:", availabilityCheck.warnings);
+      }
+    }
+
         // Build URLSearchParams for Stripe API
     const params = new URLSearchParams();
 
@@ -46,7 +72,7 @@ export async function POST(request: NextRequest) {
     params.append('invoice_creation[enabled]', 'true');
 
     // Line items - products
-    items.forEach((item: { name: string; price: number; quantity: number; image?: string; size?: string }, index: number) => {
+    items.forEach((item: { name: string; price: number; quantity: number; image?: string; size?: string; productId?: string }, index: number) => {
       params.append(`line_items[${index}][price_data][currency]`, 'czk');
       params.append(`line_items[${index}][price_data][product_data][name]`, item.name);
       params.append(`line_items[${index}][price_data][unit_amount]`, Math.round(item.price * 100).toString()); // Convert to cents
@@ -56,6 +82,13 @@ export async function POST(request: NextRequest) {
       }
       if (item.size) {
         params.append(`line_items[${index}][price_data][product_data][description]`, `Velikost: ${item.size}`);
+      }
+      // Přidáme product metadata pro inventory tracking
+      if (item.productId) {
+        params.append(`line_items[${index}][price_data][product_data][metadata][product_id]`, item.productId);
+      }
+      if (item.size) {
+        params.append(`line_items[${index}][price_data][product_data][metadata][size]`, item.size);
       }
     });
 
@@ -105,6 +138,16 @@ export async function POST(request: NextRequest) {
       params.append('metadata[delivery_city]', formData.city);
       params.append('metadata[delivery_postal_code]', formData.postalCode);
     }
+
+    // Přidáme cart items do metadata pro inventory tracking
+    params.append('metadata[cart_items]', JSON.stringify(
+      items.map((item: { productId?: string; size?: string; quantity: number; name: string }) => ({
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity,
+        name: item.name
+      }))
+    ));
 
     // Debug logging
     console.log('Creating Stripe checkout session with params:', {

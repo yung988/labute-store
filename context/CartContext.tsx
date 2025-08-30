@@ -54,6 +54,7 @@ export const useSpreeCart = () => {
   const cart = {
     line_items: cartContext.items.map(item => ({
       id: item.id,
+      productId: item.productId, // Přidáme productId pro inventory tracking
       variant: {
         name: item.name,
         price: item.price.toString(),
