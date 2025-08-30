@@ -85,7 +85,7 @@ const CartSummary = ({
 
   return (
     <div
-      className={`bg-white ${isMobile ? "border-b border-gray-300" : "border border-gray-300"} ${!isMobile ? "sticky top-0 h-screen overflow-y-auto" : ""}`}
+      className={`bg-white ${isMobile ? "border-b border-gray-300" : "border border-gray-300"} ${!isMobile ? "h-full" : ""}`}
     >
       {isMobile && (
         <div className="sticky top-0 bg-white border-b border-gray-300 p-4">
@@ -565,7 +565,7 @@ function CheckoutForm() {
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-0">
         {/* Levá strana - Formulář */}
-        <div className={`overflow-y-auto p-6 lg:p-12 ${isMobile ? 'h-[calc(100vh-80px)]' : 'h-screen'}`}>
+        <div className="p-6 lg:p-12">
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-2xl font-medium tracking-wide uppercase">YEEZUZ2020</h1>
@@ -913,7 +913,7 @@ function CheckoutForm() {
 
         {/* Pravá strana - Košík (pouze desktop) */}
         {!isMobile && (
-          <div className="bg-gray-50">
+          <div className="bg-gray-50 sticky top-0 h-screen overflow-y-auto">
             <CartSummary
               cartItems={items}
               updateQuantity={handleQuantityChange}
