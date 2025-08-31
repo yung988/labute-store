@@ -44,8 +44,8 @@ export function LoginForm({
         // Redirect admin users to admin panel, regular users to home
         const { data: user } = await supabase.auth.getUser();
         const userRole = user.user?.user_metadata?.role || user.user?.app_metadata?.role;
-        
-        if (userRole === 'superadmin' || userRole === 'shopmanager') {
+
+        if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'shopmanager') {
           router.push("/admin");
         } else {
           router.push("/");
@@ -83,8 +83,8 @@ export function LoginForm({
               <p className="text-sm text-green-600 mb-4">
                 Magic link byl odeslán na váš email. Zkontrolujte svou poštovní schránku.
               </p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setIsMagicLinkSent(false);
                   setIsPasswordMode(true);
@@ -114,7 +114,7 @@ export function LoginForm({
                     Magic Link
                   </Button>
                 </div>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -126,7 +126,7 @@ export function LoginForm({
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-                
+
                 {isPasswordMode && (
                   <div className="grid gap-2">
                     <div className="flex items-center">
@@ -147,12 +147,12 @@ export function LoginForm({
                     />
                   </div>
                 )}
-                
+
                 {error && <p className="text-sm text-red-500">{error}</p>}
-                
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading 
-                    ? (isPasswordMode ? "Logging in..." : "Sending magic link...") 
+                  {isLoading
+                    ? (isPasswordMode ? "Logging in..." : "Sending magic link...")
                     : (isPasswordMode ? "Login" : "Send Magic Link")
                   }
                 </Button>

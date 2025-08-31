@@ -76,30 +76,36 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
       },
     );
 
-    // Get user claims
-    const { data, error } = await supabase.auth.getClaims();
+    // Get user data
+    const { data, error } = await supabase.auth.getUser();
 
     if (error) {
       return { isValid: false, error: `Auth error: ${error.message}` };
     }
 
-    if (!data?.claims) {
-      return { isValid: false, error: 'No user claims found' };
+    if (!data?.user) {
+      return { isValid: false, error: 'No user found' };
     }
 
-    const claims = data.claims;
+    const user = data.user;
 
-    // Verify admin role
-    if (!verifyAdminRoleFromClaims(claims)) {
+    // Check admin role in user metadata
+    const userRole = user.user_metadata?.role || user.app_metadata?.role;
+
+    if (userRole !== 'admin' && userRole !== 'superadmin' && userRole !== 'shopmanager') {
       return { isValid: false, error: 'Insufficient permissions - admin role required' };
     }
 
-    // Type guard for admin user
-    if (!isAdminUser(claims)) {
-      return { isValid: false, error: 'Invalid admin user structure' };
-    }
+    // Create admin user object
+    const adminUser: AdminUser = {
+      id: user.id,
+      email: user.email || '',
+      role: 'admin',
+      user_metadata: user.user_metadata,
+      app_metadata: user.app_metadata
+    };
 
-    return { isValid: true, user: claims };
+    return { isValid: true, user: adminUser };
 
   } catch (error) {
     return {
