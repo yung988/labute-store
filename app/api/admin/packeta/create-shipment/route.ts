@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
   // For home delivery: COD=0 (prepaid), but VALUE must be set for insurance
   // Packeta home delivery has very low insurance limits - try 1000 CZK max
   const finalCOD = isHomeDelivery ? 0 : safeCOD;
-  const finalValue = isHomeDelivery ? Math.min(safeValue, 500) : safeValue; // Try max 500 CZK
+  const finalValue = isHomeDelivery ? Math.min(safeValue, 10000) : safeValue; // Max 10k CZK per docs
 
   // Format phone number for Packeta API (must have +420 prefix and be valid)
   let formattedPhone = order.customer_phone || "";
@@ -201,7 +201,12 @@ export async function POST(req: NextRequest) {
     let xmlBody: string;
     
     if (isHomeDelivery) {
-      // Home delivery XML structure - omit value parameter to avoid insurance issues
+      // Parse street and house number from delivery address
+      const addressParts = (order.delivery_address?.trim() || '').match(/^(.+?)\s+(\d+.*?)$/);
+      const street = addressParts ? addressParts[1] : (order.delivery_address?.trim() || '');
+      const houseNumber = addressParts ? addressParts[2] : '';
+      
+      // Home delivery XML structure according to official Packeta documentation
       xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
@@ -212,11 +217,14 @@ export async function POST(req: NextRequest) {
     <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>161</addressId>
-    <street>${xmlEscape(order.delivery_address?.trim() || '')}</street>
-    <city>${xmlEscape(order.delivery_city?.trim() || '')}</city>
-    <zip>${xmlEscape(formattedPostalCode)}</zip>
     <cod>${xmlEscape(String(finalCOD))}</cod>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
+    <value>${xmlEscape(String(finalValue))}</value>
+    <currency>CZK</currency>
+    <street>${xmlEscape(street)}</street>
+    <houseNumber>${xmlEscape(houseNumber)}</houseNumber>
+    <city>${xmlEscape(order.delivery_city?.trim() || '')}</city>
+    <zip>${xmlEscape(formattedPostalCode)}</zip>
     <eshop>${xmlEscape(eshopId)}</eshop>
   </packetAttributes>
 </createPacket>`;
