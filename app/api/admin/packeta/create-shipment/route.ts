@@ -109,21 +109,69 @@ export async function POST(req: NextRequest) {
   const maxAllowedValue = 50000; // Packeta limit for COD/value
   const safeAmount = Math.min(amountCZK, maxAllowedValue);
 
-  // Format phone number for Packeta API (must have +420 prefix)
+  // Format phone number for Packeta API (must have +420 prefix and be valid)
   let formattedPhone = order.customer_phone || "";
-  if (formattedPhone && !formattedPhone.startsWith('+')) {
+  if (formattedPhone) {
+    // Remove all non-digit characters except +
+    formattedPhone = formattedPhone.replace(/[^\d+]/g, '');
+    
     // If phone doesn't start with +, assume it's Czech number and add +420
-    formattedPhone = `+420${formattedPhone}`;
+    if (!formattedPhone.startsWith('+')) {
+      // Remove leading zeros if present
+      formattedPhone = formattedPhone.replace(/^0+/, '');
+      formattedPhone = `+420${formattedPhone}`;
+    }
+    
+    // Validate Czech phone format (+420xxxxxxxxx)
+    if (!formattedPhone.match(/^\+420\d{9}$/)) {
+      formattedPhone = "+420000000000"; // Fallback for invalid phones
+    }
+  } else {
+    formattedPhone = "+420000000000"; // Fallback for missing phone
   }
 
-  // Use shorter ID for Packeta (last 8 characters of UUID)
+  // Use shorter ID for Packeta (last 8 characters of UUID) and ensure it's valid
   const packetaOrderId = orderId.slice(-8);
+  
+  // Validate and format postal code for home delivery
+  let formattedPostalCode = "";
+  if (isHomeDelivery && order.delivery_postal_code) {
+    formattedPostalCode = order.delivery_postal_code.replace(/\s/g, ''); // Remove spaces
+    // Ensure it's 5 digits
+    if (!formattedPostalCode.match(/^\d{5}$/)) {
+      return NextResponse.json({ error: "Invalid postal code format. Must be 5 digits." }, { status: 400 });
+    }
+  }
+  
+  // Validate required fields
+  const email = order.customer_email || "";
+  if (!email || !email.includes('@')) {
+    return NextResponse.json({ error: "Valid email address is required" }, { status: 400 });
+  }
+  
+  // Validate delivery address for home delivery
+  if (isHomeDelivery) {
+    if (!order.delivery_address || order.delivery_address.trim().length < 3) {
+      return NextResponse.json({ error: "Valid delivery address is required for home delivery" }, { status: 400 });
+    }
+    if (!order.delivery_city || order.delivery_city.trim().length < 2) {
+      return NextResponse.json({ error: "Valid delivery city is required for home delivery" }, { status: 400 });
+    }
+  }
 
-  // Split customer name into first name and last name
+  // Split customer name into first name and last name with validation
   const customerName = order.customer_name || "";
   const nameParts = customerName.trim().split(' ');
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(' ') || firstName; // If no lastname, use firstname
+  let firstName = nameParts[0] || "Zákazník";
+  let lastName = nameParts.slice(1).join(' ') || firstName;
+  
+  // Ensure names are not empty and have reasonable length
+  firstName = firstName.trim() || "Zákazník";
+  lastName = lastName.trim() || firstName;
+  
+  // Limit name length for Packeta API
+  firstName = firstName.substring(0, 50);
+  lastName = lastName.substring(0, 50);
 
    // Weight is already in kg for Packeta XML API (no conversion needed)
 
@@ -150,12 +198,12 @@ export async function POST(req: NextRequest) {
     <number>${xmlEscape(packetaOrderId)}</number>
     <name>${xmlEscape(firstName)}</name>
     <surname>${xmlEscape(lastName)}</surname>
-    <email>${xmlEscape(order.customer_email || '')}</email>
+    <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>161</addressId>
-    <street>${xmlEscape(order.delivery_address || '')}</street>
-    <city>${xmlEscape(order.delivery_city || '')}</city>
-    <zip>${xmlEscape(order.delivery_postal_code || '')}</zip>
+    <street>${xmlEscape(order.delivery_address?.trim() || '')}</street>
+    <city>${xmlEscape(order.delivery_city?.trim() || '')}</city>
+    <zip>${xmlEscape(formattedPostalCode)}</zip>
     <cod>${xmlEscape(String(safeAmount))}</cod>
     <value>${xmlEscape(String(safeAmount))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
@@ -171,9 +219,9 @@ export async function POST(req: NextRequest) {
     <number>${xmlEscape(packetaOrderId)}</number>
     <name>${xmlEscape(firstName)}</name>
     <surname>${xmlEscape(lastName)}</surname>
-    <email>${xmlEscape(order.customer_email || '')}</email>
+    <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
-    <addressId>${xmlEscape(order.packeta_point_id)}</addressId>
+    <addressId>${xmlEscape(order.packeta_point_id || '')}</addressId>
     <cod>${xmlEscape(String(safeAmount))}</cod>
     <value>${xmlEscape(String(safeAmount))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
@@ -183,6 +231,19 @@ export async function POST(req: NextRequest) {
     }
 
     const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+    
+    // Debug logging
+    console.log('🚀 Creating Packeta shipment:', {
+      orderId: packetaOrderId,
+      isHomeDelivery,
+      firstName,
+      lastName,
+      email,
+      phone: formattedPhone,
+      addressId: isHomeDelivery ? '161' : order.packeta_point_id,
+      weight: totalWeightKg,
+      amount: safeAmount
+    });
 
    // Simple timeout and retry for Packeta XML API
    const MAX_RETRIES = 3;
@@ -276,8 +337,27 @@ export async function POST(req: NextRequest) {
   const packetaId = idMatch ? idMatch[1] : null;
 
   if (!packetaId) {
+    console.error('❌ Packeta API error - missing ID:', {
+      xmlResponse: xmlResponse.substring(0, 500),
+      orderId: packetaOrderId,
+      isHomeDelivery
+    });
+    
+    // Try to extract more specific error from XML
+    const faultMatch = xmlResponse.match(/<fault[^>]*>([^<]+)<\/fault>/i);
+    const stringMatch = xmlResponse.match(/<string[^>]*>([^<]+)<\/string>/i);
+    const detailMatch = xmlResponse.match(/<detail[^>]*>([\s\S]*?)<\/detail>/i);
+    
+    let errorMessage = "Invalid Packeta response - missing ID";
+    if (faultMatch && stringMatch) {
+      errorMessage = `Packeta ${faultMatch[1]}: ${stringMatch[1]}`;
+    }
+    if (detailMatch) {
+      errorMessage += `. Details: ${detailMatch[1].substring(0, 200)}`;
+    }
+    
     return NextResponse.json(
-      { error: `Invalid Packeta response - missing ID. Response: ${xmlResponse.substring(0, 200)}` },
+      { error: errorMessage, xmlResponse: xmlResponse.substring(0, 500) },
       { status: 500 }
     );
   }
