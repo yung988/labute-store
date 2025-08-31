@@ -24,6 +24,8 @@ interface OrderRecord {
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
+const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID');
 
 Deno.serve(async (req: Request) => {
   try {
@@ -56,6 +58,7 @@ Deno.serve(async (req: Request) => {
     // Handle new orders (INSERT)
     if (payload.type === 'INSERT') {
       await sendOrderConfirmationEmail(record);
+      await sendTelegramNotification(`🛒 Nová objednávka!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\nEmail: ${record.customer_email}\nCelkem: ${formatPrice(record.amount_total)} Kč\n\n✉️ Potvrzovací email odeslán.`);
       return new Response('Order confirmation sent', { status: 200 });
     }
 
@@ -64,12 +67,14 @@ Deno.serve(async (req: Request) => {
       // Check if status changed
       if (record.status !== oldRecord?.status) {
         await sendOrderStatusEmail(record, oldRecord.status);
+        await sendTelegramNotification(`📋 Změna stavu objednávky\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\nStav: ${getStatusText(oldRecord.status)} → ${getStatusText(record.status)}\n\n✉️ Notifikační email odeslán.`);
         return new Response('Status update email sent', { status: 200 });
       }
 
       // Check if tracking info was added
       if (record.packeta_tracking_url && !oldRecord?.packeta_tracking_url) {
         await sendShippingEmail(record);
+        await sendTelegramNotification(`📦 Objednávka odeslána!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\n🚚 Sledování: ${record.packeta_tracking_url}\n${record.packeta_shipment_id ? `📋 Číslo zásilky: ${record.packeta_shipment_id}\n` : ''}\n✉️ Tracking email odeslán.`);
         return new Response('Shipping email sent', { status: 200 });
       }
     }
@@ -144,6 +149,40 @@ async function sendEmail({ to, subject, html }: { to: string, subject: string, h
   const result = await response.json();
   console.log('Email sent successfully:', result);
   return result;
+}
+
+async function sendTelegramNotification(message: string) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.log('Telegram credentials not configured, skipping notification');
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to send Telegram notification: ${response.status} ${errorText}`);
+      return;
+    }
+
+    const result = await response.json();
+    console.log('Telegram notification sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Error sending Telegram notification:', error);
+  }
 }
 
 function generateOrderConfirmationEmail(order: OrderRecord): string {
