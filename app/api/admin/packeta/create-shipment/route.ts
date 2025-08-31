@@ -106,8 +106,19 @@ export async function POST(req: NextRequest) {
 
   // Convert amount from cents to CZK and cap values for Packeta limits
   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
-  const maxAllowedValue = 50000; // Packeta limit for COD/value
-  const safeAmount = Math.min(amountCZK, maxAllowedValue);
+  
+  // Different limits for home delivery vs pickup points
+  // Home delivery has much lower limits for insurance/COD
+  const maxAllowedValue = isHomeDelivery ? 10000 : 50000; // Home delivery: 10k CZK, Pickup: 50k CZK
+  const maxAllowedCOD = isHomeDelivery ? 5000 : 50000;    // Home delivery: 5k CZK, Pickup: 50k CZK
+  
+  const safeValue = Math.min(amountCZK, maxAllowedValue);
+  const safeCOD = Math.min(amountCZK, maxAllowedCOD);
+  
+  // For home delivery, set both COD and VALUE to 0 since order is prepaid via Stripe
+  // This avoids insurance/COD validation issues with Packeta
+  const finalCOD = isHomeDelivery ? 0 : safeCOD;
+  const finalValue = isHomeDelivery ? 0 : safeValue;
 
   // Format phone number for Packeta API (must have +420 prefix and be valid)
   let formattedPhone = order.customer_phone || "";
@@ -204,8 +215,8 @@ export async function POST(req: NextRequest) {
     <street>${xmlEscape(order.delivery_address?.trim() || '')}</street>
     <city>${xmlEscape(order.delivery_city?.trim() || '')}</city>
     <zip>${xmlEscape(formattedPostalCode)}</zip>
-    <cod>${xmlEscape(String(safeAmount))}</cod>
-    <value>${xmlEscape(String(safeAmount))}</value>
+    <cod>${xmlEscape(String(finalCOD))}</cod>
+    <value>${xmlEscape(String(finalValue))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <eshop>${xmlEscape(eshopId)}</eshop>
   </packetAttributes>
@@ -222,8 +233,8 @@ export async function POST(req: NextRequest) {
     <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
     <addressId>${xmlEscape(order.packeta_point_id || '')}</addressId>
-    <cod>${xmlEscape(String(safeAmount))}</cod>
-    <value>${xmlEscape(String(safeAmount))}</value>
+    <cod>${xmlEscape(String(finalCOD))}</cod>
+    <value>${xmlEscape(String(finalValue))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <eshop>${xmlEscape(eshopId)}</eshop>
   </packetAttributes>
@@ -242,7 +253,8 @@ export async function POST(req: NextRequest) {
       phone: formattedPhone,
       addressId: isHomeDelivery ? '161' : order.packeta_point_id,
       weight: totalWeightKg,
-      amount: safeAmount
+      cod: finalCOD,
+      value: finalValue
     });
 
    // Simple timeout and retry for Packeta XML API
