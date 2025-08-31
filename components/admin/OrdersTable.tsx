@@ -245,42 +245,35 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
        return;
      }
 
-     try {
-       setBulkLoading(true);
-       console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
+      try {
+        setBulkLoading(true);
+        console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
 
-       const response = await fetch('/api/admin/packeta/bulk-print-labels', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
-           orderIds: Array.from(selectedOrders),
-           format: 'A6'
-         }),
-       });
+        // Use direct PDF mode like PacketaManagement.tsx
+        const url = '/api/admin/packeta/bulk-print-labels?direct=true';
+        console.log(`🔗 Opening bulk direct PDF for ${selectedOrders.size} orders`);
 
-       if (!response.ok) {
-         const errorData = await response.json().catch(() => ({}));
-         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-       }
+        // Open in new tab via form POST (window.open can't do POST)
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        form.target = '_blank';
 
-       const data = await response.json();
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'payload';
+        input.value = JSON.stringify({ orderIds: Array.from(selectedOrders), format: 'A6' });
+        form.appendChild(input);
 
-       if (data.error) {
-         throw new Error(data.error);
-       }
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
 
-       if (data.success && data.url) {
-         // Open the combined PDF in a new tab
-         window.open(data.url, '_blank');
-         
-         // Clear selection after successful print
-         setSelectedOrders(new Set());
-         
-         // Reload orders to update print indicators
-         await load();
-       }
+        // Clear selection after successful print
+        setSelectedOrders(new Set());
+        
+        // Reload orders to update print indicators
+        await load();
      } catch (e: unknown) {
        setError(e instanceof Error ? e.message : "Failed to bulk print labels");
      } finally {
