@@ -351,7 +351,7 @@ function CheckoutForm() {
     setIsChangingDelivery(true);
     try {
       setDeliveryMethod(method);
-      
+
       // Clear form data when switching methods
       if (method === "pickup") {
         setFormData(prev => ({
@@ -514,13 +514,36 @@ function CheckoutForm() {
     productId: (item as { productId?: string }).productId
   })) || [];
 
+
+  // Server-quoted delivery price for UI (server remains source of truth)
+  const [deliveryPrice, setDeliveryPrice] = useState<number>(deliveryMethod === 'pickup' ? 62 : 89);
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        const quoteItems = items
+          .filter((it) => it.productId)
+          .map((it) => ({ productId: it.productId as string, quantity: it.quantity }));
+        const res = await fetch('/api/shipping/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: quoteItems, deliveryMethod })
+        });
+        if (!res.ok) throw new Error('quote failed');
+        const data = await res.json();
+        if (data?.quote?.totalCZK != null) setDeliveryPrice(data.quote.totalCZK);
+      } catch {
+        setDeliveryPrice(deliveryMethod === 'pickup' ? 62 : 89);
+      }
+    };
+    fetchQuote();
+  }, [items, deliveryMethod]);
+
   // Ceny pro UI v CZK (ne v haléřích)
   const subtotal = parseFloat(cart?.total || '0');
   const selectedShippingMethod = shippingMethods.find(method =>
     (deliveryMethod === "pickup" && method.delivery_type === 'pickup_point') ||
     (deliveryMethod === "home_delivery" && method.delivery_type === 'home_delivery')
   );
-  const deliveryPrice = selectedShippingMethod?.cost || (deliveryMethod === "pickup" ? 79 : 149);
   const total = subtotal + deliveryPrice;
 
   if (loading) {
@@ -658,8 +681,8 @@ function CheckoutForm() {
                            value={formData.email}
                            onChange={handleInputChange}
                            className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                             validationErrors.email 
-                               ? 'border-red-300 focus:border-red-500' 
+                             validationErrors.email
+                               ? 'border-red-300 focus:border-red-500'
                                : 'border-gray-300 focus:border-black'
                            }`}
                            required
@@ -671,36 +694,36 @@ function CheckoutForm() {
                          {manualAddressMode && (
                            <div className="grid grid-cols-2 gap-4">
                          <div>
-                           <input 
-                             type="text" 
-                             name="firstName" 
-                             placeholder="Křestní jméno*" 
-                             value={formData.firstName} 
-                             onChange={handleInputChange} 
+                           <input
+                             type="text"
+                             name="firstName"
+                             placeholder="Křestní jméno*"
+                             value={formData.firstName}
+                             onChange={handleInputChange}
                              className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                               validationErrors.firstName 
-                                 ? 'border-red-300 focus:border-red-500' 
+                               validationErrors.firstName
+                                 ? 'border-red-300 focus:border-red-500'
                                  : 'border-gray-300 focus:border-black'
                              }`}
-                             required 
+                             required
                            />
                            {validationErrors.firstName && (
                              <p className="text-red-500 text-xs mt-1">{validationErrors.firstName}</p>
                            )}
                          </div>
                          <div>
-                           <input 
-                             type="text" 
-                             name="lastName" 
-                             placeholder="Příjmení*" 
-                             value={formData.lastName} 
-                             onChange={handleInputChange} 
+                           <input
+                             type="text"
+                             name="lastName"
+                             placeholder="Příjmení*"
+                             value={formData.lastName}
+                             onChange={handleInputChange}
                              className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                               validationErrors.lastName 
-                                 ? 'border-red-300 focus:border-red-500' 
+                               validationErrors.lastName
+                                 ? 'border-red-300 focus:border-red-500'
                                  : 'border-gray-300 focus:border-black'
                              }`}
-                             required 
+                             required
                            />
                            {validationErrors.lastName && (
                              <p className="text-red-500 text-xs mt-1">{validationErrors.lastName}</p>
@@ -709,18 +732,18 @@ function CheckoutForm() {
                            </div>
                          )}
                         <div>
-                         <input 
-                           type="tel" 
-                           name="phone" 
-                           placeholder="Telefonní číslo*" 
-                           value={formData.phone} 
-                           onChange={handleInputChange} 
+                         <input
+                           type="tel"
+                           name="phone"
+                           placeholder="Telefonní číslo*"
+                           value={formData.phone}
+                           onChange={handleInputChange}
                            className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                             validationErrors.phone 
-                               ? 'border-red-300 focus:border-red-500' 
+                             validationErrors.phone
+                               ? 'border-red-300 focus:border-red-500'
                                : 'border-gray-300 focus:border-black'
                            }`}
-                           required 
+                           required
                          />
                          {validationErrors.phone && (
                            <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
@@ -749,8 +772,8 @@ function CheckoutForm() {
                            value={formData.email}
                            onChange={handleInputChange}
                            className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                             validationErrors.email 
-                               ? 'border-red-300 focus:border-red-500' 
+                             validationErrors.email
+                               ? 'border-red-300 focus:border-red-500'
                                : 'border-gray-300 focus:border-black'
                            }`}
                            required
@@ -768,8 +791,8 @@ function CheckoutForm() {
                               onManualEntry={() => setManualAddressMode(true)}
                              placeholder="Ulice a číslo popisné*"
                              className={`w-full ${
-                               validationErrors.address 
-                                 ? 'border-red-300 focus:border-red-500' 
+                               validationErrors.address
+                                 ? 'border-red-300 focus:border-red-500'
                                  : 'border-gray-300 focus:border-black'
                              }`}
                            />
@@ -840,18 +863,18 @@ function CheckoutForm() {
                          </div>
                        </div>
                        <div>
-                         <input 
-                           type="tel" 
-                           name="phone" 
-                           placeholder="Telefonní číslo*" 
-                           value={formData.phone} 
-                           onChange={handleInputChange} 
+                         <input
+                           type="tel"
+                           name="phone"
+                           placeholder="Telefonní číslo*"
+                           value={formData.phone}
+                           onChange={handleInputChange}
                            className={`w-full border p-3 text-sm focus:outline-none rounded-none ${
-                             validationErrors.phone 
-                               ? 'border-red-300 focus:border-red-500' 
+                             validationErrors.phone
+                               ? 'border-red-300 focus:border-red-500'
                                : 'border-gray-300 focus:border-black'
                            }`}
-                           required 
+                           required
                          />
                          {validationErrors.phone && (
                            <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>

@@ -148,7 +148,7 @@ const CartSummary = ({
         {items.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <p className="text-xs">Váš košík je prázdný</p>
-            <Button 
+            <Button
               onClick={() => window.location.href = '/'}
               className="mt-4 rounded-none"
               variant="outline"
@@ -173,6 +173,38 @@ function CartForm() {
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+
+  // Server-quoted delivery price (authoritative price is used on server; UI shows quote)
+  const [deliveryPrice, setDeliveryPrice] = useState<number>(deliveryMethod === "pickup" ? 79 : 149);
+
+  useEffect(() => {
+    const getQuote = async () => {
+      try {
+        if (!isInitialized || items.length === 0) {
+          setDeliveryPrice(0);
+          return;
+        }
+        const quoteItems = items
+          .filter((it) => (it as any).productId)
+          .map((it) => ({ productId: (it as any).productId as string, quantity: it.quantity }));
+        const res = await fetch('/api/shipping/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: quoteItems, deliveryMethod })
+        });
+        if (!res.ok) throw new Error('quote failed');
+        const data = await res.json();
+        if (data?.quote?.totalCZK != null) {
+          setDeliveryPrice(data.quote.totalCZK);
+        }
+      } catch (e) {
+        // Fallback to conservative base
+        setDeliveryPrice(deliveryMethod === 'pickup' ? 62 : 89);
+      }
+    };
+    getQuote();
+  }, [items, deliveryMethod, isInitialized]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -236,27 +268,26 @@ function CartForm() {
     }
   }, [isInitialized, items.length, router]);
 
-  const deliveryPrice = deliveryMethod === "pickup" ? 79 : 149; // v korunách
   const total = totalPrice + deliveryPrice;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const newFormData = { ...formData, [name]: value };
     setFormData(newFormData);
-    
+
     // Ulož do localStorage
     localStorage.setItem('checkout-form-data', JSON.stringify(newFormData));
   };
 
   const handleCheckout = async () => {
     if (checkoutLoading) return;
-    
+
     setCheckoutLoading(true);
     setCheckoutError(null);
-    
+
     try {
       console.log('Creating checkout session...');
-      
+
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
@@ -272,7 +303,7 @@ function CartForm() {
       });
 
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         console.error('API error:', responseData);
         setCheckoutError(responseData.error || 'Chyba při vytváření platby');
@@ -400,7 +431,7 @@ function CartForm() {
                         <p>{`${selectedPickupPoint.zip ?? ""} ${selectedPickupPoint.city ?? ""}`.trim()}</p>
                       </div>
                     )}
-                    
+
                     {/* Kontaktní údaje pro vyzvednutí */}
                     <div className="space-y-4 mt-6">
                       <input
@@ -413,33 +444,33 @@ function CartForm() {
                         required
                       />
                       <div className="grid grid-cols-2 gap-4">
-                        <input 
-                          type="text" 
-                          name="firstName" 
-                          placeholder="Křestní jméno*" 
-                          value={formData.firstName} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
+                        <input
+                          type="text"
+                          name="firstName"
+                          placeholder="Křestní jméno*"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                          required
                         />
-                        <input 
-                          type="text" 
-                          name="lastName" 
-                          placeholder="Příjmení*" 
-                          value={formData.lastName} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
+                        <input
+                          type="text"
+                          name="lastName"
+                          placeholder="Příjmení*"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                          required
                         />
                       </div>
-                      <input 
-                        type="tel" 
-                        name="phone" 
-                        placeholder="Telefonní číslo*" 
-                        value={formData.phone} 
-                        onChange={handleInputChange} 
-                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                        required 
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Telefonní číslo*"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                        required
                       />
                     </div>
                   </div>
@@ -468,23 +499,23 @@ function CartForm() {
                         required
                       />
                       <div className="grid grid-cols-2 gap-4">
-                        <input 
-                          type="text" 
-                          name="firstName" 
-                          placeholder="Křestní jméno*" 
-                          value={formData.firstName} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
+                        <input
+                          type="text"
+                          name="firstName"
+                          placeholder="Křestní jméno*"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                          required
                         />
-                        <input 
-                          type="text" 
-                          name="lastName" 
-                          placeholder="Příjmení*" 
-                          value={formData.lastName} 
-                          onChange={handleInputChange} 
-                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                          required 
+                        <input
+                          type="text"
+                          name="lastName"
+                          placeholder="Příjmení*"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                          required
                         />
                       </div>
                       <AddressAutocomplete
@@ -506,14 +537,14 @@ function CartForm() {
                         showManualEntry={false}
                       />
                       {/* City and PSČ are derived from AddressAutocomplete selection and stored internally */}
-                      <input 
-                        type="tel" 
-                        name="phone" 
-                        placeholder="Telefonní číslo*" 
-                        value={formData.phone} 
-                        onChange={handleInputChange} 
-                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none" 
-                        required 
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Telefonní číslo*"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 p-3 text-sm focus:border-black focus:outline-none rounded-none"
+                        required
                       />
                     </div>
                   </div>
@@ -535,13 +566,13 @@ function CartForm() {
                     <span className="uppercase tracking-wide">Celkem</span>
                     <span>{formatCurrency(total)}</span>
                   </div>
-                  
+
                   {checkoutError && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
                       {checkoutError}
                     </div>
                   )}
-                  
+
                   <Button
                     onClick={handleCheckout}
                     disabled={!isFormValid || checkoutLoading}
@@ -549,7 +580,7 @@ function CartForm() {
                   >
                     {checkoutLoading ? 'Vytváří se platba...' : 'Pokračovat k platbě'}
                   </Button>
-                  
+
                   <p className="text-[9px] text-center leading-tight text-gray-600">
                     Kliknutím souhlasíte s našimi obchodními podmínkami a zásadami ochrany osobních údajů.
                   </p>
