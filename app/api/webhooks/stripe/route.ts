@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
       } : undefined,
       metadata: session.metadata,
       custom_fields: session.custom_fields,
-      invoice: session.invoice ? session.invoice : undefined
+      invoice: session.invoice ? session.invoice : undefined,
+      shipping_cost: session.shipping_cost ? {
+        amount_total: session.shipping_cost.amount_total ?? undefined
+      } : undefined
     };
 
     try {

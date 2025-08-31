@@ -33,8 +33,9 @@ export default function OrderReceiptEmail({
   items: LineItem[];
 }) {
   const subtotal = items.reduce((sum, it) => sum + it.amount_total, 0);
-  const shipping = 0; // adjust if you store it separately
-  const total = session.amount_total ?? subtotal + shipping;
+  const totalFromSession = session.amount_total ?? subtotal;
+  const shipping = Math.max(totalFromSession - subtotal, 0);
+  const total = totalFromSession;
 
   return (
     <Html>

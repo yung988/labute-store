@@ -18,6 +18,7 @@ export interface StripeCheckoutSession {
         delivery_postal_code?: string;
         packeta_point_id?: string;
         cart_items?: string; // JSON string s cart items pro inventory
+        shipping_amount?: string; // uloženo v haléřích (centy)
     } | null;
     custom_fields?: Array<{
         key: string;
@@ -26,6 +27,9 @@ export interface StripeCheckoutSession {
         };
     }>;
     invoice?: string | Stripe.Invoice | null;
+    shipping_cost?: {
+        amount_total?: number;
+    } | null;
 }
 
 // Product data for Stripe catalog

@@ -159,13 +159,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Add shipping as line item
-    const shippingIndex = items.length;
-    params.append(`line_items[${shippingIndex}][price_data][currency]`, 'czk');
-    params.append(`line_items[${shippingIndex}][price_data][product_data][name]`,
+    // Shipping as Stripe shipping_options (not as product line item)
+    const shippingAmountCents = Math.round(deliveryPrice * 100);
+    params.append('shipping_options[0][shipping_rate_data][display_name]',
       deliveryMethod === 'pickup' ? 'Zásilkovna - výdejní místo' : 'Zásilkovna - doručení domů');
-    params.append(`line_items[${shippingIndex}][price_data][unit_amount]`, Math.round(deliveryPrice * 100).toString()); // Convert to cents
-    params.append(`line_items[${shippingIndex}][quantity]`, '1');
+    params.append('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(shippingAmountCents));
+    params.append('shipping_options[0][shipping_rate_data][fixed_amount][currency]', 'czk');
+    // Optional: keep unspecified tax behavior (let Stripe defaults apply)
+    // params.append('shipping_options[0][shipping_rate_data][tax_behavior]', 'unspecified');
+
+    // Collect shipping address only for home delivery
+    if (deliveryMethod === 'home_delivery') {
+      params.append('shipping_address_collection[allowed_countries][0]', 'CZ');
+    }
 
     // Custom fields for pickup point
     if (deliveryMethod === 'pickup' && selectedPickupPoint) {
@@ -194,6 +200,8 @@ export async function POST(request: NextRequest) {
     params.append('metadata[customer_first_name]', formData.firstName);
     params.append('metadata[customer_last_name]', formData.lastName);
     params.append('metadata[customer_phone]', formData.phone);
+    // Uložíme shipping_amount pro případný fallback v DB
+    params.append('metadata[shipping_amount]', String(shippingAmountCents));
     
     // Add pickup point ID to metadata as backup
     if (deliveryMethod === 'pickup' && selectedPickupPoint) {

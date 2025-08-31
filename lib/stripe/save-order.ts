@@ -144,8 +144,13 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     }
   }
 
-  // Uložíme objednávku do databáze
-  const { error } = await supabaseAdmin.from("orders").insert({
+  // Zjistíme částku dopravy: preferuj session.shipping_cost.amount_total, fallback metadata.shipping_amount
+  const shippingAmount = typeof session.shipping_cost?.amount_total === 'number'
+    ? session.shipping_cost!.amount_total
+    : (session.metadata?.shipping_amount ? parseInt(session.metadata.shipping_amount, 10) : undefined);
+
+  // Připravíme payload pro DB insert
+  const basePayload: Record<string, unknown> = {
     id: orderId,
     stripe_session_id: session.id,
     stripe_invoice_id: invoiceId,
@@ -161,10 +166,35 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     status: "paid",
     items: JSON.stringify(normalizedItems),
     amount_total: session.amount_total,
-  });
+  };
+  if (typeof shippingAmount === 'number' && !Number.isNaN(shippingAmount)) {
+    (basePayload as any).shipping_amount = shippingAmount;
+  }
 
-  if (error) {
-    throw new Error(`Supabase error: ${error.message}`);
+  // Uložíme objednávku do databáze (s rezervním pokusem bez shipping_amount pokud sloupec neexistuje)
+  let insertError: { message: string } | null = null;
+  {
+    const { error } = await supabaseAdmin.from("orders").insert(basePayload);
+    insertError = error as any;
+  }
+
+  if (insertError) {
+    const msg = insertError.message?.toLowerCase?.() || '';
+    const colMissing = msg.includes('column') && msg.includes('shipping_amount');
+    if (colMissing) {
+      try {
+        const fallbackPayload = { ...basePayload } as any;
+        delete fallbackPayload.shipping_amount;
+        const { error: retryError } = await supabaseAdmin.from("orders").insert(fallbackPayload);
+        if (retryError) {
+          throw new Error(`Supabase error (retry): ${retryError.message}`);
+        }
+      } catch (e: any) {
+        throw new Error(`Supabase error: ${e?.message || e}`);
+      }
+    } else {
+      throw new Error(`Supabase error: ${insertError.message}`);
+    }
   }
 
   console.log("✅ Order saved:", session.id);
