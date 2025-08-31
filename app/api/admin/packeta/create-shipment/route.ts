@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
     let xmlBody: string;
     
     if (isHomeDelivery) {
-      // Home delivery XML structure
+      // Home delivery XML structure - omit value parameter to avoid insurance issues
       xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
   <apiPassword>${xmlEscape(PACKETA_API_PASSWORD)}</apiPassword>
@@ -216,7 +216,6 @@ export async function POST(req: NextRequest) {
     <city>${xmlEscape(order.delivery_city?.trim() || '')}</city>
     <zip>${xmlEscape(formattedPostalCode)}</zip>
     <cod>${xmlEscape(String(finalCOD))}</cod>
-    <value>${xmlEscape(String(finalValue))}</value>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <eshop>${xmlEscape(eshopId)}</eshop>
   </packetAttributes>
