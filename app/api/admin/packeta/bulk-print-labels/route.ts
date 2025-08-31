@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No order IDs provided" }, { status: 400 });
   }
 
+  // Check if direct PDF return is requested
+  const url = new URL(req.url);
+  const isDirect = url.searchParams.get('direct') === 'true';
+  console.log(`📄 Direct PDF mode: ${isDirect}`);
+
   try {
     // Get orders with Packeta shipment IDs
     const { data: orders, error: orderError } = await supabaseAdmin
@@ -253,6 +258,17 @@ ${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
     }
 
     const fileName = `packeta-labels-bulk-${ordersWithShipments.length}-labels.pdf`;
+
+    // If direct mode is requested, return PDF immediately without storing
+    if (isDirect) {
+      console.log('📄 Returning PDF directly (direct mode)');
+      return new NextResponse(finalPdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="${fileName}"`,
+        },
+      });
+    }
 
     // Upload PDF to Supabase storage bucket
     console.log(`📤 Uploading bulk PDF to storage: ${fileName}`);
