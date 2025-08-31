@@ -64,12 +64,22 @@ export async function POST(request: NextRequest) {
       if (fullName) customerParams.append('name', fullName);
       if (formData.phone) customerParams.append('phone', formData.phone);
       if (deliveryMethod === 'home_delivery' && formData.address && formData.city && formData.postalCode) {
+        // Uložíme adresu jako "billing" (customer.address)
         customerParams.append('address[line1]', formData.address);
         customerParams.append('address[city]', formData.city);
         customerParams.append('address[postal_code]', formData.postalCode);
-        // Pokud víme, přidáme i zemi – Stripe očekává ISO kód
         customerParams.append('address[country]', 'CZ');
+
+        // A také jako shipping, což Stripe často používá k předvyplnění
+        customerParams.append('shipping[name]', fullName || '');
+        customerParams.append('shipping[address][line1]', formData.address);
+        customerParams.append('shipping[address][city]', formData.city);
+        customerParams.append('shipping[address][postal_code]', formData.postalCode);
+        customerParams.append('shipping[address][country]', 'CZ');
       }
+
+      // Preferované jazyky pro zákazníka (pomáhá lokalizaci)
+      customerParams.append('preferred_locales[0]', 'cs');
 
       const customerRes = await fetch('https://api.stripe.com/v1/customers', {
         method: 'POST',
@@ -110,7 +120,8 @@ export async function POST(request: NextRequest) {
       // Fallback
       params.append('customer_email', formData.email);
     }
-    params.append('billing_address_collection', deliveryMethod === 'home_delivery' ? 'required' : 'auto');
+    // Nevyžadujeme fakturační adresu - použijeme 'auto', aby Stripe vyžádal adresu jen pokud je nutná
+    params.append('billing_address_collection', 'auto');
     params.append('phone_number_collection[enabled]', 'true');
     params.append('locale', 'cs');
     params.append('currency', 'czk');
