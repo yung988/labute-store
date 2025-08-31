@@ -41,7 +41,7 @@ Modern e-commerce platform built with Next.js, Supabase, and React Email.
    
    # Email (Resend)
    RESEND_API_KEY=your_resend_api_key
-   FROM_EMAIL=info@yeezuz2020.com
+   FROM_EMAIL=info@yeezuz2020.store
    
    # Stripe (optional)
    STRIPE_SECRET_KEY=your_stripe_secret_key

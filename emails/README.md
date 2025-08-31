@@ -47,7 +47,7 @@ Všechny šablony používají jednotný design systém definovaný v `theme.ts`
 ```bash
 # V .env.local
 RESEND_API_KEY=your_resend_api_key
-FROM_EMAIL=info@yeezuz2020.com  # volitelné, použije se BRAND.supportEmail
+FROM_EMAIL=info@yeezuz2020.store  # volitelné, použije se BRAND.supportEmail
 ```
 
 ### 2. Import a použití
@@ -60,7 +60,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Odeslání emailu
 await resend.emails.send({
-  from: 'YEEZUZ2020 <info@yeezuz2020.com>',
+  from: 'YEEZUZ2020 <info@yeezuz2020.store>',
   to: 'customer@example.com',
   subject: 'Potvrzení objednávky',
   react: OrderConfirmation({
@@ -236,7 +236,7 @@ export async function POST(request: Request) {
   
   // Odeslání potvrzovacího emailu
   await resend.emails.send({
-    from: 'YEEZUZ2020 <info@yeezuz2020.com>',
+    from: 'YEEZUZ2020 <info@yeezuz2020.store>',
     to: order.customerEmail,
     subject: `Potvrzení objednávky ${order.id}`,
     react: OrderConfirmation({

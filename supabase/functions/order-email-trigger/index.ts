@@ -129,7 +129,7 @@ async function sendEmail({ to, subject, html }: { to: string, subject: string, h
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'YEEZUZ2020 Store <noreply@yeezuz2020.store>',
+      from: 'YEEZUZ2020 <noreply@yeezuz2020.store>',
       to: [to],
       subject: subject,
       html: html,
@@ -233,7 +233,7 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
         <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
           <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
             YEEZUZ2020 Store<br>
-            Pro jakékoliv dotazy: yeezuz332@gmail.com
+            Pro jakékoliv dotazy: info@yeezuz2020.store
           </p>
         </div>
 
@@ -298,7 +298,7 @@ function generateStatusUpdateEmail(order: OrderRecord, oldStatus: string, status
         <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
           <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
             YEEZUZ2020 Store<br>
-            Pro jakékoliv dotazy: yeezuz332@gmail.com
+            Pro jakékoliv dotazy: info@yeezuz2020.store
           </p>
         </div>
 
@@ -375,7 +375,7 @@ function generateShippingEmail(order: OrderRecord): string {
         <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
           <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
             YEEZUZ2020 Store<br>
-            Pro jakékoliv dotazy: yeezuz332@gmail.com
+            Pro jakékoliv dotazy: info@yeezuz2020.store
           </p>
         </div>
 
