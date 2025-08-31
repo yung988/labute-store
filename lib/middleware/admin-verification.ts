@@ -9,7 +9,7 @@ import { hasEnvVars } from "../utils";
 export interface AdminUser {
   id: string;
   email: string;
-  role: 'admin';
+  role: 'admin' | 'superadmin';
   user_metadata?: Record<string, any>;
   app_metadata?: Record<string, any>;
 }
@@ -21,9 +21,11 @@ export function isAdminUser(user: unknown): user is AdminUser {
     typeof u === 'object' &&
     typeof u.id === 'string' &&
     typeof u.email === 'string' &&
-    (u.role === 'admin' ||
+    (u.role === 'admin' || u.role === 'superadmin' ||
      (u.user_metadata as Record<string, unknown>)?.role === 'admin' ||
-     (u.app_metadata as Record<string, unknown>)?.role === 'admin')
+     (u.user_metadata as Record<string, unknown>)?.role === 'superadmin' ||
+     (u.app_metadata as Record<string, unknown>)?.role === 'admin' ||
+     (u.app_metadata as Record<string, unknown>)?.role === 'superadmin')
   );
 }
 
@@ -34,8 +36,11 @@ export function verifyAdminRoleFromClaims(claims: unknown): boolean {
   // Check multiple possible locations for admin role
   const roleChecks = [
     c.role === 'admin',
+    c.role === 'superadmin',
     (c.user_metadata as Record<string, unknown>)?.role === 'admin',
-    (c.app_metadata as Record<string, unknown>)?.role === 'admin'
+    (c.user_metadata as Record<string, unknown>)?.role === 'superadmin',
+    (c.app_metadata as Record<string, unknown>)?.role === 'admin',
+    (c.app_metadata as Record<string, unknown>)?.role === 'superadmin'
   ];
 
   return roleChecks.some(check => check === true);

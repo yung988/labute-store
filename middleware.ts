@@ -3,6 +3,11 @@ import { verifyAdminAccess, createAdminRedirect } from "@/lib/middleware/admin-v
 import { type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Debug: Log environment variables availability
+  console.log('Middleware: Checking env vars...');
+  console.log('NEXT_PUBLIC_SUPABASE_URL:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY:', !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY);
+
   // First run the existing session update
   const sessionResponse = await updateSession(request);
 
