@@ -5,6 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import { ConditionalLayout } from "@/components/ConditionalLayout";
 import { ReactLenis } from "lenis/react";
 import "./globals.css";
+import { PostHogProvider } from "@/components/PostHogProvider";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -33,20 +34,22 @@ export default function RootLayout({
         <meta name="color-scheme" content="light" />
       </head>
       <body className={`${geistSans.className} antialiased`}>
-        <ReactLenis root>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            disableTransitionOnChange
-          >
-            <CartProvider>
-              <ConditionalLayout>
-                {children}
-              </ConditionalLayout>
-            </CartProvider>
-          </ThemeProvider>
-        </ReactLenis>
+        <PostHogProvider>
+          <ReactLenis root>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              enableSystem={false}
+              disableTransitionOnChange
+            >
+              <CartProvider>
+                <ConditionalLayout>
+                  {children}
+                </ConditionalLayout>
+              </CartProvider>
+            </ThemeProvider>
+          </ReactLenis>
+        </PostHogProvider>
       </body>
     </html>
   );
