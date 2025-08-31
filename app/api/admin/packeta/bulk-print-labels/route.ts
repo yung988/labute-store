@@ -213,12 +213,12 @@ ${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
           } else {
             throw new Error('No base64 decoder available in this runtime');
           }
-          finalPdfBuffer = bytesUint8.buffer.slice(bytesUint8.byteOffset, bytesUint8.byteOffset + bytesUint8.byteLength);
+          finalPdfBuffer = (bytesUint8.buffer as ArrayBuffer).slice(bytesUint8.byteOffset, bytesUint8.byteOffset + bytesUint8.byteLength);
           console.log(`📄 Decoded batch PDF buffer size: ${finalPdfBuffer.byteLength} bytes`);
         } else {
           // Fallback: unexpected content-type, attempt to treat as binary from text
           console.log('📄 Unexpected content-type, attempting to read as binary from text');
-          finalPdfBuffer = new TextEncoder().encode(responseText).buffer;
+          finalPdfBuffer = (new TextEncoder().encode(responseText).buffer as ArrayBuffer);
         }
       }
     } catch (parseError) {
