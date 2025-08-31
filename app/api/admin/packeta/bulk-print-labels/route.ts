@@ -24,7 +24,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { orderIds, format } = await req.json();
+  let orderIds, format;
+  
+  // Handle both JSON and form data
+  const contentType = req.headers.get('content-type');
+  console.log(`📥 Request content-type: ${contentType}`);
+  
+  if (contentType?.includes('application/json')) {
+    const body = await req.json();
+    orderIds = body.orderIds;
+    format = body.format;
+    console.log(`📦 JSON request - orderIds: ${orderIds?.length}, format: ${format}`);
+  } else {
+    // Handle form data (from PacketaManagement.tsx)
+    const formData = await req.formData();
+    const payload = formData.get('payload');
+    console.log(`📦 Form data - payload: ${payload}`);
+    if (payload) {
+      const parsedPayload = JSON.parse(payload as string);
+      orderIds = parsedPayload.orderIds;
+      format = parsedPayload.format;
+      console.log(`📦 Parsed form data - orderIds: ${orderIds?.length}, format: ${format}`);
+    }
+  }
 
   if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
     return NextResponse.json({ error: "No order IDs provided" }, { status: 400 });
