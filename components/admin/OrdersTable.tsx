@@ -5,10 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatOrderId } from "@/lib/product-images";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -76,12 +72,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const [sortBy, setSortBy] = useState<"date" | "amount" | "status">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Advanced filters
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
-  const [amountRange, setAmountRange] = useState<{ min?: number; max?: number }>({});
-  const [deliveryMethod, setDeliveryMethod] = useState<string>("all");
-  const [hasPacketaShipment, setHasPacketaShipment] = useState<boolean | null>(null);
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -156,7 +147,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   useEffect(() => {
     load();
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, load]);
 
   // Real-time updates subscription
   useEffect(() => {
