@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkInventoryAvailability, type CartItemForInventory } from '@/lib/inventory';
 
+import { computeQuoteFromItems, type QuoteItem, type DeliveryMethod } from '@/lib/shipping/packeta';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -8,8 +10,7 @@ export async function POST(request: NextRequest) {
       items,
       deliveryMethod,
       selectedPickupPoint,
-      formData,
-      deliveryPrice
+      formData
     } = body;
 
     // Validace
@@ -41,13 +42,13 @@ export async function POST(request: NextRequest) {
 
     if (inventoryItems.length > 0) {
       const availabilityCheck = await checkInventoryAvailability(inventoryItems);
-      
+
       if (!availabilityCheck.available) {
-        return NextResponse.json({ 
-          error: `Nedostatek zásob: ${availabilityCheck.errors.join(', ')}` 
+        return NextResponse.json({
+          error: `Nedostatek zásob: ${availabilityCheck.errors.join(', ')}`
         }, { status: 400 });
       }
-      
+
       // Logujeme varování o nízkých zásobách
       if (availabilityCheck.warnings.length > 0) {
         console.warn("⚠️ Low stock warnings:", availabilityCheck.warnings);
@@ -159,8 +160,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Shipping as Stripe shipping_options (not as product line item)
-    const shippingAmountCents = Math.round(deliveryPrice * 100);
+    // Shipping as Stripe shipping_options (server-authoritative)
+    const quoteItems: QuoteItem[] = items
+      .filter((it: any) => it.productId && it.quantity)
+      .map((it: any) => ({ productId: it.productId, quantity: it.quantity }));
+
+    const method: DeliveryMethod = deliveryMethod === 'home_delivery' ? 'home_delivery' : 'pickup';
+    const serverQuote = await computeQuoteFromItems(quoteItems, method);
+    const shippingAmountCents = Math.round(serverQuote.totalCZK * 100);
+
     params.append('shipping_options[0][shipping_rate_data][type]', 'fixed_amount');
     params.append('shipping_options[0][shipping_rate_data][display_name]',
       deliveryMethod === 'pickup' ? 'Zásilkovna - výdejní místo' : 'Zásilkovna - doručení domů');
@@ -203,7 +211,7 @@ export async function POST(request: NextRequest) {
     params.append('metadata[customer_phone]', formData.phone);
     // Uložíme shipping_amount pro případný fallback v DB
     params.append('metadata[shipping_amount]', String(shippingAmountCents));
-    
+
     // Add pickup point ID to metadata as backup
     if (deliveryMethod === 'pickup' && selectedPickupPoint) {
       params.append('metadata[packeta_point_id]', selectedPickupPoint.id);
@@ -230,7 +238,6 @@ export async function POST(request: NextRequest) {
     console.log('Creating Stripe checkout session with params:', {
       itemCount: items.length,
       deliveryMethod,
-      deliveryPrice,
       usingCustomer: !!customerId,
       hasPickupPoint: !!selectedPickupPoint,
       // Log only keys to avoid leaking any sensitive values

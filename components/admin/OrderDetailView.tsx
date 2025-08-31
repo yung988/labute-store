@@ -247,53 +247,21 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
     }
   };
 
-      const printPacketaLabel = async () => {
+      const printPacketaLabel = () => {
         try {
-          // Call the Next.js API route with direct=true to get PDF directly
-          const response = await fetch(`/api/admin/packeta/print-label/${orderId}?direct=true`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          // Check if response is PDF (direct download)
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/pdf')) {
-            // Direct PDF download
-            const pdfBlob = await response.blob();
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
-
-            // Clean up the object URL after a delay
-            setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
+          // Open the API endpoint directly in a new tab (no storage)
+          const url = `/api/admin/packeta/print-label/${orderId}?direct=true`;
+          const win = window.open(url, '_blank');
+          if (!win) {
+            setError("Prohlížeč zablokoval nové okno. Povolte prosím vyskakovací okna.");
           } else {
-            // JSON response with URL
-            const data = await response.json();
-
-            if (data.error) {
-              throw new Error(data.error);
-            }
-
-            if (!data.success || !data.url) {
-              throw new Error("Invalid response from server");
-            }
-
-            // Open the PDF URL in a new tab/window
-            window.open(data.url, '_blank');
+            alert("Štítek byl otevřen!");
           }
-
-         alert("Štítek byl otevřen!");
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to print label");
-        console.error("Print label error:", e);
-      }
-    };
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : "Failed to print label");
+          console.error("Print label error:", e);
+        }
+      };
 
   if (loading && !order) {
     return (

@@ -320,6 +320,18 @@ export async function GET(
       );
     }
 
+    // If direct mode is requested, return PDF immediately without any storage operations
+    if (returnDirect) {
+      console.log("📄 Returning PDF directly (direct mode, no storage)");
+      return new NextResponse(pdfBuffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="packeta-label-${orderId}.pdf"`,
+        },
+      });
+    }
+
+
     // Test if we can create a simple text file first
     const testFileName = `test-${orderId}.txt`;
     const testContent = `Test file for order ${orderId} at ${new Date().toISOString()}`;

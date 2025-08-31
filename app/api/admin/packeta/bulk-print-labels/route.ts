@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { PDFDocument } from 'pdf-lib';
+
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -25,11 +27,11 @@ export async function POST(req: NextRequest) {
   }
 
   let orderIds, format;
-  
+
   // Handle both JSON and form data
   const contentType = req.headers.get('content-type');
   console.log(`📥 Request content-type: ${contentType}`);
-  
+
   if (contentType?.includes('application/json')) {
     const body = await req.json();
     orderIds = body.orderIds;
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ordersWithShipments = orders.filter(order => order.packeta_shipment_id);
-    
+
     if (ordersWithShipments.length === 0) {
       return NextResponse.json({ error: "No orders with Packeta shipments found" }, { status: 404 });
     }
@@ -83,12 +85,14 @@ export async function POST(req: NextRequest) {
     // Create batch XML request with all packetIds
     const packetIds = ordersWithShipments.map(order => order.packeta_shipment_id);
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
-<packetLabelPdf>
+<packetsLabelsPdf>
   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
-${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
+  <packetIds>
+${packetIds.map(id => `    <id>${id}</id>`).join('\n')}
+  </packetIds>
   <format>${finalFormat}</format>
   <offset>0</offset>
-</packetLabelPdf>`;
+</packetsLabelsPdf>`;
 
     console.log(`📡 Sending batch request to Packeta API with ${packetIds.length} packets:`, {
       packetIds,
@@ -205,6 +209,9 @@ ${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
       } else {
         const responseText = await labelResponse.text();
         console.log(`📄 Packeta batch response received, size: ${responseText.length} bytes`);
+        console.log(`📄 Response content-type: ${contentType}`);
+        console.log(`📄 Response status: ${labelResponse.status}`);
+        console.log(`📄 Response text preview: ${responseText.substring(0, 200)}...`);
 
         // Debug: Check if response is empty
         if (!responseText || responseText.trim() === '') {
@@ -243,9 +250,58 @@ ${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
           finalPdfBuffer = (bytesUint8.buffer as ArrayBuffer).slice(bytesUint8.byteOffset, bytesUint8.byteOffset + bytesUint8.byteLength);
           console.log(`📄 Decoded batch PDF buffer size: ${finalPdfBuffer.byteLength} bytes`);
         } else {
-          // Fallback: unexpected content-type, attempt to treat as binary from text
-          console.log('📄 Unexpected content-type, attempting to read as binary from text');
-          finalPdfBuffer = (new TextEncoder().encode(responseText).buffer as ArrayBuffer);
+          // XML but no <result> base64 payload. Check for Packeta fault and fallback.
+          const isFault = responseText.includes('<status>fault');
+          if (isFault) {
+            console.warn('⚠️ Packeta batch returned fault. Falling back to per-label merge.');
+            const origin = new URL(req.url).origin;
+            const mergedPdf = await PDFDocument.create();
+
+            for (const order of ordersWithShipments) {
+              try {
+                const singleUrl = `${origin}/api/admin/packeta/print-label/${order.id}?direct=true`;
+                const res = await fetch(singleUrl);
+                if (!res.ok) {
+                  console.warn(`⚠️ Single label fetch failed for ${order.id}: ${res.status}`);
+                  continue;
+                }
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/pdf')) {
+                  console.warn(`⚠️ Single label not PDF for ${order.id}, content-type: ${ct}`);
+                  continue;
+                }
+                const bytes = new Uint8Array(await res.arrayBuffer());
+                const srcPdf = await PDFDocument.load(bytes);
+                const pages = await mergedPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+                pages.forEach(p => mergedPdf.addPage(p));
+              } catch (e) {
+                console.warn(`⚠️ Error merging label for ${order.id}`, e);
+              }
+            }
+
+            const mergedBytes = await mergedPdf.save();
+            const fileName = `packeta-labels-merged-${ordersWithShipments.length}.pdf`;
+            return new NextResponse(mergedBytes, {
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="${fileName}"`
+              }
+            });
+          }
+
+          // Not a recognized success or fault response
+          console.log('📄 Unexpected content-type or format for batch response');
+          return NextResponse.json(
+            {
+              error: "Packeta batch API returned unexpected response format",
+              details: {
+                contentType,
+                status: labelResponse.status,
+                responsePreview: responseText.substring(0, 500)
+              }
+            },
+            { status: 502 }
+          );
         }
       }
     } catch (parseError) {

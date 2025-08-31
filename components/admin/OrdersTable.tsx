@@ -186,35 +186,13 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     }
   };
 
-   const printPacketaLabel = async (orderId: string) => {
-     try {
-       // Call the Next.js API route instead of edge function
-       const response = await fetch(`/api/admin/packeta/print-label/${orderId}`, {
-         method: 'GET',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-       });
-
-       if (!response.ok) {
-         const errorData = await response.json().catch(() => ({}));
-         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-       }
-
-       const data = await response.json();
-
-       if (data.error) {
-         throw new Error(data.error);
-       }
-
-       if (!data.success || !data.url) {
-         throw new Error("Invalid response from server");
-       }
-
-       // Open the PDF URL in a new tab/window
-       window.open(data.url, '_blank');
-     } catch (e: unknown) {
-       setError(e instanceof Error ? e.message : "Failed to print label");
+   const printPacketaLabel = (orderId: string) => {
+     // Open PDF directly from API (no storage)
+     const url = `/api/admin/packeta/print-label/${orderId}?direct=true`;
+     console.log(`🔗 Opening direct PDF: ${url}`);
+     const win = window.open(url, '_blank');
+     if (!win) {
+       setError("Prohlížeč zablokoval nové okno. Povolte prosím vyskakovací okna.");
      }
    };
 
