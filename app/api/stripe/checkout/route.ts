@@ -68,17 +68,8 @@ export async function POST(request: NextRequest) {
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
-    // Pro home delivery předvyplníme billing adresu
+    // Pro home delivery zachováme údaje v metadata (pro případné budoucí použití)
     if (deliveryMethod === 'home_delivery' && formData.address && formData.city && formData.postalCode) {
-      // Předvyplníme billing údaje pro Stripe checkout
-      params.append('customer_details[name]', `${formData.firstName} ${formData.lastName}`.trim());
-      params.append('customer_details[phone]', formData.phone);
-      params.append('customer_details[address][line1]', formData.address);
-      params.append('customer_details[address][city]', formData.city);
-      params.append('customer_details[address][postal_code]', formData.postalCode);
-      params.append('customer_details[address][country]', 'CZ');
-
-      // Zachováme také v metadata pro naše účely
       params.append('metadata[billing_address_line1]', formData.address);
       params.append('metadata[billing_address_city]', formData.city);
       params.append('metadata[billing_address_postal_code]', formData.postalCode);
