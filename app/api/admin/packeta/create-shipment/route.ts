@@ -28,11 +28,11 @@ export async function POST(req: NextRequest) {
 
   // Check if it's pickup or home delivery
   const isHomeDelivery = order.delivery_method === 'home_delivery';
-  
+
   if (!isHomeDelivery && !order.packeta_point_id) {
     return NextResponse.json({ error: "No Packeta point selected for this pickup order" }, { status: 400 });
   }
-  
+
   if (isHomeDelivery && (!order.delivery_address || !order.delivery_city || !order.delivery_postal_code)) {
     return NextResponse.json({ error: "Missing delivery address for home delivery order" }, { status: 400 });
   }
@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
        { status: 500 }
      );
    }
+
+    // Home delivery carrier configuration (CZ). Fallback to 106 if not provided.
+    const homeCarrierId = process.env.PACKETA_HOME_CARRIER_ID_CZ || '106';
+
 
   // Calculate total weight from order items (in kg for Packeta API)
   let totalWeightKg = 0.5; // Default 0.5kg fallback
@@ -106,15 +110,15 @@ export async function POST(req: NextRequest) {
 
   // Convert amount from cents to CZK and cap values for Packeta limits
   const amountCZK = Math.floor((order.amount_total || 0) / 100); // Convert cents to CZK
-  
+
   // Different limits for home delivery vs pickup points
   // Home delivery has much lower limits for insurance/COD
   const maxAllowedValue = isHomeDelivery ? 10000 : 50000; // Home delivery: 10k CZK, Pickup: 50k CZK
   const maxAllowedCOD = isHomeDelivery ? 5000 : 50000;    // Home delivery: 5k CZK, Pickup: 50k CZK
-  
+
   const safeValue = Math.min(amountCZK, maxAllowedValue);
   const safeCOD = Math.min(amountCZK, maxAllowedCOD);
-  
+
   // For home delivery: COD=0 (prepaid), but VALUE must be set for insurance
   // Packeta home delivery has very low insurance limits - try 1000 CZK max
   const finalCOD = isHomeDelivery ? 0 : safeCOD;
@@ -125,14 +129,14 @@ export async function POST(req: NextRequest) {
   if (formattedPhone) {
     // Remove all non-digit characters except +
     formattedPhone = formattedPhone.replace(/[^\d+]/g, '');
-    
+
     // If phone doesn't start with +, assume it's Czech number and add +420
     if (!formattedPhone.startsWith('+')) {
       // Remove leading zeros if present
       formattedPhone = formattedPhone.replace(/^0+/, '');
       formattedPhone = `+420${formattedPhone}`;
     }
-    
+
     // Validate Czech phone format (+420xxxxxxxxx)
     if (!formattedPhone.match(/^\+420\d{9}$/)) {
       formattedPhone = "+420000000000"; // Fallback for invalid phones
@@ -143,7 +147,7 @@ export async function POST(req: NextRequest) {
 
   // Use shorter ID for Packeta (last 8 characters of UUID) and ensure it's valid
   const packetaOrderId = orderId.slice(-8);
-  
+
   // Validate and format postal code for home delivery
   let formattedPostalCode = "";
   if (isHomeDelivery && order.delivery_postal_code) {
@@ -153,13 +157,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid postal code format. Must be 5 digits." }, { status: 400 });
     }
   }
-  
+
   // Validate required fields
   const email = order.customer_email || "";
   if (!email || !email.includes('@')) {
     return NextResponse.json({ error: "Valid email address is required" }, { status: 400 });
   }
-  
+
   // Validate delivery address for home delivery
   if (isHomeDelivery) {
     if (!order.delivery_address || order.delivery_address.trim().length < 3) {
@@ -168,7 +172,7 @@ export async function POST(req: NextRequest) {
     if (!order.delivery_city || order.delivery_city.trim().length < 2) {
       return NextResponse.json({ error: "Valid delivery city is required for home delivery" }, { status: 400 });
     }
-    
+
     // Log address details for debugging geolocation issues
     console.log('🏠 Home delivery address validation:', {
       address: order.delivery_address,
@@ -183,11 +187,11 @@ export async function POST(req: NextRequest) {
   const nameParts = customerName.trim().split(' ');
   let firstName = nameParts[0] || "Zákazník";
   let lastName = nameParts.slice(1).join(' ') || firstName;
-  
+
   // Ensure names are not empty and have reasonable length
   firstName = firstName.trim() || "Zákazník";
   lastName = lastName.trim() || firstName;
-  
+
   // Limit name length for Packeta API
   firstName = firstName.substring(0, 50);
   lastName = lastName.substring(0, 50);
@@ -204,19 +208,19 @@ export async function POST(req: NextRequest) {
 
 
     // Use the MD5 hash directly from PACKETA_API_PASSWORD (it's already hashed)
-    
+
     // Build XML request - different structure for pickup vs home delivery
     let xmlBody: string;
-    
+
     if (isHomeDelivery) {
       // Parse street and house number properly for Czech addresses
       // Format: "Ulice číslo" -> street="Ulice", houseNumber="číslo"
       const fullAddress = order.delivery_address?.trim() || '';
       const addressMatch = fullAddress.match(/^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)$/);
-      
+
       let street = '';
       let houseNumber = '';
-      
+
       if (addressMatch) {
         street = addressMatch[1].trim();
         houseNumber = addressMatch[2].trim();
@@ -225,7 +229,7 @@ export async function POST(req: NextRequest) {
         street = fullAddress;
         houseNumber = '';
       }
-      
+
       console.log('🏠 Address parsing for Packeta:', {
         originalAddress: fullAddress,
         parsedStreet: street,
@@ -233,7 +237,7 @@ export async function POST(req: NextRequest) {
         city: order.delivery_city,
         zip: order.delivery_postal_code
       });
-      
+
       // Home delivery XML structure according to official Packeta documentation
       xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <createPacket>
@@ -244,7 +248,8 @@ export async function POST(req: NextRequest) {
     <surname>${xmlEscape(lastName)}</surname>
     <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
-    <addressId>161</addressId>
+    <carrierId>${xmlEscape(homeCarrierId)}</carrierId>
+    <country>CZ</country>
     <cod>${xmlEscape(String(finalCOD))}</cod>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <value>${xmlEscape(String(finalValue))}</value>
@@ -277,7 +282,7 @@ export async function POST(req: NextRequest) {
     }
 
     const xmlApiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
-    
+
     // Debug logging
     console.log('🚀 Creating Packeta shipment:', {
       orderId: packetaOrderId,
@@ -286,7 +291,8 @@ export async function POST(req: NextRequest) {
       lastName,
       email,
       phone: formattedPhone,
-      addressId: isHomeDelivery ? '161' : order.packeta_point_id,
+      carrierId: isHomeDelivery ? homeCarrierId : undefined,
+      addressId: isHomeDelivery ? undefined : order.packeta_point_id,
       weight: totalWeightKg,
       cod: finalCOD,
       value: finalValue
@@ -324,7 +330,7 @@ export async function POST(req: NextRequest) {
         if (attempt < MAX_RETRIES) {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         }
-       
+
 
 
      } catch (error) {
@@ -389,12 +395,12 @@ export async function POST(req: NextRequest) {
       orderId: packetaOrderId,
       isHomeDelivery
     });
-    
+
     // Try to extract more specific error from XML
     const faultMatch = xmlResponse.match(/<fault[^>]*>([^<]+)<\/fault>/i);
     const stringMatch = xmlResponse.match(/<string[^>]*>([^<]+)<\/string>/i);
     const detailMatch = xmlResponse.match(/<detail[^>]*>([\s\S]*?)<\/detail>/i);
-    
+
     let errorMessage = "Invalid Packeta response - missing ID";
     if (faultMatch && stringMatch) {
       errorMessage = `Packeta ${faultMatch[1]}: ${stringMatch[1]}`;
@@ -402,14 +408,14 @@ export async function POST(req: NextRequest) {
     if (detailMatch) {
       errorMessage += `. Details: ${detailMatch[1].substring(0, 200)}`;
     }
-    
+
     return NextResponse.json(
       { error: errorMessage, xmlResponse: xmlResponse.substring(0, 500) },
       { status: 500 }
     );
   }
 
-  // Extract barcode from XML response 
+  // Extract barcode from XML response
   const barcodeMatch = xmlResponse.match(/<barcode[^>]*>([^<]+)<\/barcode>/i);
   const packetaBarcode = barcodeMatch ? barcodeMatch[1] : null;
 
@@ -433,7 +439,7 @@ export async function POST(req: NextRequest) {
   }
 
   const deliveryTypeText = isHomeDelivery ? 'home delivery' : 'pickup point';
-  
+
   return NextResponse.json({
     success: true,
     packetaId: packetaId,
