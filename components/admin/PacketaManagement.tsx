@@ -142,10 +142,7 @@ export default function PacketaManagement() {
        setLoading(true);
        console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
 
-       // For bulk print, we'll call the single label function multiple times
-       // This is simpler than creating a separate bulk function
-       const urls: string[] = [];
-       const errors: string[] = [];
+
 
         // Otevřít přímo endpoint, který vrátí PDF (bez ukládání do bucketu)
         const url = '/api/admin/packeta/bulk-print-labels?direct=true';
