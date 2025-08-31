@@ -48,6 +48,14 @@ export default function CustomerCommunication() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [emailDialog, setEmailDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerDetailView, setCustomerDetailView] = useState<string | null>(null);
+  const [customerOrders, setCustomerOrders] = useState<Array<{
+    id: string;
+    created_at: string;
+    amount_total: number | null;
+    status: string;
+    delivery_method?: string;
+  }>>([]);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const [emailTemplates] = useState<EmailTemplate[]>([
@@ -130,6 +138,23 @@ export default function CustomerCommunication() {
   useEffect(() => {
     loadCustomers();
   }, []);
+
+  const loadCustomerHistory = async (customerEmail: string) => {
+    try {
+      const supabase = createClient();
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_email', customerEmail)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomerOrders(orders || []);
+      setCustomerDetailView(customerEmail);
+    } catch (e) {
+      console.error('Failed to load customer history:', e);
+    }
+  };
 
   const filteredCustomers = useMemo(() => {
     let filtered = customers;
@@ -384,17 +409,27 @@ export default function CustomerCommunication() {
                           </div>
                         </td>
                         <td className="p-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedCustomer(customer);
-                              setEmailDialog(true);
-                            }}
-                          >
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            Kontaktovat
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => loadCustomerHistory(customer.customer_email)}
+                            >
+                              <Users className="w-4 h-4 mr-2" />
+                              Detail
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedCustomer(customer);
+                                setEmailDialog(true);
+                              }}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              Kontakt
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -470,6 +505,107 @@ export default function CustomerCommunication() {
                 {loading ? 'Odesílám...' : 'Odeslat email'}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Detail Dialog */}
+      <Dialog open={!!customerDetailView} onOpenChange={() => setCustomerDetailView(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Detail zákazníka: {customerDetailView}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Customer Summary */}
+            {customerOrders.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Přehled zákazníka</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{customerOrders.length}</div>
+                      <div className="text-sm text-muted-foreground">Objednávek</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {(customerOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / 100).toFixed(0)} Kč
+                      </div>
+                      <div className="text-sm text-muted-foreground">Celková hodnota</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {(customerOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / customerOrders.length / 100).toFixed(0)} Kč
+                      </div>
+                      <div className="text-sm text-muted-foreground">Průměrná objednávka</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">
+                        {new Date(customerOrders[0]?.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Poslední objednávka</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Order History */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Historie objednávek</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {customerOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Žádné objednávky
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {customerOrders.map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex-1">
+                          <div className="font-medium">
+                            Objednávka #{order.id.slice(-8)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(order.created_at).toLocaleString()}
+                          </div>
+                          {order.delivery_method && (
+                            <div className="text-xs text-muted-foreground">
+                              {order.delivery_method === 'pickup' ? 'Výdejní místo' : 'Doručení domů'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="font-semibold">
+                              {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : '-'}
+                            </div>
+                          </div>
+                          <Badge variant={
+                            order.status === 'paid' ? 'default' :
+                            order.status === 'shipped' ? 'secondary' :
+                            order.status === 'cancelled' ? 'destructive' : 'outline'
+                          }>
+                            {order.status === 'paid' && 'Zaplaceno'}
+                            {order.status === 'shipped' && 'Odesláno'}
+                            {order.status === 'cancelled' && 'Zrušeno'}
+                            {order.status === 'processing' && 'Zpracovává se'}
+                            {!['paid', 'shipped', 'cancelled', 'processing'].includes(order.status) && order.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </DialogContent>
       </Dialog>

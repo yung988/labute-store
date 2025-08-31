@@ -239,7 +239,7 @@ export default function AdminPage() {
         {/* Content - SCROLLABLE AREA */}
         <div className="p-6 overflow-auto">
           {currentSection === 'dashboard' && (
-            <Dashboard />
+            <Dashboard onNavigateAction={navigateToSection} />
           )}
 
           {currentSection === 'orders' && (

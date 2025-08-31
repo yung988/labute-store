@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Package, TrendingDown, RefreshCw } from "lucide-react";
 import { Product } from "@/types/products";
 
 type ProductWithStock = Product & {
@@ -51,9 +54,116 @@ export default function InventoryTable() {
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">Error: {error}</div>;
 
+  // Calculate alerts
+  const lowStockItems = products.flatMap(product => 
+    product.skus?.filter(sku => sku.stock <= 5 && sku.stock > 0).map(sku => ({
+      ...sku,
+      productName: product.name,
+      productId: product.id
+    })) || []
+  );
+
+  const outOfStockItems = products.flatMap(product => 
+    product.skus?.filter(sku => sku.stock === 0).map(sku => ({
+      ...sku,
+      productName: product.name,
+      productId: product.id
+    })) || []
+  );
+
+  const totalProducts = products.length;
+  const totalVariants = products.reduce((sum, p) => sum + (p.skus?.length || 0), 0);
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="overflow-auto">
+      {/* Header with stats */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold">Správa skladem</h2>
+          <p className="text-muted-foreground">
+            {totalProducts} produktů, {totalVariants} variant
+          </p>
+        </div>
+        <Button onClick={load} variant="outline" disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Obnovit
+        </Button>
+      </div>
+
+      {/* Alerts */}
+      {(lowStockItems.length > 0 || outOfStockItems.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {outOfStockItems.length > 0 && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-red-800 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Vyprodané položky
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-900 mb-2">
+                  {outOfStockItems.length}
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {outOfStockItems.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="text-sm text-red-700">
+                      {item.productName} - {item.size}
+                    </div>
+                  ))}
+                  {outOfStockItems.length > 5 && (
+                    <div className="text-sm text-red-600">
+                      ... a {outOfStockItems.length - 5} dalších
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {lowStockItems.length > 0 && (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-orange-800 flex items-center gap-2">
+                  <TrendingDown className="w-5 h-5" />
+                  Nízké zásoby
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-900 mb-2">
+                  {lowStockItems.length}
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {lowStockItems.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="text-sm text-orange-700 flex justify-between">
+                      <span>{item.productName} - {item.size}</span>
+                      <Badge variant="outline" className="text-orange-800 border-orange-300">
+                        {item.stock} ks
+                      </Badge>
+                    </div>
+                  ))}
+                  {lowStockItems.length > 5 && (
+                    <div className="text-sm text-orange-600">
+                      ... a {lowStockItems.length - 5} dalších
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Inventory table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Skladové zásoby
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
         <table className="min-w-full border text-sm">
           <thead className="bg-muted">
             <tr>
@@ -126,13 +236,15 @@ export default function InventoryTable() {
             )}
           </tbody>
         </table>
+        
+        {products.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            No products found
+          </div>
+        )}
       </div>
-      
-      {products.length === 0 && (
-        <div className="text-center text-muted-foreground py-8">
-          No products found
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

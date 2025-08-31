@@ -59,6 +59,16 @@ type TimelineEvent = {
   icon: React.ReactNode;
 };
 
+type Communication = {
+  id: string;
+  timestamp: string;
+  type: string;
+  title: string;
+  description: string;
+  icon: string;
+  automated: boolean;
+};
+
 
 
 interface OrderDetailViewProps {
@@ -69,6 +79,7 @@ interface OrderDetailViewProps {
 export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProps) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -121,6 +132,17 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       }
 
       setTimeline(timelineEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+
+      // Load communications
+      try {
+        const commRes = await fetch(`/api/admin/orders/${orderId}/communications`);
+        if (commRes.ok) {
+          const commData = await commRes.json();
+          setCommunications(commData.communications || []);
+        }
+      } catch {
+        // Ignore communication errors for now
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load order");
     } finally {
@@ -765,15 +787,48 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
           </Card>
 
           {/* Timeline */}
-          {timeline.length > 0 && (
+          {(timeline.length > 0 || communications.length > 0) && (
             <Card>
               <CardHeader>
-                <CardTitle>Historie</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Historie a komunikace
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  {/* Communications */}
+                  {communications.map((comm) => (
+                    <div key={comm.id} className="flex gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        comm.automated ? 'bg-blue-100' : 'bg-green-100'
+                      }`}>
+                        {comm.icon === 'shopping-cart' && <Package className="w-4 h-4 text-blue-600" />}
+                        {comm.icon === 'check-circle' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                        {comm.icon === 'truck' && <Truck className="w-4 h-4 text-blue-600" />}
+                        {comm.icon === 'package' && <Package className="w-4 h-4 text-blue-600" />}
+                        {comm.icon === 'message-circle' && <Mail className="w-4 h-4 text-green-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{comm.title}</p>
+                          {comm.automated && (
+                            <Badge variant="outline" className="text-xs">
+                              Automatické
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{comm.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(comm.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Legacy timeline events */}
                   {timeline.map((event, idx) => (
-                    <div key={idx} className="flex gap-3">
+                    <div key={`timeline-${idx}`} className="flex gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         {event.icon}
                       </div>
@@ -786,6 +841,12 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                       </div>
                     </div>
                   ))}
+                  
+                  {communications.length === 0 && timeline.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Žádná historie komunikace
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
