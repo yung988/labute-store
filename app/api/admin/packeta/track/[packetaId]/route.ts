@@ -164,7 +164,7 @@ export async function GET(
       estimatedDelivery: null,
       deliveredAt: null,
       lastUpdate: new Date().toISOString(),
-      trackingUrl: `https://www.zasilkovna.cz/sledovani/${packetaId}`,
+      trackingUrl: `https://tracking.packeta.com/cs/${packetaId.startsWith('Z') ? packetaId : 'Z' + packetaId}`,
       trackingHistory: [],
       rawResponse: packetData.raw_xml
     };

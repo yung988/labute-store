@@ -108,9 +108,10 @@ export default function OrderStatusEmail({
                   Číslo zásilky: <strong>{packetaId}</strong>
                 </Text>
                 <Text style={{ margin: '5px 0 0 0', color: '#666' }}>
-                  Zásilku můžete sledovat na: 
-                  <a href={`https://www.zasilkovna.cz/sledovani/${packetaId}`} style={{ color: '#1976d2' }}>
-                    {` zasilkovna.cz/sledovani/${packetaId}`}
+                  Zásilku můžete sledovat na:
+                  <a href={`https://tracking.packeta.com/cs/${packetaId?.toString().startsWith('Z') ? packetaId : 'Z' + packetaId}`}
+                     style={{ color: '#1976d2' }}>
+                    {` tracking.packeta.com/cs/${packetaId?.toString().startsWith('Z') ? packetaId : 'Z' + packetaId}`}
                   </a>
                 </Text>
               </Section>

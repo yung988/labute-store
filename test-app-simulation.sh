@@ -73,7 +73,7 @@ if [[ $STATUS == "200" ]]; then
     echo "✅ Úspěch!"
     echo "   Packeta ID: $PACKET_ID"
     echo "   Barcode: $BARCODE"
-    echo "   Tracking URL: https://www.zasilkovna.cz/sledovani/$PACKET_ID"
+    echo "   Tracking URL: https://tracking.packeta.com/cs/Z$PACKET_ID"
   else
     echo "⚠️  API vrátilo 200, ale žádné ID"
   fi

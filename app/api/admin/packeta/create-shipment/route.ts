@@ -419,7 +419,7 @@ export async function POST(req: NextRequest) {
 
   // Generate tracking ID with Z prefix for customer tracking
   const trackingId = `Z${packetaId}`;
-  const trackingUrl = `https://www.zasilkovna.cz/sledovani/${trackingId}`;
+  const trackingUrl = `https://tracking.packeta.com/cs/${trackingId}`;
 
   // Update order with Packeta data
   const { error: updateError } = await supabaseAdmin

@@ -55,7 +55,7 @@ if [[ $STATUS == "200" && $BODY == *"<id>"* ]]; then
   echo "✅ ÚSPĚCH!"
   echo "   Packeta ID: $PACKET_ID"
   echo "   Barcode: $BARCODE"
-  echo "   Tracking: https://www.zasilkovna.cz/sledovani/$PACKET_ID"
+  echo "   Tracking: https://tracking.packeta.com/cs/Z$PACKET_ID"
 else
   echo "❌ Stále problém"
 fi

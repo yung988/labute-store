@@ -39,8 +39,8 @@ export async function GET(
       statusText: statusTexts[order.status] || order.status,
       lastUpdate: order.updated_at,
       packetaId: order.packeta_shipment_id,
-      trackingUrl: order.packeta_tracking_url || (order.packeta_shipment_id 
-        ? `https://www.zasilkovna.cz/sledovani/Z${order.packeta_shipment_id}` 
+      trackingUrl: order.packeta_tracking_url || (order.packeta_shipment_id
+        ? `https://tracking.packeta.com/cs/Z${order.packeta_shipment_id}`
         : undefined)
     };
 
