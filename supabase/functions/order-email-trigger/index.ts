@@ -150,14 +150,14 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
   const items = Array.isArray(order.items) ? order.items : [];
   const itemsHtml = items.map(item => `
     <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">
-        ${item.name || item.product_name || 'Produkt'}
-        ${item.size ? ` (velikost: ${item.size})` : ''}
+      <td style="padding: 16px 0; border-bottom: 1px solid #000; font-size: 14px;">
+        <div style="font-weight: 500;">${item.name || item.product_name || 'Produkt'}</div>
+        ${item.size ? `<div style="color: #666; font-size: 12px; margin-top: 4px;">Velikost: ${item.size}</div>` : ''}
       </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${item.quantity || 1}x
+      <td style="padding: 16px 0; border-bottom: 1px solid #000; text-align: center; font-size: 14px;">
+        ${item.quantity || 1}
       </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
+      <td style="padding: 16px 0; border-bottom: 1px solid #000; text-align: right; font-size: 14px; font-weight: 500;">
         ${formatPrice(item.price_cents || 0)} Kč
       </td>
     </tr>
@@ -169,49 +169,74 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
     <head>
       <meta charset="utf-8">
       <title>Potvrzení objednávky</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #000; text-align: center;">YEEZUZ2020 STORE</h1>
+    <body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #000;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
 
-        <h2>Děkujeme za vaši objednávku!</h2>
-
-        <p>Ahoj ${order.customer_name || 'zákazníče'},</p>
-        <p>Vaše objednávka #${order.id.slice(-8)} byla úspěšně přijata a bude zpracována.</p>
-
-        <h3>Detaily objednávky:</h3>
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-          <thead>
-            <tr style="background-color: #f5f5f5;">
-              <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Produkt</th>
-              <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Množství</th>
-              <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Cena</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-            <tr style="font-weight: bold; background-color: #f9f9f9;">
-              <td colspan="2" style="padding: 15px; border-top: 2px solid #ddd;">Celkem:</td>
-              <td style="padding: 15px; text-align: right; border-top: 2px solid #ddd;">
-                ${formatPrice(order.amount_total)} Kč
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0; border-radius: 5px;">
-          <p><strong>Stav objednávky:</strong> ${getStatusText(order.status)}</p>
-          <p><strong>Email:</strong> ${order.customer_email}</p>
-          <p><strong>Datum:</strong> ${new Date(order.created_at).toLocaleDateString('cs-CZ')}</p>
+        <!-- Header -->
+        <div style="text-align: center; padding: 40px 20px; border-bottom: 1px solid #000;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; color: #000;">YEEZUZ2020</h1>
         </div>
 
-        <p>Jakmile bude vaše objednávka expedována, pošleme vám sledovací číslo.</p>
+        <!-- Content -->
+        <div style="padding: 40px 20px;">
 
-        <hr style="margin: 30px 0;">
-        <p style="text-align: center; color: #666; font-size: 14px;">
-          YEEZUZ2020 Store<br>
-          Pro jakékoliv dotazy nás kontaktujte na yeezuz332@gmail.com
-        </p>
+          <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 400; color: #000;">Děkujeme za vaši objednávku</h2>
+
+          <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Ahoj ${order.customer_name || 'zákazníče'},
+          </p>
+
+          <p style="margin: 0 0 32px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Vaše objednávka <strong>#${order.id.slice(-8)}</strong> byla úspěšně přijata a bude zpracována.
+          </p>
+
+          <!-- Order Details -->
+          <div style="margin: 32px 0;">
+            <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 400; color: #000;">Detaily objednávky</h3>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 0;">
+              <thead>
+                <tr>
+                  <th style="padding: 16px 0; border-bottom: 2px solid #000; text-align: left; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Produkt</th>
+                  <th style="padding: 16px 0; border-bottom: 2px solid #000; text-align: center; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Počet</th>
+                  <th style="padding: 16px 0; border-bottom: 2px solid #000; text-align: right; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Cena</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+                <tr>
+                  <td colspan="2" style="padding: 24px 0 16px 0; border-top: 2px solid #000; font-size: 16px; font-weight: 500;">Celkem</td>
+                  <td style="padding: 24px 0 16px 0; border-top: 2px solid #000; text-align: right; font-size: 16px; font-weight: 500;">
+                    ${formatPrice(order.amount_total)} Kč
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Order Info -->
+          <div style="margin: 32px 0; padding: 20px; border: 1px solid #000;">
+            <div style="margin: 0 0 8px 0; font-size: 14px;"><strong>Stav:</strong> ${getStatusText(order.status)}</div>
+            <div style="margin: 0 0 8px 0; font-size: 14px;"><strong>Email:</strong> ${order.customer_email}</div>
+            <div style="margin: 0; font-size: 14px;"><strong>Datum:</strong> ${new Date(order.created_at).toLocaleDateString('cs-CZ')}</div>
+          </div>
+
+          <p style="margin: 32px 0 0 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Jakmile bude vaše objednávka expedována, pošleme vám sledovací číslo.
+          </p>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
+          <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
+            YEEZUZ2020 Store<br>
+            Pro jakékoliv dotazy: yeezuz332@gmail.com
+          </p>
+        </div>
+
       </div>
     </body>
     </html>
@@ -225,35 +250,58 @@ function generateStatusUpdateEmail(order: OrderRecord, oldStatus: string, status
     <head>
       <meta charset="utf-8">
       <title>Změna stavu objednávky</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #000; text-align: center;">YEEZUZ2020 STORE</h1>
+    <body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #000;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
 
-        <h2>Změna stavu objednávky</h2>
-
-        <p>Ahoj ${order.customer_name || 'zákazníče'},</p>
-        <p>Stav vaší objednávky #${order.id.slice(-8)} se změnil.</p>
-
-        <div style="background-color: #e8f4f8; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 5px solid #007cba;">
-          <p style="margin: 0;"><strong>Předchozí stav:</strong> ${statusMessages[oldStatus] || oldStatus}</p>
-          <p style="margin: 10px 0 0 0;"><strong>Nový stav:</strong> ${statusMessages[order.status] || order.status}</p>
+        <!-- Header -->
+        <div style="text-align: center; padding: 40px 20px; border-bottom: 1px solid #000;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; color: #000;">YEEZUZ2020</h1>
         </div>
 
-        ${order.packeta_tracking_url ? `
-          <div style="background-color: #f0f8e8; padding: 15px; margin: 20px 0; border-radius: 5px;">
-            <p><strong>Sledování zásilky:</strong></p>
-            <a href="${order.packeta_tracking_url}" style="color: #007cba; text-decoration: none;">
-              ${order.packeta_tracking_url}
-            </a>
-          </div>
-        ` : ''}
+        <!-- Content -->
+        <div style="padding: 40px 20px;">
 
-        <hr style="margin: 30px 0;">
-        <p style="text-align: center; color: #666; font-size: 14px;">
-          YEEZUZ2020 Store<br>
-          Pro jakékoliv dotazy nás kontaktujte na yeezuz332@gmail.com
-        </p>
+          <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 400; color: #000;">Změna stavu objednávky</h2>
+
+          <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Ahoj ${order.customer_name || 'zákazníče'},
+          </p>
+
+          <p style="margin: 0 0 32px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Stav vaší objednávky <strong>#${order.id.slice(-8)}</strong> se změnil.
+          </p>
+
+          <!-- Status Change -->
+          <div style="border: 1px solid #000; padding: 20px; margin: 32px 0;">
+            <div style="margin: 0 0 12px 0; font-size: 14px;">
+              <strong>Předchozí stav:</strong> ${statusMessages[oldStatus] || oldStatus}
+            </div>
+            <div style="margin: 0; font-size: 14px;">
+              <strong>Nový stav:</strong> ${statusMessages[order.status] || order.status}
+            </div>
+          </div>
+
+          ${order.packeta_tracking_url ? `
+            <div style="border: 1px solid #000; padding: 20px; margin: 32px 0;">
+              <div style="margin: 0 0 12px 0; font-size: 14px; font-weight: 500;">Sledování zásilky</div>
+              <a href="${order.packeta_tracking_url}" style="color: #000; text-decoration: underline; font-size: 14px; word-break: break-all;">
+                ${order.packeta_tracking_url}
+              </a>
+            </div>
+          ` : ''}
+
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
+          <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
+            YEEZUZ2020 Store<br>
+            Pro jakékoliv dotazy: yeezuz332@gmail.com
+          </p>
+        </div>
+
       </div>
     </body>
     </html>
@@ -267,39 +315,70 @@ function generateShippingEmail(order: OrderRecord): string {
     <head>
       <meta charset="utf-8">
       <title>Objednávka odeslána</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #000; text-align: center;">YEEZUZ2020 STORE</h1>
+    <body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #000;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
 
-        <h2>📦 Vaše objednávka byla odeslána!</h2>
-
-        <p>Ahoj ${order.customer_name || 'zákazníče'},</p>
-        <p>Skvělé zprávy! Vaše objednávka #${order.id.slice(-8)} byla odeslána a je na cestě k vám.</p>
-
-        <div style="background-color: #e8f5e8; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 5px solid #28a745;">
-          <h3 style="margin-top: 0;">Sledování zásilky</h3>
-          <p>Vaši zásilku můžete sledovat pomocí odkazu níže:</p>
-          <a href="${order.packeta_tracking_url}"
-             style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px;
-                    text-decoration: none; border-radius: 5px; font-weight: bold;">
-            Sledovat zásilku
-          </a>
-          ${order.packeta_shipment_id ? `<p style="margin-top: 15px; font-size: 14px; color: #666;">
-            Číslo zásilky: ${order.packeta_shipment_id}
-          </p>` : ''}
+        <!-- Header -->
+        <div style="text-align: center; padding: 40px 20px; border-bottom: 1px solid #000;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 300; letter-spacing: 2px; color: #000;">YEEZUZ2020</h1>
         </div>
 
-        <div style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ffeaa7;">
-          <p style="margin: 0;"><strong>💡 Tip:</strong> Zásilka obvykle dorazí do 1-3 pracovních dnů.
-          O příchodu na výdejní místo budete informováni SMS zprávou.</p>
+        <!-- Content -->
+        <div style="padding: 40px 20px;">
+
+          <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 400; color: #000;">Vaše objednávka byla odeslána</h2>
+
+          <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Ahoj ${order.customer_name || 'zákazníče'},
+          </p>
+
+          <p style="margin: 0 0 32px 0; font-size: 14px; line-height: 1.6; color: #000;">
+            Skvělé zprávy! Vaše objednávka <strong>#${order.id.slice(-8)}</strong> byla odeslána a je na cestě k vám.
+          </p>
+
+          <!-- Tracking Section -->
+          <div style="border: 1px solid #000; padding: 24px; margin: 32px 0; text-align: center;">
+            <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 400; color: #000;">Sledování zásilky</h3>
+
+            <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #000;">
+              Vaši zásilku můžete sledovat pomocí odkazu níže:
+            </p>
+
+            <a href="${order.packeta_tracking_url}"
+               style="display: inline-block; background-color: #000; color: #fff; padding: 12px 32px;
+                      text-decoration: none; font-size: 14px; font-weight: 500;
+                      letter-spacing: 1px; text-transform: uppercase;
+                      transition: all 0.2s ease;">
+              Sledovat zásilku
+            </a>
+
+            ${order.packeta_shipment_id ? `
+              <p style="margin: 20px 0 0 0; font-size: 12px; color: #666;">
+                Číslo zásilky: <strong>${order.packeta_shipment_id}</strong>
+              </p>
+            ` : ''}
+          </div>
+
+          <!-- Info Box -->
+          <div style="border: 1px solid #000; padding: 20px; margin: 32px 0;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #000;">
+              <strong>Informace o doručení:</strong><br>
+              Zásilka obvykle dorazí do 1-3 pracovních dnů. O příchodu na výdejní místo budete informováni SMS zprávou.
+            </p>
+          </div>
+
         </div>
 
-        <hr style="margin: 30px 0;">
-        <p style="text-align: center; color: #666; font-size: 14px;">
-          YEEZUZ2020 Store<br>
-          Pro jakékoliv dotazy nás kontaktujte na yeezuz332@gmail.com
-        </p>
+        <!-- Footer -->
+        <div style="padding: 40px 20px; border-top: 1px solid #000; text-align: center;">
+          <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
+            YEEZUZ2020 Store<br>
+            Pro jakékoliv dotazy: yeezuz332@gmail.com
+          </p>
+        </div>
+
       </div>
     </body>
     </html>
