@@ -305,7 +305,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     }
   };
 
-  const statuses = ["new", "paid", "processing", "shipped", "cancelled", "refunded"];
+  const statuses = useMemo(() => ["new", "paid", "processing", "shipped", "cancelled", "refunded"], []);
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: orders.length };
     statuses.forEach(status => {

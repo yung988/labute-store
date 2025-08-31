@@ -211,14 +211,14 @@ export default function CustomerCommunication() {
     }
   };
 
-  const statuses = ["new", "paid", "processing", "shipped", "cancelled", "refunded"];
   const statusCounts = useMemo(() => {
+    const statuses = ["new", "paid", "processing", "shipped", "cancelled", "refunded"];
     const counts: Record<string, number> = { all: customers.length };
     statuses.forEach(status => {
       counts[status] = customers.filter(c => c.status === status).length;
     });
     return counts;
-  }, [customers, statuses]);
+  }, [customers]);
 
   if (loading && customers.length === 0) {
     return (

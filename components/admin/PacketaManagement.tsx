@@ -309,14 +309,14 @@ export default function PacketaManagement() {
     }
   };
 
-  const statuses = ["paid", "processing", "shipped", "cancelled"];
   const statusCounts = useMemo(() => {
+    const statuses = ["paid", "processing", "shipped", "cancelled"];
     const counts: Record<string, number> = { all: shipments.length };
     statuses.forEach(status => {
       counts[status] = shipments.filter(s => s.status === status).length;
     });
     return counts;
-  }, [shipments, statuses]);
+  }, [shipments]);
 
   if (loading && shipments.length === 0) {
     return (

@@ -168,14 +168,14 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     amount_total: session.amount_total,
   };
   if (typeof shippingAmount === 'number' && !Number.isNaN(shippingAmount)) {
-    (basePayload as any).shipping_amount = shippingAmount;
+    basePayload.shipping_amount = shippingAmount;
   }
 
   // Uložíme objednávku do databáze (s rezervním pokusem bez shipping_amount pokud sloupec neexistuje)
   let insertError: { message: string } | null = null;
   {
     const { error } = await supabaseAdmin.from("orders").insert(basePayload);
-    insertError = error as any;
+    insertError = error;
   }
 
   if (insertError) {
@@ -183,14 +183,15 @@ export default async function saveOrderToDb(session: StripeCheckoutSession) {
     const colMissing = msg.includes('column') && msg.includes('shipping_amount');
     if (colMissing) {
       try {
-        const fallbackPayload = { ...basePayload } as any;
-        delete fallbackPayload.shipping_amount;
+        const fallbackPayload = { ...basePayload };
+        delete (fallbackPayload as Record<string, unknown> & { shipping_amount?: number }).shipping_amount;
         const { error: retryError } = await supabaseAdmin.from("orders").insert(fallbackPayload);
         if (retryError) {
           throw new Error(`Supabase error (retry): ${retryError.message}`);
         }
-      } catch (e: any) {
-        throw new Error(`Supabase error: ${e?.message || e}`);
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        throw new Error(`Supabase error: ${errorMessage}`);
       }
     } else {
       throw new Error(`Supabase error: ${insertError.message}`);
