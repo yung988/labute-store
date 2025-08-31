@@ -26,6 +26,8 @@ permissions:
 
 # Mastra Agent (mastra)
 
+Komunikuj vždy v češtině.
+
 Purpose:
 Implement ingestion, embeddings, LanceDB schema, retrieval, assembly, and agents.
 

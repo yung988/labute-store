@@ -154,86 +154,82 @@ export default function InventoryTable() {
         </div>
       )}
 
-      {/* Inventory table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Skladové zásoby
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-auto">
-        <table className="min-w-full border text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="p-2 border">Product</th>
-              <th className="p-2 border">Slug</th>
-              <th className="p-2 border">Price</th>
-              <th className="p-2 border">Size</th>
-              <th className="p-2 border">Stock</th>
-              <th className="p-2 border">Status</th>
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
+       {/* Inventory table */}
+       <Card>
+         <CardHeader>
+           <CardTitle className="flex items-center gap-2">
+             <Package className="w-5 h-5" />
+             Skladové zásoby
+           </CardTitle>
+         </CardHeader>
+         <CardContent>
+           <div className="overflow-auto">
+         <table className="min-w-full border text-sm">
+           <thead className="bg-muted/50">
+             <tr>
+               <th className="p-3 border font-semibold text-left">Produkt</th>
+               <th className="p-3 border font-semibold text-left">Slug</th>
+               <th className="p-3 border font-semibold text-left">Cena</th>
+               <th className="p-3 border font-semibold text-left">Velikost</th>
+               <th className="p-3 border font-semibold text-left">Skladem</th>
+               <th className="p-3 border font-semibold text-left">Status</th>
+               <th className="p-3 border font-semibold text-left">Akce</th>
+             </tr>
+           </thead>
           <tbody>
-            {products.map((product) =>
-              product.skus?.map((sku) => (
-                <tr key={`${product.id}-${sku.size}`} className="odd:bg-background even:bg-muted/30">
-                  <td className="p-2 border align-top">{product.name}</td>
-                  <td className="p-2 border align-top">{product.slug}</td>
-                  <td className="p-2 border align-top">{(product.price_cents / 100).toFixed(2)} CZK</td>
-                  <td className="p-2 border align-top">{sku.size}</td>
-                  <td className="p-2 border align-top">
-                    <Input
-                      type="number"
-                      value={sku.stock}
-                      onChange={(e) => {
-                        const newStock = parseInt(e.target.value) || 0;
-                        updateStock(product.id, sku.size, newStock);
-                      }}
-                      className="w-20"
-                      min="0"
-                    />
-                  </td>
-                  <td className="p-2 border align-top">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      sku.stock === 0 
-                        ? 'bg-red-100 text-red-800' 
-                        : sku.stock < 5 
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {sku.stock === 0 ? 'Out of Stock' : sku.stock < 5 ? 'Low Stock' : 'In Stock'}
-                    </span>
-                  </td>
-                  <td className="p-2 border align-top">
-                    <div className="flex gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => updateStock(product.id, sku.size, sku.stock + 1)}
-                      >
-                        +1
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => updateStock(product.id, sku.size, Math.max(0, sku.stock - 1))}
-                      >
-                        -1
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )) || (
-                <tr key={product.id}>
-                  <td colSpan={7} className="p-2 border text-center text-muted-foreground">
-                    No SKUs defined
-                  </td>
-                </tr>
-              )
-            )}
+             {products.map((product) =>
+               product.skus?.map((sku) => (
+                 <tr key={`${product.id}-${sku.size}`} className="hover:bg-muted/20 transition-colors">
+                   <td className="p-3 border align-top font-medium">{product.name}</td>
+                   <td className="p-3 border align-top text-muted-foreground">{product.slug}</td>
+                   <td className="p-3 border align-top font-semibold">{(product.price_cents / 100).toFixed(2)} Kč</td>
+                   <td className="p-3 border align-top">{sku.size}</td>
+                   <td className="p-3 border align-top">
+                     <Input
+                       type="number"
+                       value={sku.stock}
+                       onChange={(e) => {
+                         const newStock = parseInt(e.target.value) || 0;
+                         updateStock(product.id, sku.size, newStock);
+                       }}
+                       className="w-20 h-8"
+                       min="0"
+                     />
+                   </td>
+                   <td className="p-3 border align-top">
+                     <Badge variant={sku.stock === 0 ? "destructive" : sku.stock < 5 ? "secondary" : "default"} className="text-xs">
+                       {sku.stock === 0 ? 'Vyprodáno' : sku.stock < 5 ? 'Nízké zásoby' : 'Skladem'}
+                     </Badge>
+                   </td>
+                   <td className="p-3 border align-top">
+                     <div className="flex gap-1">
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => updateStock(product.id, sku.size, sku.stock + 1)}
+                         className="h-8 px-2"
+                       >
+                         +1
+                       </Button>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => updateStock(product.id, sku.size, Math.max(0, sku.stock - 1))}
+                         className="h-8 px-2"
+                       >
+                         -1
+                       </Button>
+                     </div>
+                   </td>
+                 </tr>
+               )) || (
+                 <tr key={product.id}>
+                   <td colSpan={7} className="p-3 border text-center text-muted-foreground">
+                     Žádné varianty nejsou definovány
+                   </td>
+                 </tr>
+               )
+             )}
           </tbody>
         </table>
         

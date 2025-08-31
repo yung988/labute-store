@@ -93,6 +93,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sessionId] = useState(() => {
+    // Generate unique session ID for cart tracking
+    if (typeof window !== 'undefined') {
+      let id = localStorage.getItem('cart-session-id');
+      if (!id) {
+        id = `cart-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+        localStorage.setItem('cart-session-id', id);
+      }
+      return id;
+    }
+    return `cart-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  });
 
   // Načtení košíku z localStorage při načtení stránky
   useEffect(() => {
@@ -112,8 +124,44 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (isInitialized) {
       localStorage.setItem("cart", JSON.stringify(items));
+      
+      // Track cart on server for abandoned cart detection
+      if (items.length > 0) {
+        trackCartOnServer();
+      }
     }
   }, [items, isInitialized]);
+
+  // Function to track cart on server
+  const trackCartOnServer = async () => {
+    try {
+      // Get customer info from localStorage if available (from checkout form)
+      const customerEmail = localStorage.getItem('customer-email');
+      const customerName = localStorage.getItem('customer-name');
+      
+      await fetch('/api/cart/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          items: items.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+            image: item.image
+          })),
+          customerEmail,
+          customerName,
+          totalAmount: totalPrice
+        })
+      });
+    } catch (error) {
+      // Silently fail - cart tracking is not critical
+      console.debug('Cart tracking failed:', error);
+    }
+  };
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -197,6 +245,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const event = new StorageEvent("storage", { key: "cart", newValue: JSON.stringify(empty) });
       window.dispatchEvent(event);
     } catch {}
+    
+    // Mark cart as recovered on server
+    markCartAsRecovered();
+  };
+
+  // Function to mark cart as recovered (order completed)
+  const markCartAsRecovered = async () => {
+    try {
+      await fetch(`/api/cart/track?sessionId=${sessionId}`, {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.debug('Cart recovery tracking failed:', error);
+    }
   };
 
   // Funkce pro otevření dropdown

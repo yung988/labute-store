@@ -23,6 +23,8 @@ permissions:
 
 # Plan Analyse Agent (plan-analyse)
 
+Komunikuj vždy v češtině.
+
 Purpose:
 Perform repo survey, map dependencies/risks, and summarize external research.
 

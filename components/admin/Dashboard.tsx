@@ -3,11 +3,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  BarChart3, 
-  ShoppingCart, 
-  Users, 
-  TrendingUp, 
+import {
+  BarChart3,
+  ShoppingCart,
+  Users,
+  TrendingUp,
   Package,
   Truck,
   DollarSign,
@@ -306,10 +306,12 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Dashboard</h2>
-          <p className="text-muted-foreground">Přehled obchodu a statistiky</p>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Přehled obchodu a statistiky
+          </p>
         </div>
-        <Button onClick={loadStats} variant="outline" disabled={loading}>
+        <Button onClick={loadStats} variant="outline" disabled={loading} size="sm">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Obnovit
         </Button>
@@ -325,26 +327,31 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       {/* Alerts Section */}
       {(stats.alerts.lowStock.length > 0 || stats.alerts.oldOrders.length > 0 || stats.alerts.pendingShipments > 0) && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
-            Upozornění
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <h3 className="text-lg font-semibold">Upozornění</h3>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {stats.alerts.lowStock.length > 0 && (
-              <Card className="border-orange-200 bg-orange-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-orange-800">Nízké zásoby</h4>
-                    <Package className="w-4 h-4 text-orange-600" />
+              <Card className="border-orange-200 bg-orange-50/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-orange-800">
+                    Nízké zásoby
+                  </CardTitle>
+                  <Package className="h-4 w-4 text-orange-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-900">
+                    {stats.alerts.lowStock.length}
                   </div>
-                  <p className="text-sm text-orange-700 mb-2">
-                    {stats.alerts.lowStock.length} produktů má nízké zásoby
+                  <p className="text-xs text-orange-700">
+                    produktů má nízké zásoby
                   </p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-orange-700 border-orange-300 hover:bg-orange-100"
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 w-full text-orange-700 border-orange-300 hover:bg-orange-100"
                     onClick={() => onNavigateAction('inventory')}
                   >
                     Zobrazit sklad
@@ -354,55 +361,63 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
             )}
 
             {stats.alerts.oldOrders.length > 0 && (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-red-800">Staré objednávky</h4>
-                    <div className="flex items-center gap-1">
-                      <Bell className="w-4 h-4 text-red-600 animate-pulse" />
-                      <Clock className="w-4 h-4 text-red-600" />
-                    </div>
+              <Card className="border-red-200 bg-red-50/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-red-800">
+                    Staré objednávky
+                  </CardTitle>
+                  <div className="flex items-center gap-1">
+                    <Bell className="h-4 w-4 text-red-600" />
+                    <Clock className="h-4 w-4 text-red-600" />
                   </div>
-                  <p className="text-sm text-red-700 mb-3">
-                    {stats.alerts.oldOrders.length} objednávek čeká více než 1 den
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-900">
+                    {stats.alerts.oldOrders.length}
+                  </div>
+                  <p className="text-xs text-red-700">
+                    objednávek čeká více než 1 den
                   </p>
-                  <div className="space-y-2">
+                  <div className="mt-3 space-y-2">
                     {stats.alerts.oldOrders.slice(0, 2).map((order) => (
                       <div key={order.id} className="flex items-center justify-between text-xs bg-white/50 p-2 rounded">
                         <span className="font-medium">{order.customer_email}</span>
                         <span className="text-red-600">{order.days_old} dní</span>
                       </div>
                     ))}
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-red-700 border-red-300 hover:bg-red-100 flex-1"
-                        onClick={() => onNavigateAction('orders')}
-                      >
-                        <Eye className="w-3 h-3 mr-1" />
-                        Zobrazit všechny
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-red-700 border-red-300 hover:bg-red-100"
+                      onClick={() => onNavigateAction('orders')}
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Zobrazit všechny
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
             {stats.alerts.pendingShipments > 0 && (
-              <Card className="border-blue-200 bg-blue-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-blue-800">Čekající zásilky</h4>
-                    <Truck className="w-4 h-4 text-blue-600" />
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-800">
+                    Čekající zásilky
+                  </CardTitle>
+                  <Truck className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-900">
+                    {stats.alerts.pendingShipments}
                   </div>
-                  <p className="text-sm text-blue-700 mb-2">
-                    {stats.alerts.pendingShipments} objednávek čeká na vytvoření zásilky
+                  <p className="text-xs text-blue-700">
+                    objednávek čeká na vytvoření zásilky
                   </p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 w-full text-blue-700 border-blue-300 hover:bg-blue-100"
                     onClick={() => onNavigateAction('packeta')}
                   >
                     Spravovat zásilky
@@ -484,20 +499,20 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Status Breakdown */}
-        <Card>
+        <Card className="col-span-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="h-4 w-4" />
               Status objednávek
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pl-2">
             <div className="space-y-3">
               {Object.entries(stats.statusBreakdown).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div key={status} className="flex items-center">
+                  <div className="flex items-center gap-2 flex-1">
                     {getStatusBadge(status)}
                   </div>
                   <div className="font-semibold">{count}</div>
@@ -508,26 +523,26 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
         </Card>
 
         {/* Packeta Stats */}
-        <Card>
+        <Card className="col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
+              <Package className="h-4 w-4" />
               Packeta zásilky
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Celkem zásilek</span>
-                <div className="text-2xl font-bold">{stats.packetaStats.total}</div>
+                <span className="text-sm font-medium">Celkem zásilek</span>
+                <span className="text-2xl font-bold">{stats.packetaStats.total}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-blue-600">Odesláno</span>
-                <div className="font-semibold text-blue-600">{stats.packetaStats.shipped}</div>
+                <span className="font-semibold text-blue-600">{stats.packetaStats.shipped}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-orange-600">Čeká na odeslání</span>
-                <div className="font-semibold text-orange-600">{stats.packetaStats.pending}</div>
+                <span className="font-semibold text-orange-600">{stats.packetaStats.pending}</span>
               </div>
             </div>
           </CardContent>
@@ -538,46 +553,54 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       <Card>
         <CardHeader>
           <CardTitle>Poslední objednávky</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Nejnovější objednávky s rychlými akcemi
+          </p>
         </CardHeader>
         <CardContent>
           {stats.recentOrdersList.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Zatím žádné objednávky
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">Zatím žádné objednávky</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {stats.recentOrdersList.map((order) => (
-                <div 
-                  key={order.id} 
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                <div
+                  key={order.id}
+                  className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
                 >
-                  <div 
-                    className="flex-1 cursor-pointer"
-                    onClick={() => onNavigateAction('order-detail', order.id)}
-                  >
-                    <div className="font-medium">
-                      {order.customer_name || 'Nezadáno'} ({order.customer_email})
+                  <div className="flex-1 space-y-1">
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => onNavigateAction('order-detail', order.id)}
+                    >
+                      <p className="text-sm font-medium leading-none">
+                        {order.customer_name || 'Nezadáno'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.customer_email}
+                      </p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleString()}
-                    </div>
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center space-x-2">
                     <div className="text-right">
-                      <div className="font-semibold">
+                      <p className="text-sm font-medium">
                         {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : '-'}
-                      </div>
+                      </p>
                     </div>
                     {getStatusBadge(order.status)}
-                    
+
                     {/* Quick Actions */}
-                    <div className="flex items-center gap-1">
-                      {/* Nové objednávky (právě zaplacené) - můžeme rovnou vytvořit zásilku */}
+                    <div className="flex items-center space-x-1">
                       {(order.status === 'paid' || order.status === 'new') && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-green-600 border-green-300 hover:bg-green-50"
+                          className="h-8 w-8 p-0 text-green-600 border-green-300 hover:bg-green-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleQuickAction(order.id, 'create_shipment');
@@ -586,19 +609,18 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                           title="Vytvořit zásilku"
                         >
                           {processingActions.has(`${order.id}-create_shipment`) ? (
-                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <RefreshCw className="h-3 w-3 animate-spin" />
                           ) : (
-                            <Send className="w-3 h-3" />
+                            <Send className="h-3 w-3" />
                           )}
                         </Button>
                       )}
-                      
-                      {/* Zpracovávané objednávky - můžeme označit jako odesláno */}
+
                       {order.status === 'processing' && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+                          className="h-8 w-8 p-0 text-blue-600 border-blue-300 hover:bg-blue-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleQuickAction(order.id, 'mark_shipped');
@@ -607,21 +629,21 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                           title="Označit jako odesláno"
                         >
                           {processingActions.has(`${order.id}-mark_shipped`) ? (
-                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <RefreshCw className="h-3 w-3 animate-spin" />
                           ) : (
-                            <Truck className="w-3 h-3" />
+                            <Truck className="h-3 w-3" />
                           )}
                         </Button>
                       )}
-                      
+
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 px-2"
+                        className="h-8 w-8 p-0"
                         onClick={() => onNavigateAction('order-detail', order.id)}
                         title="Zobrazit detail"
                       >
-                        <ArrowRight className="w-3 h-3" />
+                        <ArrowRight className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>

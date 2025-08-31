@@ -379,23 +379,20 @@ function CheckoutForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear auto-filled indicators when user manually types
-    if (name === 'city' && autoFilledFields.city) {
-      setAutoFilledFields(prev => ({ ...prev, city: false }));
+    
+    // Store customer info for abandoned cart tracking
+    if (name === 'email' && value) {
+      localStorage.setItem('customer-email', value);
     }
-    if (name === 'postalCode' && autoFilledFields.postalCode) {
-      setAutoFilledFields(prev => ({ ...prev, postalCode: false }));
+    if (name === 'firstName' && value) {
+      const lastName = formData.lastName;
+      const fullName = lastName ? `${value} ${lastName}` : value;
+      localStorage.setItem('customer-name', fullName);
     }
-
-    // Clear validation error when user starts typing
-    if (validationErrors[name as keyof typeof validationErrors]) {
-      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-
-    // Real-time validation for specific fields
-    if (name === 'phone' && value && !validatePhone(value)) {
-      setValidationErrors(prev => ({ ...prev, phone: 'Neplatné telefonní číslo' }));
+    if (name === 'lastName' && value) {
+      const firstName = formData.firstName;
+      const fullName = firstName ? `${firstName} ${value}` : value;
+      localStorage.setItem('customer-name', fullName);
     }
   };
 
@@ -452,12 +449,7 @@ function CheckoutForm() {
   //   return trimmed.length >= 2 && /^[a-zA-ZáčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s\-]+$/.test(trimmed);
   // };
 
-  const validatePhone = (phone: string) => {
-    // Czech phone number validation - should be 9 digits (without +420)
-    const cleanPhone = phone.replace(/[\s\-\+]/g, '');
-    // Accept both formats: 420123456789 or 123456789
-    return /^(420)?[1-9]\d{8}$/.test(cleanPhone);
-  };
+
 
   // Validation function for future use
   // const validateForm = () => {

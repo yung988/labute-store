@@ -22,6 +22,8 @@ permissions:
 
 # Write Test Agent
 
+Komunikuj vždy v češtině.
+
 Responsibilities:
 
 - The objective, break it down into clear, testable behaviors.

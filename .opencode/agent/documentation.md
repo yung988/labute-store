@@ -21,6 +21,8 @@ permissions:
 
 # Documentation Agent (documentation)
 
+Komunikuj vždy v češtině.
+
 Purpose:
 Update README, specs, and examples with clear, actionable docs.
 

@@ -22,6 +22,8 @@ permissions:
 
 # Write Test Agent (write-test)
 
+Komunikuj vždy v češtině.
+
 Purpose:
 Author unit/integration tests with deterministic behavior and mocks.
 

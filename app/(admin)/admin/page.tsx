@@ -1,33 +1,47 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { 
-  BarChart3, 
-  Package, 
-  ShoppingCart, 
-  Truck, 
+import {
+  BarChart3,
+  Package,
+  ShoppingCart,
+  Truck,
   Users,
   Menu,
   X,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import OrdersTable from "@/components/admin/OrdersTable";
-import InventoryTable from "@/components/admin/InventoryTable";
-import PacketaManagement from "@/components/admin/PacketaManagement";
-import OrderDetailView from "@/components/admin/OrderDetailView";
-import CustomerCommunication from "@/components/admin/CustomerCommunication";
-import Dashboard from "@/components/admin/Dashboard";
+
+// Lazy load admin components
+const OrdersTable = React.lazy(() => import("@/components/admin/OrdersTable"));
+const InventoryTable = React.lazy(() => import("@/components/admin/InventoryTable"));
+const PacketaManagement = React.lazy(() => import("@/components/admin/PacketaManagement"));
+const OrderDetailView = React.lazy(() => import("@/components/admin/OrderDetailView"));
+const CustomerCommunication = React.lazy(() => import("@/components/admin/CustomerCommunication"));
+const Dashboard = React.lazy(() => import("@/components/admin/Dashboard"));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="text-center">
+      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+      <p className="text-muted-foreground">Načítání...</p>
+    </div>
+  </div>
+);
+
 
 type AdminSection = 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail';
 
@@ -38,6 +52,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -74,7 +89,7 @@ export default function AdminPage() {
     if (orderId) {
       setSelectedOrderId(orderId);
     }
-    
+
     // Update URL
     const url = new URL(window.location.href);
     url.searchParams.set('section', section);
@@ -84,7 +99,7 @@ export default function AdminPage() {
       url.searchParams.delete('orderId');
     }
     window.history.pushState({}, '', url.toString());
-    
+
     // Close sidebar on mobile
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
@@ -137,9 +152,9 @@ export default function AdminPage() {
       {/* Sidebar - STICKY */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        fixed lg:sticky lg:translate-x-0 
+        fixed lg:sticky lg:translate-x-0
         w-64 h-screen top-0
-        bg-card border-r border-border 
+        bg-card border-r border-border
         z-50 transition-transform duration-300 ease-in-out
         flex flex-col
       `}>
@@ -239,42 +254,54 @@ export default function AdminPage() {
         {/* Content - SCROLLABLE AREA */}
         <div className="p-6 overflow-auto">
           {currentSection === 'dashboard' && (
-            <Dashboard onNavigateAction={navigateToSection} />
+            <Suspense fallback={<LoadingSpinner />}>
+              <Dashboard onNavigateAction={navigateToSection} />
+            </Suspense>
           )}
 
           {currentSection === 'orders' && (
             <div>
               <h2 className="text-3xl font-bold mb-6">Objednávky</h2>
-              <OrdersTable onOrderClick={handleOrderClick} />
+              <Suspense fallback={<LoadingSpinner />}>
+                <OrdersTable onOrderClick={handleOrderClick} />
+              </Suspense>
             </div>
           )}
 
           {currentSection === 'inventory' && (
             <div>
               <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
-              <InventoryTable />
+              <Suspense fallback={<LoadingSpinner />}>
+                <InventoryTable />
+              </Suspense>
             </div>
           )}
 
           {currentSection === 'packeta' && (
             <div>
               <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
-              <PacketaManagement />
+              <Suspense fallback={<LoadingSpinner />}>
+                <PacketaManagement />
+              </Suspense>
             </div>
           )}
 
           {currentSection === 'customers' && (
             <div>
               <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
-              <CustomerCommunication />
+              <Suspense fallback={<LoadingSpinner />}>
+                <CustomerCommunication />
+              </Suspense>
             </div>
           )}
 
           {currentSection === 'order-detail' && selectedOrderId && (
-            <OrderDetailView
-              orderId={selectedOrderId}
-              onBack={() => navigateToSection('orders')}
-            />
+            <Suspense fallback={<LoadingSpinner />}>
+              <OrderDetailView
+                orderId={selectedOrderId}
+                onBack={() => navigateToSection('orders')}
+              />
+            </Suspense>
           )}
         </div>
       </div>

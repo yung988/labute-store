@@ -1,17 +1,20 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { formatOrderId } from "@/lib/product-images";
 import { createClient } from "@/lib/supabase/client";
-import { 
-  Search, 
-  Filter, 
-  Download, 
+import {
+  Search,
+  Filter,
+  Download,
   RefreshCw,
   Eye,
   Package,
@@ -27,6 +30,15 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger, ContextMenuSeparator } from "@/components/ui/context-menu";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Order = {
   id: string;
@@ -57,40 +69,159 @@ interface OrdersTableProps {
 export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "status">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Advanced filters
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [amountRange, setAmountRange] = useState<{ min?: number; max?: number }>({});
+  const [deliveryMethod, setDeliveryMethod] = useState<string>("all");
+  const [hasPacketaShipment, setHasPacketaShipment] = useState<boolean | null>(null);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select('*, label_printed_at, label_printed_count')
-        .order('created_at', { ascending: false });
+  // Pagination state
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [pageSize] = useState(50);
 
-      if (error) {
-        throw new Error(`Database error: ${error.message}`);
+  const loadOrders = useCallback(async (cursor?: string | null, append = false) => {
+    if (!append) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    setError(null);
+
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.set('limit', pageSize.toString());
+
+      if (cursor) {
+        params.set('cursor', cursor);
       }
 
-      setOrders(ordersData || []);
+      if (statusFilter !== 'all') {
+        params.set('status', statusFilter);
+      }
+
+      if (searchQuery.trim()) {
+        params.set('search', searchQuery.trim());
+      }
+
+      const response = await fetch(`/api/admin/orders?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (append) {
+        setOrders(prev => [...prev, ...data.orders]);
+      } else {
+        setOrders(data.orders);
+      }
+
+      setNextCursor(data.pagination.nextCursor);
+      setHasMore(data.pagination.hasMore);
+      setTotalCount(data.pagination.count);
+
     } catch (e: unknown) {
       console.error('Load orders error:', e);
       setError(e instanceof Error ? e.message : "Failed to load orders");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [pageSize, statusFilter, searchQuery]);
+
+  const loadMore = useCallback(async () => {
+    if (nextCursor && hasMore && !loadingMore) {
+      await loadOrders(nextCursor, true);
+    }
+  }, [nextCursor, hasMore, loadingMore, loadOrders]);
+
+  const load = useCallback(async () => {
+    await loadOrders(null, false);
+  }, [loadOrders]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [statusFilter, searchQuery]);
+
+  // Real-time updates subscription
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Subscribe to orders table changes
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'system',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload: { eventType: string; new?: Order; old?: Order }) => {
+          console.log('Real-time order update:', payload);
+
+          if (payload.eventType === 'INSERT') {
+            // Add new order to the list if it matches current filters
+            const newOrder = payload.new as Order;
+            setOrders(prev => {
+              // Check if order already exists (avoid duplicates)
+              if (prev.some(order => order.id === newOrder.id)) {
+                return prev;
+              }
+
+              // Add to beginning of list (newest first)
+              const updated = [newOrder, ...prev];
+
+              // If we have more than pageSize items, remove the oldest
+              if (updated.length > pageSize) {
+                updated.splice(pageSize);
+              }
+
+              return updated;
+            });
+
+            // Update total count
+            setTotalCount(prev => prev + 1);
+
+          } else if (payload.eventType === 'UPDATE') {
+            // Update existing order
+            const updatedOrder = payload.new as Order;
+            setOrders(prev =>
+              prev.map(order =>
+                order.id === updatedOrder.id ? { ...order, ...updatedOrder } : order
+              )
+            );
+
+          } else if (payload.eventType === 'DELETE') {
+            // Remove deleted order
+            const deletedOrder = payload.old as Order;
+            setOrders(prev => prev.filter(order => order.id !== deletedOrder.id));
+            setTotalCount(prev => Math.max(0, prev - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [pageSize]);
 
   const filteredAndSortedOrders = useMemo(() => {
     let filtered = orders;
@@ -259,7 +390,8 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
      }
    };
 
-  const getStatusBadge = (status: string) => {
+  // Memoized status badge component
+  const StatusBadge = React.memo(({ status }: { status: string }) => {
     switch (status) {
       case 'paid':
         return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
@@ -274,16 +406,20 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
-  };
+  });
+
+  StatusBadge.displayName = 'StatusBadge';
 
   const statuses = useMemo(() => ["new", "paid", "processing", "shipped", "cancelled", "refunded"], []);
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: orders.length };
+    const counts: Record<string, number> = { all: totalCount };
+    // For filtered views, we can't accurately count statuses without loading all
+    // So we'll show approximate counts based on loaded orders
     statuses.forEach(status => {
       counts[status] = orders.filter(o => o.status === status).length;
     });
     return counts;
-  }, [orders, statuses]);
+  }, [orders, statuses, totalCount]);
 
   if (loading && orders.length === 0) {
     return (
@@ -343,7 +479,7 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span>Objednávky ({filteredAndSortedOrders.length})</span>
+              <span>Objednávky ({totalCount > 0 ? `${orders.length} z ${totalCount}` : orders.length})</span>
               {selectedOrders.size > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
@@ -436,28 +572,28 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
             </div>
           )}
 
-          {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedOrders.size === filteredAndSortedOrders.length && filteredAndSortedOrders.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Vybrat všechny objednávky"
-                    />
-                  </TableHead>
-                  <TableHead className="w-32">ID objednávky</TableHead>
-                  <TableHead>Zákazník</TableHead>
-                  <TableHead>Kontakt</TableHead>
-                  <TableHead className="w-32">Status</TableHead>
-                  <TableHead className="w-32">Částka</TableHead>
-                  <TableHead>Doručení</TableHead>
-                  <TableHead className="w-32">Datum</TableHead>
-                  <TableHead className="w-20">Akce</TableHead>
-                </TableRow>
-              </TableHeader>
+           {/* Table */}
+           <div className="border rounded-lg overflow-hidden bg-card">
+             <Table>
+               <TableHeader>
+                 <TableRow className="bg-muted/30 hover:bg-muted/50">
+                   <TableHead className="w-12">
+                     <Checkbox
+                       checked={selectedOrders.size === filteredAndSortedOrders.length && filteredAndSortedOrders.length > 0}
+                       onCheckedChange={toggleSelectAll}
+                       aria-label="Vybrat všechny objednávky"
+                     />
+                   </TableHead>
+                   <TableHead className="w-32 font-semibold">ID objednávky</TableHead>
+                   <TableHead className="font-semibold">Zákazník</TableHead>
+                   <TableHead className="font-semibold">Kontakt</TableHead>
+                   <TableHead className="w-32 font-semibold">Status</TableHead>
+                   <TableHead className="w-32 font-semibold">Částka</TableHead>
+                   <TableHead className="font-semibold">Doručení</TableHead>
+                   <TableHead className="w-32 font-semibold">Datum</TableHead>
+                   <TableHead className="w-20 font-semibold">Akce</TableHead>
+                 </TableRow>
+               </TableHeader>
               <TableBody>
                 {filteredAndSortedOrders.length === 0 ? (
                   <TableRow>
@@ -557,9 +693,9 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                             onValueChange={(status) => updateStatus(order.id, status)}
                           >
                             <SelectTrigger className="w-full h-8 text-xs">
-                              <SelectValue asChild>
-                                {getStatusBadge(order.status)}
-                              </SelectValue>
+                               <SelectValue asChild>
+                                 <StatusBadge status={order.status} />
+                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {statuses.map(status => (
@@ -701,10 +837,36 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                         </ContextMenuContent>
                       </ContextMenu>
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                   })
+                 )}
+
+                 {/* Load More Row */}
+                 {hasMore && (
+                   <TableRow>
+                     <TableCell colSpan={9} className="text-center py-4">
+                       <Button
+                         onClick={loadMore}
+                         disabled={loadingMore}
+                         variant="outline"
+                         className="w-full max-w-xs"
+                       >
+                         {loadingMore ? (
+                           <>
+                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                             Načítání...
+                           </>
+                         ) : (
+                           <>
+                             <Package className="w-4 h-4 mr-2" />
+                             Načíst více objednávek ({totalCount - orders.length} zbývá)
+                           </>
+                         )}
+                       </Button>
+                     </TableCell>
+                   </TableRow>
+                 )}
+               </TableBody>
+             </Table>
           </div>
         </CardContent>
       </Card>
