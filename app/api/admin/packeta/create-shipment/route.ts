@@ -168,6 +168,14 @@ export async function POST(req: NextRequest) {
     if (!order.delivery_city || order.delivery_city.trim().length < 2) {
       return NextResponse.json({ error: "Valid delivery city is required for home delivery" }, { status: 400 });
     }
+    
+    // Log address details for debugging geolocation issues
+    console.log('🏠 Home delivery address validation:', {
+      address: order.delivery_address,
+      city: order.delivery_city,
+      postalCode: order.delivery_postal_code,
+      country: 'CZ'
+    });
   }
 
   // Split customer name into first name and last name with validation
@@ -201,10 +209,30 @@ export async function POST(req: NextRequest) {
     let xmlBody: string;
     
     if (isHomeDelivery) {
-      // Parse street and house number from delivery address
-      const addressParts = (order.delivery_address?.trim() || '').match(/^(.+?)\s+(\d+.*?)$/);
-      const street = addressParts ? addressParts[1] : (order.delivery_address?.trim() || '');
-      const houseNumber = addressParts ? addressParts[2] : '';
+      // Parse street and house number properly for Czech addresses
+      // Format: "Ulice číslo" -> street="Ulice", houseNumber="číslo"
+      const fullAddress = order.delivery_address?.trim() || '';
+      const addressMatch = fullAddress.match(/^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)$/);
+      
+      let street = '';
+      let houseNumber = '';
+      
+      if (addressMatch) {
+        street = addressMatch[1].trim();
+        houseNumber = addressMatch[2].trim();
+      } else {
+        // Fallback - use full address as street if parsing fails
+        street = fullAddress;
+        houseNumber = '';
+      }
+      
+      console.log('🏠 Address parsing for Packeta:', {
+        originalAddress: fullAddress,
+        parsedStreet: street,
+        parsedHouseNumber: houseNumber,
+        city: order.delivery_city,
+        zip: order.delivery_postal_code
+      });
       
       // Home delivery XML structure according to official Packeta documentation
       xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
