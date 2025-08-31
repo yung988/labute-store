@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
       url.searchParams.set('limit', '10');
       url.searchParams.set('lang', 'cs');
       url.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
+      url.searchParams.set('locality', 'cz'); // Omezit pouze na Českou republiku
 
       try {
         console.log(`Searching for: "${searchQuery}" at URL: ${url.toString()}`);
@@ -146,6 +147,7 @@ export async function GET(req: NextRequest) {
         suggestUrl.searchParams.set('limit', '10');
         suggestUrl.searchParams.set('lang', 'cs');
         suggestUrl.searchParams.set('type', 'regional.address,regional.street');
+        suggestUrl.searchParams.set('locality', 'cz'); // Omezit pouze na Českou republiku
 
         console.log(`Fallback Suggest URL: ${suggestUrl.toString()}`);
         const suggestRes = await fetch(suggestUrl.toString(), {
@@ -175,6 +177,7 @@ export async function GET(req: NextRequest) {
         broadUrl.searchParams.set('limit', '15');
         broadUrl.searchParams.set('lang', 'cs');
         broadUrl.searchParams.set('type', 'regional.address,regional.street,regional.municipality');
+        broadUrl.searchParams.set('locality', 'cz'); // Omezit pouze na Českou republiku
 
         const broadResponse = await fetch(broadUrl.toString(), {
           headers: { 'X-Mapy-Api-Key': apiKey },
@@ -212,6 +215,14 @@ export async function GET(req: NextRequest) {
                            item.type === 'address.point';
 
         if (!isValidType) return false;
+
+        // Dodatečné filtrování pouze na české adresy
+        if (item.regionalStructure) {
+          const country = item.regionalStructure.find(rs => rs.type === 'regional.country');
+          if (country && country.isoCode && country.isoCode !== 'CZ') {
+            return false; // Vyfiltrovat ne-české adresy
+          }
+        }
 
         // Additional filtering for better relevance
         const itemName = item.name || '';
