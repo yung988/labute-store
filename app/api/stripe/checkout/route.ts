@@ -161,6 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Shipping as Stripe shipping_options (not as product line item)
     const shippingAmountCents = Math.round(deliveryPrice * 100);
+    params.append('shipping_options[0][shipping_rate_data][type]', 'fixed_amount');
     params.append('shipping_options[0][shipping_rate_data][display_name]',
       deliveryMethod === 'pickup' ? 'Zásilkovna - výdejní místo' : 'Zásilkovna - doručení domů');
     params.append('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(shippingAmountCents));
