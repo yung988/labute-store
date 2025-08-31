@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
      );
    }
 
-    // Home delivery carrier configuration (CZ). Fallback to 106 if not provided.
-    const homeCarrierId = process.env.PACKETA_HOME_CARRIER_ID_CZ || '106';
+    // Home delivery service configuration (CZ). Fallback to 106 (Packeta Home CZ) if not provided.
+    const homeAddressId = process.env.PACKETA_HOME_ADDRESS_ID_CZ || '106';
 
 
   // Calculate total weight from order items (in kg for Packeta API)
@@ -248,8 +248,7 @@ export async function POST(req: NextRequest) {
     <surname>${xmlEscape(lastName)}</surname>
     <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
-    <carrierId>${xmlEscape(homeCarrierId)}</carrierId>
-    <country>CZ</country>
+    <addressId>${xmlEscape(homeAddressId)}</addressId>
     <cod>${xmlEscape(String(finalCOD))}</cod>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <value>${xmlEscape(String(finalValue))}</value>
@@ -291,8 +290,7 @@ export async function POST(req: NextRequest) {
       lastName,
       email,
       phone: formattedPhone,
-      carrierId: isHomeDelivery ? homeCarrierId : undefined,
-      addressId: isHomeDelivery ? undefined : order.packeta_point_id,
+      addressId: isHomeDelivery ? homeAddressId : order.packeta_point_id,
       weight: totalWeightKg,
       cod: finalCOD,
       value: finalValue
