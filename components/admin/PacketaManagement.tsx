@@ -102,36 +102,10 @@ export default function PacketaManagement() {
 
     const printLabel = async (orderId: string, format: string = 'A6') => {
       try {
-        console.log(`🏷️ Requesting label for order ${orderId} with format ${format}`);
-
-        // Call the Next.js API route instead of edge function
-        const response = await fetch(`/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log(`📡 API response:`, data);
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        if (!data.success || !data.url) {
-          console.error(`❌ Invalid response data:`, data);
-          throw new Error("Invalid response from server");
-        }
-
-        // Open the PDF URL in a new tab/window
-        console.log(`🔗 Opening URL: ${data.url}`);
-        window.open(data.url, '_blank');
+        // Otevřít přímo API endpoint, který vrátí PDF (bez ukládání do bucketu)
+        const url = `/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}&direct=true`;
+        console.log(`🔗 Opening direct PDF: ${url}`);
+        window.open(url, '_blank');
       } catch (e: unknown) {
         console.error(`❌ Print label error:`, e);
         setError(e instanceof Error ? e.message : "Failed to print label");
@@ -173,54 +147,27 @@ export default function PacketaManagement() {
        const urls: string[] = [];
        const errors: string[] = [];
 
-        // Use bulk print API route
-        const response = await fetch('/api/admin/packeta/bulk-print-labels', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            orderIds: selectedOrders,
-            format: 'A6'
-          }),
-        });
+        // Otevřít přímo endpoint, který vrátí PDF (bez ukládání do bucketu)
+        const url = '/api/admin/packeta/bulk-print-labels?direct=true';
+        console.log(`🔗 Opening bulk direct PDF for ${selectedOrders.size} orders`);
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-        }
+        // Otevřít v novém tabu přes formulářový POST (window.open neumí POST)
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        form.target = '_blank';
 
-        const data = await response.json();
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'payload';
+        input.value = JSON.stringify({ orderIds: Array.from(selectedOrders), format: 'A6' });
+        form.appendChild(input);
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
 
-        if (data.success && data.url) {
-          urls.push(data.url);
-        } else {
-          errors.push(`Bulk print failed: Invalid response`);
-        }
-
-       if (urls.length === 0) {
-         throw new Error(`Failed to generate any labels. Errors: ${errors.join(', ')}`);
-       }
-
-       if (urls.length === 1) {
-         // Single label - open directly
-         console.log(`🔗 Opening single label URL: ${urls[0]}`);
-         window.open(urls[0], '_blank');
-       } else {
-         // Multiple labels - open first one and show summary
-         console.log(`🔗 Opening first label, generated ${urls.length} labels`);
-         window.open(urls[0], '_blank');
-
-         if (errors.length > 0) {
-           alert(`Generated ${urls.length} labels successfully, but ${errors.length} failed:\n${errors.join('\n')}`);
-         } else {
-           alert(`Successfully generated ${urls.length} labels`);
-         }
-       }
+        // Pozn.: Zbytek UI notifikací necháme na uživateli po otevření PDF
 
        setSelectedOrders(new Set());
      } catch (e: unknown) {

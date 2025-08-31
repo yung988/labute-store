@@ -168,47 +168,58 @@ ${packetIds.map(id => `  <packetId>${id}</packetId>`).join('\n')}
       );
     }
 
-    const responseText = await labelResponse.text();
-    console.log(`📄 Packeta batch response received, size: ${responseText.length} bytes`);
-
-    // Debug: Check if response is empty
-    if (!responseText || responseText.trim() === '') {
-      console.error('❌ Packeta batch API returned empty response');
-      return NextResponse.json(
-        { error: "Packeta batch API returned empty response" },
-        { status: 502 }
-      );
-    }
-
-    // Parse XML response to get PDF data
+    // Parse response as PDF (binary) or as XML with base64-encoded PDF
     let finalPdfBuffer: ArrayBuffer;
     try {
-      // Check if response is XML with base64 PDF
-      if (responseText.includes('<result>') && responseText.includes('</result>')) {
-        console.log('📄 Batch response contains base64 PDF data');
-        const resultMatch = responseText.match(/<result>([^<]*)<\/result>/);
-        if (!resultMatch || !resultMatch[1]) {
-          console.error('❌ No PDF data found in batch XML response');
+      const contentType = labelResponse.headers.get('content-type') || '';
+      if (contentType.includes('application/pdf') || contentType.includes('application/octet-stream')) {
+        console.log('📄 Batch response content-type indicates PDF, reading as arrayBuffer');
+        finalPdfBuffer = await labelResponse.arrayBuffer();
+      } else {
+        const responseText = await labelResponse.text();
+        console.log(`📄 Packeta batch response received, size: ${responseText.length} bytes`);
+
+        // Debug: Check if response is empty
+        if (!responseText || responseText.trim() === '') {
+          console.error('❌ Packeta batch API returned empty response');
           return NextResponse.json(
-            { error: "No PDF data found in Packeta batch response", details: responseText.substring(0, 500) },
+            { error: "Packeta batch API returned empty response" },
             { status: 502 }
           );
         }
 
-        // Decode base64 PDF
-        const base64Data = resultMatch[1];
-        console.log(`📄 Base64 data length: ${base64Data.length} characters`);
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        // Check if response is XML with base64 PDF
+        if (responseText.includes('<result>') && responseText.includes('</result>')) {
+          console.log('📄 Batch response contains base64 PDF data');
+          const resultMatch = responseText.match(/<result>([\s\S]*?)<\/result>/);
+          const base64Data = resultMatch && resultMatch[1] ? resultMatch[1].trim() : '';
+          if (!base64Data) {
+            console.error('❌ No PDF data found in batch XML response');
+            return NextResponse.json(
+              { error: "No PDF data found in Packeta batch response", details: responseText.substring(0, 500) },
+              { status: 502 }
+            );
+          }
+
+          // Decode base64 PDF safely (Node Buffer or browser atob)
+          let bytesUint8: Uint8Array;
+          if (typeof Buffer !== 'undefined') {
+            const nodeBuf = Buffer.from(base64Data, 'base64');
+            bytesUint8 = new Uint8Array(nodeBuf.buffer, nodeBuf.byteOffset, nodeBuf.byteLength);
+          } else if (typeof atob !== 'undefined') {
+            const binaryString = atob(base64Data);
+            bytesUint8 = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytesUint8[i] = binaryString.charCodeAt(i);
+          } else {
+            throw new Error('No base64 decoder available in this runtime');
+          }
+          finalPdfBuffer = bytesUint8.buffer.slice(bytesUint8.byteOffset, bytesUint8.byteOffset + bytesUint8.byteLength);
+          console.log(`📄 Decoded batch PDF buffer size: ${finalPdfBuffer.byteLength} bytes`);
+        } else {
+          // Fallback: unexpected content-type, attempt to treat as binary from text
+          console.log('📄 Unexpected content-type, attempting to read as binary from text');
+          finalPdfBuffer = new TextEncoder().encode(responseText).buffer;
         }
-        finalPdfBuffer = bytes.buffer;
-        console.log(`📄 Decoded batch PDF buffer size: ${finalPdfBuffer.byteLength} bytes`);
-      } else {
-        // Fallback: treat as direct PDF
-        console.log('📄 Treating batch response as direct PDF');
-        finalPdfBuffer = new TextEncoder().encode(responseText).buffer;
       }
     } catch (parseError) {
       console.error('❌ Error parsing Packeta batch response:', parseError);
