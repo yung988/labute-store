@@ -54,7 +54,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-        // Build URLSearchParams for Stripe API
+    // Pokud máme adresu z pokladny, založíme/naplníme Stripe Customer, aby se billing předvyplnil
+    let customerId: string | null = null;
+    try {
+      // Vytvoření Customer s adresou (neřešíme deduplikaci podle emailu kvůli jednoduchosti)
+      const customerParams = new URLSearchParams();
+      customerParams.append('email', formData.email);
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      if (fullName) customerParams.append('name', fullName);
+      if (formData.phone) customerParams.append('phone', formData.phone);
+      if (deliveryMethod === 'home_delivery' && formData.address && formData.city && formData.postalCode) {
+        customerParams.append('address[line1]', formData.address);
+        customerParams.append('address[city]', formData.city);
+        customerParams.append('address[postal_code]', formData.postalCode);
+        // Pokud víme, přidáme i zemi – Stripe očekává ISO kód
+        customerParams.append('address[country]', 'CZ');
+      }
+
+      const customerRes = await fetch('https://api.stripe.com/v1/customers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: customerParams,
+      });
+
+      if (customerRes.ok) {
+        const customerJson = await customerRes.json();
+        customerId = customerJson.id as string;
+      } else {
+        const errTxt = await customerRes.text();
+        console.warn('⚠️ Failed to create Stripe customer, falling back to customer_email', errTxt);
+      }
+    } catch (e) {
+      console.warn('⚠️ Error while creating Stripe customer, falling back to customer_email', e);
+      customerId = null;
+    }
+
+    // Build URLSearchParams for Stripe API
     const params = new URLSearchParams();
 
     // Basic parameters
@@ -62,7 +100,16 @@ export async function POST(request: NextRequest) {
     params.append('mode', 'payment');
     params.append('success_url', `${request.nextUrl.origin}/success?session_id={CHECKOUT_SESSION_ID}`);
     params.append('cancel_url', `${request.nextUrl.origin}/cart`);
-    params.append('customer_email', formData.email);
+    if (customerId) {
+      params.append('customer', customerId);
+      // Umožní zákazníkovi upravit a uložit údaje zpět do Customer profilu
+      params.append('customer_update[address]', 'auto');
+      params.append('customer_update[name]', 'auto');
+      params.append('customer_update[shipping]', 'auto');
+    } else {
+      // Fallback
+      params.append('customer_email', formData.email);
+    }
     params.append('billing_address_collection', deliveryMethod === 'home_delivery' ? 'required' : 'auto');
     params.append('phone_number_collection[enabled]', 'true');
     params.append('locale', 'cs');
@@ -159,12 +206,16 @@ export async function POST(request: NextRequest) {
     ));
 
     // Debug logging
+    const paramKeys = Array.from(params.keys());
     console.log('Creating Stripe checkout session with params:', {
       itemCount: items.length,
       deliveryMethod,
       deliveryPrice,
       customerEmail: formData.email,
-      hasPickupPoint: !!selectedPickupPoint
+      usingCustomer: !!customerId,
+      hasPickupPoint: !!selectedPickupPoint,
+      // Log only keys to avoid leaking any sensitive values
+      paramKeys
     });
 
     // Create Stripe Checkout Session
@@ -178,14 +229,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const errorText = await response.text();
+      // Try to parse JSON error for clearer logs
+      let errorJson: unknown = null;
+      try { errorJson = JSON.parse(errorText); } catch {}
       console.error('Stripe API error:', {
         status: response.status,
         statusText: response.statusText,
-        error: error
+        error: errorJson ?? errorText,
+        // Include param keys we sent to Stripe for diagnosis
+        sentParamKeys: Array.from(params.keys())
       });
       return NextResponse.json({
-        error: `Stripe API error: ${response.status} - ${error}`
+        error: `Stripe API error: ${response.status} - ${errorText}`
       }, { status: response.status });
     }
 
