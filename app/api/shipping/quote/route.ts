@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
 
     const quote = await computeQuoteFromItems(items, deliveryMethod);
     return NextResponse.json({ success: true, quote });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to compute quote' }, { status: 500 });
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Failed to compute quote';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

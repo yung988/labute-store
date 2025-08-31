@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
 import { useSpreeCart } from "@/context/CartContext";
@@ -208,7 +208,8 @@ function CheckoutForm() {
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
   const [isChangingDelivery, setIsChangingDelivery] = useState(false);
   const [showEmptyModal, setShowEmptyModal] = useState(false);
-  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [, setShippingMethods] = useState<ShippingMethod[]>([]);
+
 
   const [formData, setFormData] = useState({
     email: "",
@@ -498,7 +499,7 @@ function CheckoutForm() {
   }, [loading, cart?.line_items?.length, router]);
 
   // Převod Spree cart dat do lokálního formátu
-  const items: CartItem[] = cart?.line_items?.map((item) => ({
+  const items: CartItem[] = useMemo(() => cart?.line_items?.map((item) => ({
     id: item.id,
     name: item.variant.name || item.product.name,
     // Zobrazujeme v CZK (bez haléřů) – Stripe dostane haléře níže jako *100
@@ -512,7 +513,7 @@ function CheckoutForm() {
     image: item.product.images?.[0]?.url || item.variant.images?.[0]?.url || undefined,
     // Používáme productId z cart context
     productId: (item as { productId?: string }).productId
-  })) || [];
+  })) || [], [cart?.line_items]);
 
 
   // Server-quoted delivery price for UI (server remains source of truth)
@@ -540,10 +541,6 @@ function CheckoutForm() {
 
   // Ceny pro UI v CZK (ne v haléřích)
   const subtotal = parseFloat(cart?.total || '0');
-  const selectedShippingMethod = shippingMethods.find(method =>
-    (deliveryMethod === "pickup" && method.delivery_type === 'pickup_point') ||
-    (deliveryMethod === "home_delivery" && method.delivery_type === 'home_delivery')
-  );
   const total = subtotal + deliveryPrice;
 
   if (loading) {

@@ -186,8 +186,8 @@ function CartForm() {
           return;
         }
         const quoteItems = items
-          .filter((it) => (it as any).productId)
-          .map((it) => ({ productId: (it as any).productId as string, quantity: it.quantity }));
+          .filter((it): it is typeof it & { productId: string } => 'productId' in it && typeof it.productId === 'string')
+          .map((it) => ({ productId: it.productId, quantity: it.quantity }));
         const res = await fetch('/api/shipping/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -198,7 +198,7 @@ function CartForm() {
         if (data?.quote?.totalCZK != null) {
           setDeliveryPrice(data.quote.totalCZK);
         }
-      } catch (e) {
+      } catch {
         // Fallback to conservative base
         setDeliveryPrice(deliveryMethod === 'pickup' ? 62 : 89);
       }

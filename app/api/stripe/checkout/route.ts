@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
 
     // Shipping as Stripe shipping_options (server-authoritative)
     const quoteItems: QuoteItem[] = items
-      .filter((it: any) => it.productId && it.quantity)
-      .map((it: any) => ({ productId: it.productId, quantity: it.quantity }));
+      .filter((it: { productId?: string; quantity?: number }) => it.productId && it.quantity)
+      .map((it: { productId: string; quantity: number }) => ({ productId: it.productId, quantity: it.quantity }));
 
     const method: DeliveryMethod = deliveryMethod === 'home_delivery' ? 'home_delivery' : 'pickup';
     const serverQuote = await computeQuoteFromItems(quoteItems, method);

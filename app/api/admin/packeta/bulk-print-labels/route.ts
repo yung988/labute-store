@@ -281,7 +281,7 @@ ${packetIds.map(id => `    <id>${id}</id>`).join('\n')}
 
             const mergedBytes = await mergedPdf.save();
             const fileName = `packeta-labels-merged-${ordersWithShipments.length}.pdf`;
-            return new NextResponse(mergedBytes, {
+            return new NextResponse(Buffer.from(mergedBytes), {
               headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `inline; filename="${fileName}"`
