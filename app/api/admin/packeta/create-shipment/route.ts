@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
     <surname>${xmlEscape(lastName)}</surname>
     <email>${xmlEscape(email)}</email>
     <phone>${xmlEscape(formattedPhone)}</phone>
-    <addressId>161</addressId>
+    <addressId>106</addressId>
     <cod>${xmlEscape(String(finalCOD))}</cod>
     <weight>${xmlEscape(String(totalWeightKg))}</weight>
     <value>${xmlEscape(String(finalValue))}</value>
