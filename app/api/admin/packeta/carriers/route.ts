@@ -7,28 +7,41 @@ export async function GET() {
     return NextResponse.json({ error: 'Packeta API key not configured' }, { status: 500 });
   }
 
-  // XML request to get carriers list
-  const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
-<packetaInfo>
-  <apiPassword>${PACKETA_API_PASSWORD}</apiPassword>
-</packetaInfo>`;
-
   try {
-    const response = await fetch('https://www.zasilkovna.cz/api/rest', {
-      method: 'POST',
+    // Use the correct Packeta pickup-point API endpoint
+    const apiUrl = `https://pickup-point.api.packeta.com/v5/${PACKETA_API_PASSWORD}/branch/json?lang=cz`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/xml',
-        'Accept': 'application/xml',
+        'Accept': 'application/json',
       },
-      body: xmlBody,
     });
 
-    const xmlResponse = await response.text();
+    if (!response.ok) {
+      const errorText = await response.text();
+      return NextResponse.json({ 
+        error: `Packeta API error: ${response.status}`,
+        details: errorText 
+      }, { status: response.status });
+    }
+
+    const carriersData = await response.json();
+    
+    // Filter for home delivery carriers (usually have "home" or "HD" in name)
+    const homeDeliveryCarriers = carriersData.data ? 
+      carriersData.data.filter((carrier: { name?: string }) => 
+        carrier.name?.toLowerCase().includes('home') ||
+        carrier.name?.toLowerCase().includes('hd') ||
+        carrier.name?.toLowerCase().includes('doručení') ||
+        carrier.name?.toLowerCase().includes('domů')
+      ) : [];
     
     return NextResponse.json({
       success: true,
-      xmlResponse,
-      status: response.status
+      totalCarriers: carriersData.data?.length || 0,
+      homeDeliveryCarriers,
+      allCarriers: carriersData.data || []
     });
     
   } catch (error) {
