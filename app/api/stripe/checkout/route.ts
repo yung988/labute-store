@@ -123,10 +123,6 @@ export async function POST(request: NextRequest) {
     // Nevyžadujeme fakturační adresu - použijeme 'auto', aby Stripe vyžádal adresu jen pokud je nutná
     params.append('billing_address_collection', 'auto');
     params.append('phone_number_collection[enabled]', 'true');
-    // Explicitní předvyplnění telefonu pokud máme Customer
-    if (customerId && formData.phone) {
-      params.append('customer_details[phone]', formData.phone);
-    }
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
