@@ -230,7 +230,6 @@ export async function POST(request: NextRequest) {
       itemCount: items.length,
       deliveryMethod,
       deliveryPrice,
-      customerEmail: formData.email,
       usingCustomer: !!customerId,
       hasPickupPoint: !!selectedPickupPoint,
       // Log only keys to avoid leaking any sensitive values

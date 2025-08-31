@@ -47,6 +47,7 @@ type OrderDetail = {
   items: string | unknown[];
   status: string;
   amount_total: number | null;
+  shipping_amount: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -700,6 +701,13 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                  </p>
                </div>
               
+               <div>
+                 <Label className="text-sm font-medium text-muted-foreground">Cena dopravy</Label>
+                 <p className="text-sm mt-1">
+                   {order.shipping_amount != null ? `${(order.shipping_amount / 100).toFixed(2)} Kč` : '-'}
+                 </p>
+               </div>
+
                <div>
                  <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>
                  <p className="text-sm mt-1 font-mono">

@@ -44,6 +44,7 @@ type Order = {
   items: string | unknown[];
   status: string;
   amount_total: number | null;
+  shipping_amount: number | null;
   created_at: string;
   label_printed_at: string | null;
   label_printed_count: number | null;
@@ -640,6 +641,11 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                                   ID: {order.packeta_point_id}
                                 </div>
                               )
+                            )}
+                            {typeof order.shipping_amount === 'number' && (
+                              <div className="text-muted-foreground">
+                                Doprava: {(order.shipping_amount / 100).toFixed(2)} Kč
+                              </div>
                             )}
                             
                             {/* Shipment ID if exists */}

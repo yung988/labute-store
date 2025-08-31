@@ -35,5 +35,12 @@ export default async function sendOrderEmail(session: Session) {
     react: OrderReceiptEmail({ session, items }),
   });
 
-  console.log("✅ Brandovaný email poslán:", session.customer_details.email);
+  const maskEmail = (e?: string | null) => {
+    if (!e) return "[hidden]";
+    const [user, domain] = e.split("@");
+    if (!domain) return "[hidden]";
+    const maskedUser = user.length <= 2 ? "**" : user[0] + "***" + user[user.length - 1];
+    return `${maskedUser}@${domain}`;
+  };
+  console.log("✅ Brandovaný email poslán:", maskEmail(session.customer_details.email ?? undefined));
 }

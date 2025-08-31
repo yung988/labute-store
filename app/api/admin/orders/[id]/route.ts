@@ -43,6 +43,7 @@ export async function PUT(
     "items",
     "status",
     "amount_total",
+    "shipping_amount",
   ]) {
     if (key in body) updates[key] = body[key];
   }
@@ -93,6 +94,7 @@ export async function PATCH(
     "items",
     "status",
     "amount_total",
+    "shipping_amount",
   ]) {
     if (key in body) updates[key] = body[key];
   }

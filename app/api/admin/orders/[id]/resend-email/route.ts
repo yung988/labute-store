@@ -103,7 +103,14 @@ export async function POST(
       );
     }
 
-    console.log(`✅ Resent ${type} email to ${order.customer_email} for order ${id}`);
+    const maskEmail = (e?: string | null) => {
+      if (!e) return "[hidden]";
+      const [user, domain] = e.split("@");
+      if (!domain) return "[hidden]";
+      const maskedUser = user.length <= 2 ? "**" : user[0] + "***" + user[user.length - 1];
+      return `${maskedUser}@${domain}`;
+    };
+    console.log(`✅ Resent ${type} email to ${maskEmail(order.customer_email)} for order ${id}`);
     
     return NextResponse.json({ 
       success: true, 
