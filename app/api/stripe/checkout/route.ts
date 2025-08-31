@@ -123,6 +123,10 @@ export async function POST(request: NextRequest) {
     // Nevyžadujeme fakturační adresu - použijeme 'auto', aby Stripe vyžádal adresu jen pokud je nutná
     params.append('billing_address_collection', 'auto');
     params.append('phone_number_collection[enabled]', 'true');
+    // Explicitní předvyplnění telefonu pokud máme Customer
+    if (customerId && formData.phone) {
+      params.append('customer_details[phone]', formData.phone);
+    }
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
@@ -135,8 +139,8 @@ export async function POST(request: NextRequest) {
       params.append('metadata[billing_phone]', formData.phone);
     }
 
-    // Enable invoice creation for paid orders
-    params.append('invoice_creation[enabled]', 'true');
+    // Enable invoice creation for paid orders (může způsobovat "dlužná částka" text)
+    // params.append('invoice_creation[enabled]', 'true');
 
     // Line items - products
     items.forEach((item: { name: string; price: number; quantity: number; image?: string; size?: string; productId?: string }, index: number) => {
