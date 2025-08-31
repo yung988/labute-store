@@ -115,10 +115,10 @@ export async function POST(req: NextRequest) {
   const safeValue = Math.min(amountCZK, maxAllowedValue);
   const safeCOD = Math.min(amountCZK, maxAllowedCOD);
   
-  // For home delivery, set both COD and VALUE to 0 since order is prepaid via Stripe
-  // This avoids insurance/COD validation issues with Packeta
+  // For home delivery: COD=0 (prepaid), but VALUE must be set for insurance
+  // Use a reasonable insurance value (max 5000 CZK for home delivery)
   const finalCOD = isHomeDelivery ? 0 : safeCOD;
-  const finalValue = isHomeDelivery ? 0 : safeValue;
+  const finalValue = isHomeDelivery ? Math.min(safeValue, 5000) : safeValue;
 
   // Format phone number for Packeta API (must have +420 prefix and be valid)
   let formattedPhone = order.customer_phone || "";
