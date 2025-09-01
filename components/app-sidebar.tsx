@@ -102,7 +102,7 @@ export function AppSidebar({ currentSection, onNavigateAction, user, ...props }:
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r bg-sidebar" {...props}>
+    <Sidebar collapsible="icon" variant="inset" className="border-r bg-sidebar" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

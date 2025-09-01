@@ -190,6 +190,25 @@
     position: relative;
   }
 
+  /* Fix for inset variant positioning */
+  [data-variant='inset'] [data-slot='sidebar-inset'] {
+    margin-left: var(--sidebar-width) !important;
+  }
+
+  [data-variant='inset'][data-collapsible='icon'] [data-slot='sidebar-inset'] {
+    margin-left: var(--sidebar-width-icon) !important;
+  }
+
+  /* Ensure content is not hidden under sidebar */
+  [data-slot='sidebar-inset'] {
+    margin-left: var(--sidebar-width) !important;
+  }
+
+  /* Collapsed state */
+  [data-state='collapsed'] [data-slot='sidebar-inset'] {
+    margin-left: var(--sidebar-width-icon) !important;
+  }
+
   /* Fix for notifications positioning */
   [data-sonner-toaster] {
     z-index: 9999 !important;
