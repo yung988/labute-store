@@ -2,23 +2,17 @@
 
 import * as React from 'react';
 import {
-  IconCamera,
   IconDashboard,
   IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconHelp,
   IconInnerShadowTop,
   IconListDetails,
   IconPackage,
-  IconReport,
-  IconSearch,
-  IconSettings,
   IconUsers,
+  IconMail,
+  IconHelp,
+  IconSettings,
 } from '@tabler/icons-react';
 
-import { NavDocuments } from '@/components/nav-documents';
 import { NavMain } from '@/components/nav-main';
 import { NavSecondary } from '@/components/nav-secondary';
 import { NavUser } from '@/components/nav-user';
@@ -32,7 +26,17 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-const data = {
+export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  currentSection?: string;
+  onNavigateAction?: (section: string) => void;
+  user?: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+}
+
+const defaultData = {
   user: {
     name: 'Admin',
     email: 'admin@yeezuz2020.cz',
@@ -43,134 +47,89 @@ const data = {
       title: 'Dashboard',
       url: '#',
       icon: IconDashboard,
+      id: 'dashboard',
     },
     {
       title: 'Objednávky',
       url: '#',
       icon: IconListDetails,
+      id: 'orders',
     },
     {
       title: 'Skladem',
       url: '#',
       icon: IconDatabase,
+      id: 'inventory',
     },
     {
       title: 'Packeta',
       url: '#',
       icon: IconPackage,
+      id: 'packeta',
     },
     {
       title: 'Zákazníci',
       url: '#',
       icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: 'Capture',
-      icon: IconCamera,
-      isActive: true,
-      url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
+      id: 'customers',
     },
     {
-      title: 'Proposal',
-      icon: IconFileDescription,
+      title: 'Emaily',
       url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
-    },
-    {
-      title: 'Prompts',
-      icon: IconFileAi,
-      url: '#',
-      items: [
-        {
-          title: 'Active Proposals',
-          url: '#',
-        },
-        {
-          title: 'Archived',
-          url: '#',
-        },
-      ],
+      icon: IconMail,
+      id: 'emails',
     },
   ],
   navSecondary: [
     {
-      title: 'Settings',
+      title: 'Nastavení',
       url: '#',
       icon: IconSettings,
     },
     {
-      title: 'Get Help',
+      title: 'Nápověda',
       url: '#',
       icon: IconHelp,
-    },
-    {
-      title: 'Search',
-      url: '#',
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: 'Data Library',
-      url: '#',
-      icon: IconDatabase,
-    },
-    {
-      name: 'Reports',
-      url: '#',
-      icon: IconReport,
-    },
-    {
-      name: 'Word Assistant',
-      url: '#',
-      icon: IconFileWord,
     },
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ currentSection, onNavigateAction, user, ...props }: AppSidebarProps) {
+  const userData = {
+    ...defaultData.user,
+    ...user,
+    avatar: user?.avatar || defaultData.user.avatar,
+  };
+
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-1.5">
+              <a href="/admin">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <IconInnerShadowTop className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">YEEZUZ2020</span>
+                  <span className="truncate text-xs">Admin Panel</span>
+                </div>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain
+          items={defaultData.navMain}
+          currentSection={currentSection}
+          onNavigateAction={onNavigateAction}
+        />
+        <NavSecondary items={defaultData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
   );

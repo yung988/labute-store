@@ -6,6 +6,7 @@ import { ConditionalLayout } from '@/components/ConditionalLayout';
 import { ReactLenis } from 'lenis/react';
 import './globals.css';
 import { PostHogProvider } from '@/components/PostHogProvider';
+import { Toaster } from '@/components/ui/sonner';
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -44,6 +45,7 @@ export default function RootLayout({
             >
               <CartProvider>
                 <ConditionalLayout>{children}</ConditionalLayout>
+                <Toaster />
               </CartProvider>
             </ThemeProvider>
           </ReactLenis>

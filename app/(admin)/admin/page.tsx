@@ -3,18 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import {
-  BarChart3,
-  Package,
-  ShoppingCart,
-  Truck,
-  Users,
-  Menu,
-  X,
-  LogOut,
-  User as UserIcon,
-  Loader2,
-} from 'lucide-react';
+import { Loader2, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,13 +12,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import CommandPaletteTrigger from '@/components/CommandPaletteTrigger';
+import { NotificationDropdown } from '@/components/admin/NotificationDropdown';
+import { NotificationSystem } from '@/components/admin/NotificationSystem';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
 
 // Lazy load admin components
-const OrdersTable = React.lazy(() => import('@/components/admin/OrdersTable'));
+const ConsolidatedOrdersTable = React.lazy(
+  () => import('@/components/admin/ConsolidatedOrdersTable')
+);
 const InventoryTable = React.lazy(() => import('@/components/admin/InventoryTable'));
 const PacketaManagement = React.lazy(() => import('@/components/admin/PacketaManagement'));
 const OrderDetailView = React.lazy(() => import('@/components/admin/OrderDetailView'));
 const CustomerCommunication = React.lazy(() => import('@/components/admin/CustomerCommunication'));
+const EmailCommunication = React.lazy(() => import('@/components/admin/EmailCommunication'));
 const Dashboard = React.lazy(() => import('@/components/admin/Dashboard'));
 
 // Loading component
@@ -42,7 +48,14 @@ const LoadingSpinner = () => (
   </div>
 );
 
-type AdminSection = 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail';
+type AdminSection =
+  | 'dashboard'
+  | 'orders'
+  | 'inventory'
+  | 'packeta'
+  | 'customers'
+  | 'order-detail'
+  | 'emails';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -50,7 +63,6 @@ export default function AdminPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -79,7 +91,15 @@ export default function AdminPage() {
 
     if (
       section &&
-      ['dashboard', 'orders', 'inventory', 'packeta', 'customers', 'order-detail'].includes(section)
+      [
+        'dashboard',
+        'orders',
+        'inventory',
+        'packeta',
+        'customers',
+        'order-detail',
+        'emails',
+      ].includes(section)
     ) {
       setCurrentSection(section);
       if (orderId) {
@@ -103,11 +123,6 @@ export default function AdminPage() {
       url.searchParams.delete('orderId');
     }
     window.history.pushState({}, '', url.toString());
-
-    // Close sidebar on mobile
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
   };
 
   const handleOrderClick = (orderId: string) => {
@@ -135,176 +150,152 @@ export default function AdminPage() {
     return null;
   }
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'orders', label: 'Objednávky', icon: ShoppingCart },
-    { id: 'packeta', label: 'Packeta', icon: Truck },
-    { id: 'customers', label: 'Zákazníci', icon: Users },
-    { id: 'inventory', label: 'Skladem', icon: Package },
-  ];
+  const getSectionTitle = (section: AdminSection): string => {
+    const titles = {
+      dashboard: 'Dashboard',
+      orders: 'Objednávky',
+      inventory: 'Skladem',
+      packeta: 'Packeta',
+      customers: 'Zákazníci',
+      emails: 'Emaily',
+      'order-detail': 'Detail objednávky',
+    };
+    return titles[section] || 'Admin';
+  };
+
+  const handleSidebarNavigate = (section: string) => {
+    navigateToSection(section as AdminSection);
+  };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar - STICKY */}
-      <div
-        className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        fixed lg:sticky lg:translate-x-0
-        w-64 h-screen top-0
-        bg-card border-r border-border
-        z-50 transition-transform duration-300 ease-in-out
-        flex flex-col
-      `}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-          <h1 className="text-xl font-bold">YEEZUZ2020 Store</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.id}
-                variant={currentSection === item.id ? 'default' : 'ghost'}
-                className="w-full justify-start h-10"
-                onClick={() => navigateToSection(item.id as AdminSection)}
-              >
-                <Icon className="w-4 h-4 mr-3" />
-                {item.label}
-              </Button>
-            );
-          })}
-        </nav>
-
-        {/* User info - STICKY BOTTOM */}
-        <div className="p-4 border-t border-border flex-shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start p-2">
-                <div className="flex items-center space-x-3 w-full">
-                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <UserIcon className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium truncate">{user.email}</p>
-                    <p className="text-xs text-muted-foreground">Administrátor</p>
-                  </div>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuItem disabled>
-                <UserIcon className="w-4 h-4 mr-2" />
-                {user.email}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Odhlásit se
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Main Content - SCROLLABLE */}
-      <div className="flex-1 min-h-screen">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-30">
-          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-4 w-4" />
-          </Button>
-          <h2 className="font-semibold">YEEZUZ2020 Store</h2>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <UserIcon className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Odhlásit se
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Content - SCROLLABLE AREA */}
-        <div className="p-6 overflow-auto">
-          {currentSection === 'dashboard' && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <Dashboard onNavigateAction={navigateToSection} />
-            </Suspense>
-          )}
-
-          {currentSection === 'orders' && (
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Objednávky</h2>
-              <Suspense fallback={<LoadingSpinner />}>
-                <OrdersTable onOrderClick={handleOrderClick} />
-              </Suspense>
-            </div>
-          )}
-
-          {currentSection === 'inventory' && (
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
-              <Suspense fallback={<LoadingSpinner />}>
-                <InventoryTable />
-              </Suspense>
-            </div>
-          )}
-
-          {currentSection === 'packeta' && (
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
-              <Suspense fallback={<LoadingSpinner />}>
-                <PacketaManagement />
-              </Suspense>
-            </div>
-          )}
-
-          {currentSection === 'customers' && (
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
-              <Suspense fallback={<LoadingSpinner />}>
-                <CustomerCommunication />
-              </Suspense>
-            </div>
-          )}
-
-          {currentSection === 'order-detail' && selectedOrderId && (
-            <Suspense fallback={<LoadingSpinner />}>
-              <OrderDetailView
-                orderId={selectedOrderId}
-                onBack={() => navigateToSection('orders')}
+    <SidebarProvider>
+      <AppSidebar
+        currentSection={currentSection}
+        onNavigateAction={handleSidebarNavigate}
+        user={{
+          name: 'Admin',
+          email: user.email || 'admin@yeezuz2020.cz',
+        }}
+      />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/admin">YEEZUZ2020 Admin</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{getSectionTitle(currentSection)}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+          <div className="ml-auto flex items-center gap-2 px-4">
+            <div className="hidden md:block max-w-sm">
+              <CommandPaletteTrigger
+                onNavigate={(section, orderId) =>
+                  navigateToSection(section as AdminSection, orderId)
+                }
               />
-            </Suspense>
-          )}
+            </div>
+            <NotificationDropdown />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <UserIcon className="h-4 w-4" />
+                  <span className="sr-only">User menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Odhlásit se
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div className="md:hidden mb-4">
+            <CommandPaletteTrigger
+              onNavigate={(section, orderId) => navigateToSection(section as AdminSection, orderId)}
+            />
+          </div>
+
+          <div className="min-h-screen flex-1 rounded-xl bg-muted/50 p-4">
+            {currentSection === 'dashboard' && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <Dashboard onNavigateAction={navigateToSection} />
+              </Suspense>
+            )}
+
+            {currentSection === 'orders' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Konsolidované objednávky</h2>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ConsolidatedOrdersTable
+                    onOrderClick={handleOrderClick}
+                    onCommunicateWith={handleOrderClick}
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {currentSection === 'inventory' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <InventoryTable />
+                </Suspense>
+              </div>
+            )}
+
+            {currentSection === 'packeta' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PacketaManagement />
+                </Suspense>
+              </div>
+            )}
+
+            {currentSection === 'customers' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CustomerCommunication />
+                </Suspense>
+              </div>
+            )}
+
+            {currentSection === 'emails' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6">Emailová komunikace</h2>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <EmailCommunication onOrderClick={handleOrderClick} />
+                </Suspense>
+              </div>
+            )}
+
+            {currentSection === 'order-detail' && selectedOrderId && (
+              <Suspense fallback={<LoadingSpinner />}>
+                <OrderDetailView
+                  orderId={selectedOrderId}
+                  onBack={() => navigateToSection('orders')}
+                />
+              </Suspense>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      </SidebarInset>
+      <NotificationSystem />
+    </SidebarProvider>
   );
 }
