@@ -35,14 +35,14 @@
     --header-height: 64px;
 
     /* Sidebar variables */
-    --sidebar: 0 0% 98%;
-    --sidebar-foreground: 0 0% 3.9%;
-    --sidebar-primary: 0 0% 9%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96.1%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 89.8%;
-    --sidebar-ring: 0 0% 3.9%;
+    --sidebar: 249 100% 98%;
+    --sidebar-foreground: 249 10% 3.9%;
+    --sidebar-primary: 249 100% 9%;
+    --sidebar-primary-foreground: 249 100% 98%;
+    --sidebar-accent: 249 100% 96.1%;
+    --sidebar-accent-foreground: 249 10% 9%;
+    --sidebar-border: 249 13% 89.8%;
+    --sidebar-ring: 249 10% 3.9%;
   }
 
   .dark {
@@ -72,14 +72,14 @@
     --chart-5: 340 75% 55%;
 
     /* Sidebar variables for dark mode */
-    --sidebar: 0 0% 14.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 9%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 0 0% 83.1%;
+    --sidebar: 249 20% 14.9%;
+    --sidebar-foreground: 249 10% 98%;
+    --sidebar-primary: 249 100% 98%;
+    --sidebar-primary-foreground: 249 10% 9%;
+    --sidebar-accent: 249 20% 14.9%;
+    --sidebar-accent-foreground: 249 10% 98%;
+    --sidebar-border: 249 20% 14.9%;
+    --sidebar-ring: 249 10% 83.1%;
   }
 }
 
@@ -149,13 +149,22 @@
 
   /* Sidebar fixes */
   [data-slot='sidebar'] {
-    background-color: hsl(var(--sidebar)) !important;
-    border-right: 1px solid hsl(var(--sidebar-border)) !important;
+    background-color: hsl(249 100% 98%) !important;
+    border-right: 1px solid hsl(249 13% 89.8%) !important;
     z-index: 50 !important;
   }
 
+  .dark [data-slot='sidebar'] {
+    background-color: hsl(249 20% 14.9%) !important;
+    border-right: 1px solid hsl(249 20% 14.9%) !important;
+  }
+
   [data-slot='sidebar-inner'] {
-    background-color: hsl(var(--sidebar)) !important;
+    background-color: hsl(249 100% 98%) !important;
+  }
+
+  .dark [data-slot='sidebar-inner'] {
+    background-color: hsl(249 20% 14.9%) !important;
   }
 
   [data-slot='sidebar-container'] {
@@ -169,7 +178,11 @@
 
   /* Fix for any transparent backgrounds */
   .bg-sidebar {
-    background-color: hsl(var(--sidebar)) !important;
+    background-color: hsl(249 100% 98%) !important;
+  }
+
+  .dark .bg-sidebar {
+    background-color: hsl(249 20% 14.9%) !important;
   }
 
   /* Fix for sidebar positioning */
