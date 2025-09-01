@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const orderId = await saveOrderToDb(sessionData);
-      await sendOrderEmail(sessionData, orderId);
+      await sendOrderEmail(sessionData as never, orderId);
     } catch (err) {
       console.error('❌ Processing error:', err);
       return NextResponse.json({ error: 'Processing failed' }, { status: 500 });

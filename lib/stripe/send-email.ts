@@ -1,8 +1,6 @@
 import { Resend } from 'resend';
 import OrderReceiptEmail from '@/app/emails/OrderReceiptEmail';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface Session {
   id: string;
   customer_details?: {
@@ -10,22 +8,11 @@ interface Session {
     name?: string | null;
   } | null;
   amount_total: number | null;
-  metadata?: {
-    customer_first_name?: string;
-    customer_last_name?: string;
-    customer_phone?: string;
-    delivery_method?: string;
-    delivery_address?: string;
-    delivery_city?: string;
-    delivery_postal_code?: string;
-    packeta_point_id?: string;
-    packeta_point_name?: string;
-    packeta_point_address?: string;
-  };
+  metadata?: Record<string, unknown> | null;
   custom_fields?: Array<{
     key: string;
-    text?: string | { value?: string };
-  }>;
+    text?: string | { value?: string | null };
+  }> | null;
 }
 
 export default async function sendOrderEmail(session: Session, orderId: string) {
@@ -51,32 +38,43 @@ export default async function sendOrderEmail(session: Session, orderId: string) 
 
   // Filtrujeme shipping položky a normalizujeme data
   const normalizedItems = items
-    .filter((item: any) => {
-      const description = item.description || item.price?.product?.name || '';
+    .filter((item: unknown) => {
+      const typedItem = item as { description?: string; price?: { product?: { name?: string } } };
+      const description = typedItem.description || typedItem.price?.product?.name || '';
       return (
         !description.toLowerCase().includes('zásilkovna') &&
         !description.toLowerCase().includes('doručení') &&
         !description.toLowerCase().includes('doprava')
       );
     })
-    .map((item: any) => ({
-      description: item.description || item.price?.product?.name || 'Produkt',
-      quantity: item.quantity || 1,
-      amount_total: item.amount_total || 0,
-    }));
+    .map((item: unknown) => {
+      const typedItem = item as {
+        description?: string;
+        price?: { product?: { name?: string } };
+        quantity?: number;
+        amount_total?: number;
+      };
+      return {
+        description: typedItem.description || typedItem.price?.product?.name || 'Produkt',
+        quantity: typedItem.quantity || 1,
+        amount_total: typedItem.amount_total || 0,
+      };
+    });
 
-  const customerName =
-    session.metadata?.customer_first_name && session.metadata?.customer_last_name
-      ? `${session.metadata.customer_first_name} ${session.metadata.customer_last_name}`
-      : session.customer_details?.name;
+  // Customer name for potential future use
+  // const customerName =
+  //   session.metadata?.customer_first_name && session.metadata?.customer_last_name
+  //     ? `${session.metadata.customer_first_name} ${session.metadata.customer_last_name}`
+  //     : session.customer_details?.name;
 
   // Pošleme email s novým template
+  const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
     from: 'YEEZUZ2020 <noreply@yeezuz2020.store>',
     to: session.customer_details.email,
     subject: `Potvrzení objednávky ${orderId} - YEEZUZ2020`,
     react: OrderReceiptEmail({
-      session,
+      session: session as never,
       items: normalizedItems,
       orderId,
     }),

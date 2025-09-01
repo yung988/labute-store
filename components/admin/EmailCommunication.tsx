@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,7 @@ type EmailLog = {
   opened_at: string | null;
   failed_reason: string | null;
   email_content: string | null;
-  metadata: any;
+  metadata: Record<string, unknown>;
 };
 
 type EmailDetail = EmailLog & {
@@ -120,7 +120,7 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
     },
   ];
 
-  const loadEmails = async () => {
+  const loadEmails = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -135,7 +135,7 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadEmails();
@@ -172,7 +172,7 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
     setLoading(true);
     try {
       // Load order details if order_id exists
-      let emailWithDetails: EmailDetail = { ...email };
+      const emailWithDetails: EmailDetail = { ...email };
 
       if (email.order_id) {
         const supabase = createClient();
@@ -249,7 +249,7 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
     });
 
     return counts;
-  }, [emails]);
+  }, [emails, emailStatuses, emailTypes]);
 
   if (loading && emails.length === 0) {
     return (

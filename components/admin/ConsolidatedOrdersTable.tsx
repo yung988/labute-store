@@ -286,7 +286,15 @@ export default function ConsolidatedOrdersTable({
 
   StatusBadge.displayName = 'StatusBadge';
 
-  const statuses = ['new', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+  const statuses = [
+    'new',
+    'paid',
+    'processing',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'refunded',
+  ] as const;
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: orders.length };
     statuses.forEach((status) => {

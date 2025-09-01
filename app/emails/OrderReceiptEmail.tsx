@@ -1,14 +1,4 @@
-import {
-  Html,
-  Head,
-  Preview,
-  Body,
-  Container,
-  Section,
-  Text,
-  Hr,
-  Img,
-} from '@react-email/components';
+import { Html, Head, Preview, Body, Container, Section, Text, Hr } from '@react-email/components';
 import { emailStyles, emailTheme, BRAND } from '../../emails/theme';
 
 interface Session {
