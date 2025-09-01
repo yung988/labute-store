@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
 type MapyItem = {
   name?: string;
@@ -19,7 +19,12 @@ type MapyItem = {
 };
 
 // Fallback address parsing function for cases where Mapy.cz doesn't provide structured data
-function parseAddressFallback(addressString: string): { street: string; houseNumber: string; city: string; postalCode: string } {
+function parseAddressFallback(addressString: string): {
+  street: string;
+  houseNumber: string;
+  city: string;
+  postalCode: string;
+} {
   let street = addressString;
   let houseNumber = '';
   let city = '';
@@ -133,8 +138,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Remove duplicates based on name
-    const uniqueItems = allSourceItems.filter((item, index, self) =>
-      index === self.findIndex(i => i.name === item.name)
+    const uniqueItems = allSourceItems.filter(
+      (item, index, self) => index === self.findIndex((i) => i.name === item.name)
     );
 
     let sourceItems = uniqueItems;
@@ -170,7 +175,7 @@ export async function GET(req: NextRequest) {
     // If no results found, try a broader search without the house number
     if (sourceItems.length === 0 && streetNumberMatch) {
       const streetName = streetNumberMatch[1].trim();
-      
+
       try {
         const broadUrl = new URL('https://api.mapy.com/v1/geocode');
         broadUrl.searchParams.set('query', streetName);
@@ -186,16 +191,19 @@ export async function GET(req: NextRequest) {
         if (broadResponse.ok) {
           const broadData: { items?: MapyItem[] } = await broadResponse.json();
           const broadItems = Array.isArray(broadData.items) ? broadData.items : [];
-          
+
           // Filter for addresses that contain the street name
-          const relevantItems = broadItems.filter(item => {
+          const relevantItems = broadItems.filter((item) => {
             const itemName = (item.name || '').toLowerCase();
             const itemLocation = (item.location || '').toLowerCase();
             const streetLower = streetName.toLowerCase();
 
-            return (itemName.includes(streetLower) || itemLocation.includes(streetLower)) &&
-                   (item.type === 'regional.address' || item.type === 'regional.street' ||
-                    (item.type === 'regional.municipality_part' && item.name && /\d/.test(item.name)));
+            return (
+              (itemName.includes(streetLower) || itemLocation.includes(streetLower)) &&
+              (item.type === 'regional.address' ||
+                item.type === 'regional.street' ||
+                (item.type === 'regional.municipality_part' && item.name && /\d/.test(item.name)))
+            );
           });
 
           sourceItems = relevantItems;
@@ -207,18 +215,19 @@ export async function GET(req: NextRequest) {
     const addresses = sourceItems
       .filter((item: MapyItem) => {
         // Include addresses, streets, and municipalities
-        const isValidType = item.type === 'regional.address' || 
-                           item.type === 'regional.street' || 
-                           item.type === 'regional.municipality' ||
-                           item.type === 'regional.municipality_part' ||
-                           item.type === 'address' || 
-                           item.type === 'address.point';
+        const isValidType =
+          item.type === 'regional.address' ||
+          item.type === 'regional.street' ||
+          item.type === 'regional.municipality' ||
+          item.type === 'regional.municipality_part' ||
+          item.type === 'address' ||
+          item.type === 'address.point';
 
         if (!isValidType) return false;
 
         // Dodatečné filtrování pouze na české adresy
         if (item.regionalStructure) {
-          const country = item.regionalStructure.find(rs => rs.type === 'regional.country');
+          const country = item.regionalStructure.find((rs) => rs.type === 'regional.country');
           if (country && country.isoCode && country.isoCode !== 'CZ') {
             return false; // Vyfiltrovat ne-české adresy
           }
@@ -253,21 +262,23 @@ export async function GET(req: NextRequest) {
         // Extract city and postal code from regional structure
         let city = '';
         let postalCode = '';
-        
+
         // First try to get postal code from zip field (most reliable)
         if (item.zip) {
           postalCode = item.zip.replace(/\s/g, ''); // Remove spaces for consistency
         }
-        
+
         if (item.regionalStructure) {
           // Find municipality (city)
-          const municipality = item.regionalStructure.find(rs => rs.type === 'regional.municipality');
+          const municipality = item.regionalStructure.find(
+            (rs) => rs.type === 'regional.municipality'
+          );
           if (municipality) {
             city = municipality.name;
           }
-          
+
           // Try to extract postal code from location or other sources
-          const locationParts = location.split(',').map(part => part.trim());
+          const locationParts = location.split(',').map((part) => part.trim());
           for (const part of locationParts) {
             // Czech postal code format: 5 digits with optional space (12345 or 123 45)
             const postalMatch = part.match(/\b(\d{3}\s?\d{2})\b/);
@@ -295,7 +306,10 @@ export async function GET(req: NextRequest) {
         } else if (item.type === 'regional.street') {
           // For streets, use the name as street
           street = name;
-        } else if (item.type === 'regional.municipality' || item.type === 'regional.municipality_part') {
+        } else if (
+          item.type === 'regional.municipality' ||
+          item.type === 'regional.municipality_part'
+        ) {
           // For municipalities, we'll use the name as a general location
           // Don't set street, but we'll allow it through the filter
         }
@@ -303,7 +317,9 @@ export async function GET(req: NextRequest) {
         // Enhanced city and postal code extraction
         if (!city || !postalCode) {
           // Try to extract from the full name first (for cases like "Biskupice-Pulkov 72 67557")
-          const fullAddressMatch = name.match(/^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)\s+(\d{3}\s?\d{2})$/);
+          const fullAddressMatch = name.match(
+            /^(.+?)\s+(\d+(?:\/\d+)?[a-zA-Z]?)\s+(\d{3}\s?\d{2})$/
+          );
           if (fullAddressMatch) {
             street = fullAddressMatch[1].trim();
             houseNumber = fullAddressMatch[2];
@@ -313,7 +329,7 @@ export async function GET(req: NextRequest) {
           // If still no city, try to extract from location or regional structure
           if (!city) {
             if (location) {
-              const locationParts = location.split(',').map(part => part.trim());
+              const locationParts = location.split(',').map((part) => part.trim());
               // Usually the first part after filtering out postal codes
               for (const part of locationParts) {
                 if (!part.match(/\d{3}\s?\d{2}/) && part.length > 2) {
@@ -325,7 +341,9 @@ export async function GET(req: NextRequest) {
 
             // If still no city from location, try regional structure again
             if (!city && item.regionalStructure) {
-              const municipality = item.regionalStructure.find(rs => rs.type === 'regional.municipality');
+              const municipality = item.regionalStructure.find(
+                (rs) => rs.type === 'regional.municipality'
+              );
               if (municipality) {
                 city = municipality.name;
               }
@@ -334,7 +352,7 @@ export async function GET(req: NextRequest) {
 
           // If still no postal code, try to extract from location
           if (!postalCode && location) {
-            const locationParts = location.split(',').map(part => part.trim());
+            const locationParts = location.split(',').map((part) => part.trim());
             for (const part of locationParts) {
               // Czech postal code format: 5 digits with optional space (12345 or 123 45)
               const postalMatch = part.match(/\b(\d{3}\s?\d{2})\b/);
@@ -346,20 +364,23 @@ export async function GET(req: NextRequest) {
           }
 
           // For municipalities without postal code, try to get a default one
-          if (!postalCode && (item.type === 'regional.municipality' || item.type === 'regional.municipality_part')) {
+          if (
+            !postalCode &&
+            (item.type === 'regional.municipality' || item.type === 'regional.municipality_part')
+          ) {
             const cityName = city.toLowerCase();
             // Basic postal codes for major Czech cities
             const cityPostalCodes: { [key: string]: string } = {
-              'znojmo': '66902',
-              'praha': '11000',
-              'brno': '60200',
-              'ostrava': '70200',
-              'plzeň': '30100',
-              'liberec': '46001',
-              'olomouc': '77900',
+              znojmo: '66902',
+              praha: '11000',
+              brno: '60200',
+              ostrava: '70200',
+              plzeň: '30100',
+              liberec: '46001',
+              olomouc: '77900',
               'ústí nad labem': '40001',
               'hradec králové': '50003',
-              'pardubice': '53002'
+              pardubice: '53002',
             };
 
             if (cityPostalCodes[cityName]) {
@@ -391,7 +412,10 @@ export async function GET(req: NextRequest) {
           // For addresses and streets - show street with house number, then city
           streetWithNumber = houseNumber ? `${street} ${houseNumber}` : street;
           fullAddress = `${streetWithNumber}${city ? ', ' + city : ''}${postalCode ? ' ' + postalCode : ''}`;
-        } else if (item.type === 'regional.municipality' || item.type === 'regional.municipality_part') {
+        } else if (
+          item.type === 'regional.municipality' ||
+          item.type === 'regional.municipality_part'
+        ) {
           // For municipalities when searching just city name
           streetWithNumber = city || name;
           fullAddress = `${city || name}${postalCode ? ' ' + postalCode : ''}`;
@@ -408,27 +432,26 @@ export async function GET(req: NextRequest) {
               houseNumber,
               city,
               postalCode,
-              fullAddress
-            }
+              fullAddress,
+            },
           });
         }
 
         return {
           address: streetWithNumber, // Street with house number for form field
-          street: streetWithNumber,  // Same as address for compatibility
+          street: streetWithNumber, // Same as address for compatibility
           city: city,
           postalCode: postalCode,
           fullAddress: fullAddress,
           score: 1,
         };
       })
-      .filter(addr => addr.street || addr.city); // Return addresses with street OR city (for municipalities)
+      .filter((addr) => addr.street || addr.city); // Return addresses with street OR city (for municipalities)
 
     console.log(`Final processed addresses count: ${addresses.length}`);
     console.log('Final addresses:', JSON.stringify(addresses, null, 2));
 
     return NextResponse.json({ addresses });
-
   } catch (error) {
     console.error('Address search error:', error);
     return NextResponse.json({ addresses: [] });

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 
@@ -26,9 +26,9 @@ export default function AddressAutocomplete({
   onChange,
   onAddressSelect,
   onManualEntry,
-  placeholder = "Začněte psát ulici a číslo popisné...",
-  className = "",
-  showManualEntry = true
+  placeholder = 'Začněte psát ulici a číslo popisné...',
+  className = '',
+  showManualEntry = true,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,11 +59,11 @@ export default function AddressAutocomplete({
       setError(null);
       try {
         const response = await fetch(`/api/addresses/search?q=${encodeURIComponent(value)}`);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
 
         if (data.error) {
@@ -71,7 +71,11 @@ export default function AddressAutocomplete({
         }
 
         const addresses = Array.isArray(data.addresses) ? data.addresses : [];
-        console.log('AddressAutocomplete: results', { query: value, count: addresses.length, sample: addresses[0] });
+        console.log('AddressAutocomplete: results', {
+          query: value,
+          count: addresses.length,
+          sample: addresses[0],
+        });
         setSuggestions(addresses);
         setShowSuggestions(addresses.length > 0);
 
@@ -139,7 +143,8 @@ export default function AddressAutocomplete({
                 className="w-full px-4 py-3 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-b border-gray-100 last:border-b-0 text-gray-900"
               >
                 <div className="text-sm font-medium text-gray-900 mb-1">
-                  {address.fullAddress || `${address.street}${address.city ? `, ${address.city}` : ''}${address.postalCode ? ` ${address.postalCode}` : ''}`}
+                  {address.fullAddress ||
+                    `${address.street}${address.city ? `, ${address.city}` : ''}${address.postalCode ? ` ${address.postalCode}` : ''}`}
                 </div>
                 <div className="text-xs text-gray-600 flex items-center gap-2">
                   <span>{address.street}</span>
@@ -161,7 +166,7 @@ export default function AddressAutocomplete({
           )}
         </div>
       )}
-      
+
       {showManualEntry && (
         <button
           type="button"

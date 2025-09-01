@@ -13,9 +13,9 @@
 // - Result is rounded up to integer CZK (Math.ceil)
 // - All calculations are conservative to avoid undercharging.
 
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
-export type DeliveryMethod = "pickup" | "home_delivery";
+export type DeliveryMethod = 'pickup' | 'home_delivery';
 
 export interface QuoteItem {
   productId: string;
@@ -33,7 +33,7 @@ export interface ShippingQuote {
 // Compute base price (CZK) by delivery method and total weight (kg)
 export function basePriceCZK(weightKg: number, method: DeliveryMethod): number {
   const w = Math.max(0, weightKg);
-  if (method === "pickup") {
+  if (method === 'pickup') {
     // PP / Z-Box bands (max 15 kg)
     if (w <= 5) return 62;
     if (w <= 10) return 120;
@@ -56,7 +56,7 @@ export function basePriceCZK(weightKg: number, method: DeliveryMethod): number {
 
 // Toll surcharge depending on weight band
 export function tollSurchargeCZK(weightKg: number): number {
-  return weightKg <= 5 ? 2.10 : 4.80;
+  return weightKg <= 5 ? 2.1 : 4.8;
 }
 
 // Compose full quote (CZK) from weight and method
@@ -73,16 +73,16 @@ export function computeQuoteFromWeight(weightKg: number, method: DeliveryMethod)
 // If a product has no weight, default to 0.5 kg per unit (conservative).
 export async function computeTotalWeightFromItems(items: QuoteItem[]): Promise<number> {
   if (!items || items.length === 0) return 0;
-  const ids = Array.from(new Set(items.map(i => i.productId))).filter(Boolean);
+  const ids = Array.from(new Set(items.map((i) => i.productId))).filter(Boolean);
   if (ids.length === 0) {
     // No productIds provided, assume conservative 0.5 kg per item
     return items.reduce((sum, it) => sum + (it.quantity || 0) * 0.5, 0);
   }
 
   const { data, error } = await supabaseAdmin
-    .from("products")
-    .select("id, weight_kg")
-    .in("id", ids);
+    .from('products')
+    .select('id, weight_kg')
+    .in('id', ids);
 
   if (error) {
     // On error, assume conservative 0.5 kg per item
@@ -91,8 +91,8 @@ export async function computeTotalWeightFromItems(items: QuoteItem[]): Promise<n
 
   const weightById = new Map<string, number>();
   for (const row of data || []) {
-    const w = typeof row.weight_kg === "number" ? row.weight_kg : undefined;
-    if (row.id && typeof w === "number" && isFinite(w) && w >= 0) {
+    const w = typeof row.weight_kg === 'number' ? row.weight_kg : undefined;
+    if (row.id && typeof w === 'number' && isFinite(w) && w >= 0) {
       weightById.set(row.id, w);
     }
   }
@@ -105,8 +105,10 @@ export async function computeTotalWeightFromItems(items: QuoteItem[]): Promise<n
   return total;
 }
 
-export async function computeQuoteFromItems(items: QuoteItem[], method: DeliveryMethod): Promise<ShippingQuote> {
+export async function computeQuoteFromItems(
+  items: QuoteItem[],
+  method: DeliveryMethod
+): Promise<ShippingQuote> {
   const weight = await computeTotalWeightFromItems(items);
   return computeQuoteFromWeight(weight, method);
 }
-

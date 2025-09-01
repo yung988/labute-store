@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (!carts || carts.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'No abandoned carts found',
-        processed: 0 
+        processed: 0,
       });
     }
 
@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
           size?: string;
         }>;
         const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-        const totalAmount = cart.total_amount || items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalAmount =
+          cart.total_amount || items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
         // Send abandoned cart email
         const { error: emailError } = await resend.emails.send({
@@ -79,13 +80,17 @@ export async function GET(request: NextRequest) {
               
               <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3>Váš košík obsahuje:</h3>
-                ${items.map(item => `
+                ${items
+                  .map(
+                    (item) => `
                   <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                     <strong>${item.name}</strong><br>
                     Velikost: ${item.size || 'N/A'} | Množství: ${item.quantity}<br>
                     Cena: ${item.price} Kč
                   </div>
-                `).join('')}
+                `
+                  )
+                  .join('')}
                 
                 <div style="margin-top: 15px; font-size: 18px; font-weight: bold;">
                   Celkem: ${totalAmount} Kč (${totalItems} ${totalItems === 1 ? 'položka' : totalItems < 5 ? 'položky' : 'položek'})
@@ -103,7 +108,7 @@ export async function GET(request: NextRequest) {
                 Pokud už jste objednávku dokončili, můžete tento email ignorovat.
               </p>
             </div>
-          `
+          `,
         });
 
         if (emailError) {
@@ -115,10 +120,9 @@ export async function GET(request: NextRequest) {
             .from('abandoned_carts')
             .update({ email_sent_at: new Date().toISOString() })
             .eq('id', cart.id);
-          
+
           emailsSent++;
         }
-
       } catch (error) {
         console.error('Error processing abandoned cart:', cart.id, error);
         errors++;
@@ -129,9 +133,8 @@ export async function GET(request: NextRequest) {
       message: 'Abandoned cart check completed',
       processed: carts.length,
       emailsSent,
-      errors
+      errors,
     });
-
   } catch (error) {
     console.error('Abandoned cart cron error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

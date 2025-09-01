@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { withAdminAuth, AdminUser } from "@/lib/middleware/admin-verification";
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { withAdminAuth, AdminUser } from '@/lib/middleware/admin-verification';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser) => {
@@ -17,7 +17,7 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
           // No-op for API routes
         },
       },
-    },
+    }
   );
 
   // Parse pagination parameters
@@ -28,9 +28,12 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
   const search = url.searchParams.get('search'); // Optional search query
 
   let query = supabase
-    .from("orders")
-    .select("id,stripe_session_id,customer_email,customer_name,customer_phone,packeta_point_id,packeta_shipment_id,items,status,amount_total,shipping_amount,created_at,delivery_method,delivery_address,delivery_city,delivery_postal_code,delivery_country,label_printed_at,label_printed_count", { count: 'exact' })
-    .order("created_at", { ascending: false })
+    .from('orders')
+    .select(
+      'id,stripe_session_id,customer_email,customer_name,customer_phone,packeta_point_id,packeta_shipment_id,items,status,amount_total,shipping_amount,created_at,delivery_method,delivery_address,delivery_city,delivery_postal_code,delivery_country,label_printed_at,label_printed_count',
+      { count: 'exact' }
+    )
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   // Apply cursor-based pagination
@@ -45,7 +48,9 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
 
   // Apply search filter (simple implementation - can be enhanced)
   if (search) {
-    query = query.or(`customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.%${search}%`);
+    query = query.or(
+      `customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.%${search}%`
+    );
   }
 
   const { data, error, count } = await query;
@@ -61,8 +66,8 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
       count: count || 0,
       limit,
       nextCursor,
-      hasMore: Boolean(nextCursor)
-    }
+      hasMore: Boolean(nextCursor),
+    },
   });
 });
 
@@ -74,10 +79,7 @@ export const POST = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser
   const requiredFields = ['customer_email', 'customer_name', 'items'];
   for (const field of requiredFields) {
     if (!body[field]) {
-      return NextResponse.json(
-        { error: `Missing required field: ${field}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
     }
   }
 
@@ -94,7 +96,7 @@ export const POST = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser
           // No-op for API routes
         },
       },
-    },
+    }
   );
 
   const payload = {
@@ -105,16 +107,12 @@ export const POST = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser
     customer_phone: body.customer_phone ?? null,
     packeta_point_id: body.packeta_point_id ?? null,
     items: body.items,
-    status: body.status ?? "new",
+    status: body.status ?? 'new',
     amount_total: body.amount_total ?? null,
     shipping_amount: body.shipping_amount ?? null,
   };
 
-  const { data, error } = await supabase
-    .from("orders")
-    .insert(payload)
-    .select()
-    .single();
+  const { data, error } = await supabase.from('orders').insert(payload).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ order: data }, { status: 201 });

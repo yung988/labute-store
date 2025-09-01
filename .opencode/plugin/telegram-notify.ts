@@ -5,24 +5,24 @@
 //   // Initialize Telegram bot
 //   const bot = new SimpleTelegramBot()
 //   let lastMessage = ""
-  
+
 //   return {
 //     async event(input) {
 //       if (input.event.type === "session.idle") {
 //         // Send the last message content along with idle notification
-//         const message = lastMessage 
+//         const message = lastMessage
 //           ? `🟡 Session idle! Here's your last message:\n\n${lastMessage}`
 //           : "🟡 Hey! Your OpenCode session is idle - time to check your work!"
 //         bot.sendMessage(message)
 //       }
-      
+
 //       if (input.event.type === "message.updated") {
 //         // Reset idle timer when user sends messages
 //         bot.resetActivity()
-        
-//         const messageContent = (input.event as any).message?.content || 
+
+//         const messageContent = (input.event as any).message?.content ||
 //                               (input.event as any).content || ""
-        
+
 //         // Check if it's a command to send last message
 //         if (messageContent.includes("/send-last") || messageContent.includes("/last")) {
 //           if (lastMessage) {
@@ -32,7 +32,7 @@
 //           }
 //           return
 //         }
-        
+
 //         // Check if it's a command to send to phone
 //         if (messageContent.includes("/send-to-phone") || messageContent.includes("/phone")) {
 //           if (lastMessage) {
@@ -42,22 +42,22 @@
 //           }
 //           return
 //         }
-        
+
 //         // Try to capture message content from the event
 //         try {
 //           // Access message content if available
-//           const messageContent = (input.event as any).message?.content || 
+//           const messageContent = (input.event as any).message?.content ||
 //                                 (input.event as any).content ||
 //                                 "Message updated"
-          
+
 //           if (messageContent && messageContent !== "Message updated") {
 //             lastMessage = messageContent
-            
+
 //             // Send a preview of the message to Telegram
-//             const preview = lastMessage.length > 200 
+//             const preview = lastMessage.length > 200
 //               ? lastMessage.substring(0, 200) + "..."
 //               : lastMessage
-            
+
 //             bot.sendMessage(`📱 Last message preview:\n\n${preview}`)
 //           }
 //         } catch (error) {
@@ -65,31 +65,31 @@
 //           console.log("Message updated but couldn't capture content")
 //         }
 //       }
-      
+
 //       if (input.event.type === "file.edited") {
 //         // Reset idle timer when user edits files
 //         bot.resetActivity()
 //       }
-      
+
 //       if (input.event.type === "message.updated") {
 //         // Reset idle timer when user sends messages
 //         bot.resetActivity()
-        
+
 //         // Try to capture message content from the event
 //         try {
 //           // Access message content if available
-//           const messageContent = (input.event as any).message?.content || 
+//           const messageContent = (input.event as any).message?.content ||
 //                                 (input.event as any).content ||
 //                                 "Message updated"
-          
+
 //           if (messageContent && messageContent !== "Message updated") {
 //             lastMessage = messageContent
-            
+
 //             // Send a preview of the message to Telegram
-//             const preview = lastMessage.length > 200 
+//             const preview = lastMessage.length > 200
 //               ? lastMessage.substring(0, 200) + "..."
 //               : lastMessage
-            
+
 //             bot.sendMessage(`📱 Last message preview:\n\n${preview}`)
 //           }
 //         } catch (error) {
@@ -97,23 +97,23 @@
 //           console.log("Message updated but couldn't capture content")
 //         }
 //       }
-      
+
 //       // Also listen for message parts being updated
 //       if (input.event.type === "message.part.updated") {
 //         bot.resetActivity()
-        
+
 //         try {
-//           const partContent = (input.event as any).part?.content || 
+//           const partContent = (input.event as any).part?.content ||
 //                              (input.event as any).content ||
 //                              "Message part updated"
-          
+
 //           if (partContent && partContent !== "Message part updated") {
 //             lastMessage = partContent
-            
-//             const preview = lastMessage.length > 200 
+
+//             const preview = lastMessage.length > 200
 //               ? lastMessage.substring(0, 200) + "..."
 //               : lastMessage
-            
+
 //             bot.sendMessage(`📱 Message part preview:\n\n${preview}`)
 //           }
 //         } catch (error) {

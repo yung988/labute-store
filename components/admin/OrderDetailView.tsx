@@ -1,18 +1,24 @@
-"use client";
-import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, 
-  Package, 
-  Truck, 
-  Edit, 
-  FileText, 
+'use client';
+import { useEffect, useState, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import {
+  ArrowLeft,
+  Package,
+  Truck,
+  Edit,
+  FileText,
   Mail,
   Phone,
   MapPin,
@@ -22,11 +28,11 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Users
-} from "lucide-react";
+  Users,
+} from 'lucide-react';
 // Dialog components removed - not used in this component
-import { createClient } from "@/lib/supabase/client";
-import { formatOrderId } from "@/lib/product-images";
+import { createClient } from '@/lib/supabase/client';
+import { formatOrderId } from '@/lib/product-images';
 
 type OrderDetail = {
   id: string;
@@ -69,8 +75,6 @@ type Communication = {
   automated: boolean;
 };
 
-
-
 interface OrderDetailViewProps {
   orderId: string;
   onBack: () => void;
@@ -85,14 +89,12 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const [editMode, setEditMode] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Partial<OrderDetail>>({});
 
-
   // Helper function to truncate long text
   const truncateText = (text: string | null, maxLength: number = 20) => {
-    if (!text) return "Nezadáno";
+    if (!text) return 'Nezadáno';
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
+    return text.substring(0, maxLength) + '...';
   };
-
 
   const loadOrder = useCallback(async () => {
     setLoading(true);
@@ -105,7 +107,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
         .eq('id', orderId)
         .single();
 
-      if (error) throw new Error(error.message || "Failed to load order");
+      if (error) throw new Error(error.message || 'Failed to load order');
 
       setOrder(orderData);
       setEditedOrder({ ...orderData, stripe_invoice_id: orderData.stripe_invoice_id });
@@ -116,22 +118,26 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       const timelineEvents: TimelineEvent[] = [
         {
           timestamp: orderData.created_at,
-          event: "Order Created",
+          event: 'Order Created',
           description: `Order created with status: ${orderData.status}`,
-          icon: <FileText className="w-4 h-4" />
-        }
+          icon: <FileText className="w-4 h-4" />,
+        },
       ];
 
       if (orderData.packeta_shipment_id) {
         timelineEvents.push({
           timestamp: orderData.updated_at || orderData.created_at,
-          event: "Shipment Created",
+          event: 'Shipment Created',
           description: `Packeta shipment created: ${orderData.packeta_shipment_id}`,
-          icon: <Truck className="w-4 h-4" />
+          icon: <Truck className="w-4 h-4" />,
         });
       }
 
-      setTimeline(timelineEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+      setTimeline(
+        timelineEvents.sort(
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+      );
 
       // Load communications
       try {
@@ -144,7 +150,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
         // Ignore communication errors for now
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load order");
+      setError(e instanceof Error ? e.message : 'Failed to load order');
     } finally {
       setLoading(false);
     }
@@ -166,33 +172,31 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
         .select()
         .single();
 
-      if (error) throw new Error(error.message || "Save failed");
+      if (error) throw new Error(error.message || 'Save failed');
 
       setOrder(updatedOrder);
       setEditMode(false);
       await loadOrder();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setLoading(false);
     }
   };
 
-
-
   const createPacketaShipment = async () => {
-    if (!confirm("Opravdu vytvořit Packeta zásilku?")) return;
+    if (!confirm('Opravdu vytvořit Packeta zásilku?')) return;
 
     try {
       setLoading(true);
-      
+
       // Call the Next.js API route instead of edge function
       const response = await fetch('/api/admin/packeta/create-shipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ orderId })
+        body: JSON.stringify({ orderId }),
       });
 
       if (!response.ok) {
@@ -204,25 +208,25 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       alert(`Packeta zásilka vytvořena: ${data?.message || 'Success'}`);
       await loadOrder();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to create shipment");
+      setError(e instanceof Error ? e.message : 'Failed to create shipment');
     } finally {
       setLoading(false);
     }
   };
 
   const cancelPacketaShipment = async () => {
-    if (!confirm("Opravdu zrušit Packeta zásilku?")) return;
+    if (!confirm('Opravdu zrušit Packeta zásilku?')) return;
 
     try {
       setLoading(true);
-      
+
       // Call the Next.js API route instead of edge function
       const response = await fetch('/api/admin/packeta/cancel-shipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ orderId })
+        body: JSON.stringify({ orderId }),
       });
 
       if (!response.ok) {
@@ -230,28 +234,28 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      alert("Packeta zásilka zrušena");
+      alert('Packeta zásilka zrušena');
       await loadOrder();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to cancel shipment");
+      setError(e instanceof Error ? e.message : 'Failed to cancel shipment');
     } finally {
       setLoading(false);
     }
   };
 
   const rollbackInventory = async () => {
-    if (!confirm("Opravdu chcete vrátit položky zpět do skladu a zrušit objednávku?")) {
+    if (!confirm('Opravdu chcete vrátit položky zpět do skladu a zrušit objednávku?')) {
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const response = await fetch(`/api/admin/orders/${orderId}/rollback-inventory`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
       });
 
       if (!response.ok) {
@@ -263,27 +267,27 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
       alert(`Inventář vrácen: ${result.message}`);
       await loadOrder();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to rollback inventory");
+      setError(e instanceof Error ? e.message : 'Failed to rollback inventory');
     } finally {
       setLoading(false);
     }
   };
 
-      const printPacketaLabel = () => {
-        try {
-          // Open the API endpoint directly in a new tab (no storage)
-          const url = `/api/admin/packeta/print-label/${orderId}?direct=true`;
-          const win = window.open(url, '_blank');
-          if (!win) {
-            setError("Prohlížeč zablokoval nové okno. Povolte prosím vyskakovací okna.");
-          } else {
-            alert("Štítek byl otevřen!");
-          }
-        } catch (e: unknown) {
-          setError(e instanceof Error ? e.message : "Failed to print label");
-          console.error("Print label error:", e);
-        }
-      };
+  const printPacketaLabel = () => {
+    try {
+      // Open the API endpoint directly in a new tab (no storage)
+      const url = `/api/admin/packeta/print-label/${orderId}?direct=true`;
+      const win = window.open(url, '_blank');
+      if (!win) {
+        setError('Prohlížeč zablokoval nové okno. Povolte prosím vyskakovací okna.');
+      } else {
+        alert('Štítek byl otevřen!');
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to print label');
+      console.error('Print label error:', e);
+    }
+  };
 
   if (loading && !order) {
     return (
@@ -324,13 +328,33 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Zaplaceno
+          </Badge>
+        );
       case 'shipped':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Truck className="w-3 h-3 mr-1" />Odesláno</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <Truck className="w-3 h-3 mr-1" />
+            Odesláno
+          </Badge>
+        );
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Zrušeno
+          </Badge>
+        );
       case 'processing':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><Clock className="w-3 h-3 mr-1" />Zpracovává se</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Zpracovává se
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -361,17 +385,14 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
 
   const deleteOrder = async () => {
     if (!confirm('Opravdu smazat tuto objednávku? Tato akce je nevratná.')) return;
-    
+
     try {
       setLoading(true);
       const supabase = createClient();
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', orderId);
+      const { error } = await supabase.from('orders').delete().eq('id', orderId);
 
       if (error) throw new Error(error.message);
-      
+
       alert('Objednávka byla smazána');
       onBack();
     } catch (e) {
@@ -392,10 +413,12 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Objednávka #{formatOrderId(order.id)}</h1>
-            <p className="text-muted-foreground">Vytvořeno {new Date(order.created_at).toLocaleString()}</p>
+            <p className="text-muted-foreground">
+              Vytvořeno {new Date(order.created_at).toLocaleString()}
+            </p>
           </div>
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
           {!editMode && (
             <>
@@ -415,7 +438,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
               </Button>
             </>
           )}
-          
+
           {editMode && (
             <>
               <Button onClick={saveOrder} disabled={loading} size="sm">
@@ -457,23 +480,34 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   <Label className="text-sm font-medium text-muted-foreground">Status</Label>
                   {editMode ? (
                     <Select
-                      value={editedOrder.status || ""}
-                      onValueChange={(value) => setEditedOrder(prev => ({ ...prev, status: value }))}
+                      value={editedOrder.status || ''}
+                      onValueChange={(value) =>
+                        setEditedOrder((prev) => ({ ...prev, status: value }))
+                      }
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {["new", "paid", "processing", "shipped", "cancelled", "refunded"].map(status => (
-                          <SelectItem key={status} value={status}>
-                            {status === 'new' ? 'Nová' :
-                             status === 'paid' ? 'Zaplaceno' :
-                             status === 'processing' ? 'Zpracovává se' :
-                             status === 'shipped' ? 'Odesláno' :
-                             status === 'cancelled' ? 'Zrušeno' :
-                             status === 'refunded' ? 'Vráceno' : status}
-                          </SelectItem>
-                        ))}
+                        {['new', 'paid', 'processing', 'shipped', 'cancelled', 'refunded'].map(
+                          (status) => (
+                            <SelectItem key={status} value={status}>
+                              {status === 'new'
+                                ? 'Nová'
+                                : status === 'paid'
+                                  ? 'Zaplaceno'
+                                  : status === 'processing'
+                                    ? 'Zpracovává se'
+                                    : status === 'shipped'
+                                      ? 'Odesláno'
+                                      : status === 'cancelled'
+                                        ? 'Zrušeno'
+                                        : status === 'refunded'
+                                          ? 'Vráceno'
+                                          : status}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (
@@ -481,33 +515,41 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   )}
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Celková částka</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Celková částka
+                  </Label>
                   <p className="text-xl font-bold mt-1">
-                    {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : "Nezadáno"}
+                    {order.amount_total
+                      ? `${(order.amount_total / 100).toFixed(2)} Kč`
+                      : 'Nezadáno'}
                   </p>
                 </div>
-                 <div>
-                   <Label className="text-sm font-medium text-muted-foreground">Stripe Session ID</Label>
-                   <p className="text-sm mt-1 text-muted-foreground">
-                     {truncateText(order.stripe_session_id, 25)}
-                   </p>
-                 </div>
-                 {order.stripe_invoice_id && (
-                   <div>
-                     <Label className="text-sm font-medium text-muted-foreground">Stripe Faktura</Label>
-                     <p className="text-sm mt-1">
-                       <a
-                         href={`https://dashboard.stripe.com/invoices/${order.stripe_invoice_id}`}
-                         target="_blank"
-                         rel="noopener noreferrer"
-                         className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                       >
-                         {truncateText(order.stripe_invoice_id, 25)}
-                         <ExternalLink className="w-3 h-3" />
-                       </a>
-                     </p>
-                   </div>
-                 )}
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Stripe Session ID
+                  </Label>
+                  <p className="text-sm mt-1 text-muted-foreground">
+                    {truncateText(order.stripe_session_id, 25)}
+                  </p>
+                </div>
+                {order.stripe_invoice_id && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Stripe Faktura
+                    </Label>
+                    <p className="text-sm mt-1">
+                      <a
+                        href={`https://dashboard.stripe.com/invoices/${order.stripe_invoice_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                      >
+                        {truncateText(order.stripe_invoice_id, 25)}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -526,14 +568,16 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   <Label className="text-sm font-medium text-muted-foreground">Jméno</Label>
                   {editMode ? (
                     <Input
-                      value={editedOrder.customer_name || ""}
-                      onChange={(e) => setEditedOrder(prev => ({ ...prev, customer_name: e.target.value }))}
+                      value={editedOrder.customer_name || ''}
+                      onChange={(e) =>
+                        setEditedOrder((prev) => ({ ...prev, customer_name: e.target.value }))
+                      }
                       className="mt-1"
                       placeholder="Jméno zákazníka"
                     />
                   ) : (
                     <p className="text-sm mt-1 flex items-center gap-2">
-                      {order.customer_name || "Nezadáno"}
+                      {order.customer_name || 'Nezadáno'}
                     </p>
                   )}
                 </div>
@@ -542,15 +586,17 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   {editMode ? (
                     <Input
                       type="email"
-                      value={editedOrder.customer_email || ""}
-                      onChange={(e) => setEditedOrder(prev => ({ ...prev, customer_email: e.target.value }))}
+                      value={editedOrder.customer_email || ''}
+                      onChange={(e) =>
+                        setEditedOrder((prev) => ({ ...prev, customer_email: e.target.value }))
+                      }
                       className="mt-1"
                       placeholder="email@example.com"
                     />
                   ) : (
                     <p className="text-sm mt-1 flex items-center gap-2">
                       <Mail className="w-3 h-3" />
-                      {order.customer_email || "Nezadáno"}
+                      {order.customer_email || 'Nezadáno'}
                       {order.customer_email && (
                         <a
                           href={`mailto:${order.customer_email}`}
@@ -566,15 +612,17 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   <Label className="text-sm font-medium text-muted-foreground">Telefon</Label>
                   {editMode ? (
                     <Input
-                      value={editedOrder.customer_phone || ""}
-                      onChange={(e) => setEditedOrder(prev => ({ ...prev, customer_phone: e.target.value }))}
+                      value={editedOrder.customer_phone || ''}
+                      onChange={(e) =>
+                        setEditedOrder((prev) => ({ ...prev, customer_phone: e.target.value }))
+                      }
                       className="mt-1"
                       placeholder="+420 xxx xxx xxx"
                     />
                   ) : (
                     <p className="text-sm mt-1 flex items-center gap-2">
                       <Phone className="w-3 h-3" />
-                      {order.customer_phone || "Nezadáno"}
+                      {order.customer_phone || 'Nezadáno'}
                       {order.customer_phone && (
                         <a
                           href={`tel:${order.customer_phone}`}
@@ -611,11 +659,16 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                     };
                     const itemName = typedItem.description || typedItem.name || 'Neznámá položka';
                     return (
-                      <div key={idx} className="flex justify-between items-center p-4 bg-muted/30 rounded-lg">
+                      <div
+                        key={idx}
+                        className="flex justify-between items-center p-4 bg-muted/30 rounded-lg"
+                      >
                         <div className="flex-1">
                           <p className="font-medium">{itemName}</p>
                           {typedItem.size && (
-                            <p className="text-sm text-muted-foreground">Velikost: {typedItem.size}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Velikost: {typedItem.size}
+                            </p>
                           )}
                         </div>
                         <div className="text-right">
@@ -646,105 +699,106 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div>
-                 <Label className="text-sm font-medium text-muted-foreground">
-                   Způsob doručení
-                 </Label>
-                 <p className="text-sm mt-1 flex items-center gap-2">
-                   {order.delivery_method === 'home_delivery' ? (
-                     <>
-                       <Truck className="w-3 h-3 text-green-600" />
-                       <span className="text-green-600">Doručení domů</span>
-                     </>
-                   ) : (
-                     <>
-                       <Package className="w-3 h-3 text-blue-600" />
-                       <span className="text-blue-600">Výdejní místo</span>
-                     </>
-                   )}
-                 </p>
-               </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Způsob doručení</Label>
+                <p className="text-sm mt-1 flex items-center gap-2">
+                  {order.delivery_method === 'home_delivery' ? (
+                    <>
+                      <Truck className="w-3 h-3 text-green-600" />
+                      <span className="text-green-600">Doručení domů</span>
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-3 h-3 text-blue-600" />
+                      <span className="text-blue-600">Výdejní místo</span>
+                    </>
+                  )}
+                </p>
+              </div>
 
-               <div>
-                 <Label className="text-sm font-medium text-muted-foreground">
-                   {order.delivery_method === 'home_delivery' ? 'Adresa doručení' : 'Výdejní místo'}
-                 </Label>
-                 <p className="text-sm mt-1 flex items-start gap-2">
-                   <MapPin className="w-3 h-3 mt-0.5" />
-                   {order.delivery_method === 'home_delivery' ? (
-                     order.delivery_address ? (
-                       <div>
-                         <div>{order.delivery_address}</div>
-                         <div className="text-muted-foreground">
-                           {order.delivery_city} {order.delivery_postal_code}
-                         </div>
-                         <div className="text-muted-foreground text-xs">
-                           {order.delivery_country || 'CZ'}
-                         </div>
-                       </div>
-                     ) : (
-                       "Nezadáno"
-                     )
-                   ) : (
-                     order.packeta_point_id || "Nezadáno"
-                   )}
-                 </p>
-               </div>
-              
-               <div>
-                 <Label className="text-sm font-medium text-muted-foreground">Cena dopravy</Label>
-                 <p className="text-sm mt-1">
-                   {order.shipping_amount != null ? `${(order.shipping_amount / 100).toFixed(2)} Kč` : '-'}
-                 </p>
-               </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  {order.delivery_method === 'home_delivery' ? 'Adresa doručení' : 'Výdejní místo'}
+                </Label>
+                <p className="text-sm mt-1 flex items-start gap-2">
+                  <MapPin className="w-3 h-3 mt-0.5" />
+                  {order.delivery_method === 'home_delivery' ? (
+                    order.delivery_address ? (
+                      <div>
+                        <div>{order.delivery_address}</div>
+                        <div className="text-muted-foreground">
+                          {order.delivery_city} {order.delivery_postal_code}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {order.delivery_country || 'CZ'}
+                        </div>
+                      </div>
+                    ) : (
+                      'Nezadáno'
+                    )
+                  ) : (
+                    order.packeta_point_id || 'Nezadáno'
+                  )}
+                </p>
+              </div>
 
-               <div>
-                 <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>
-                 <p className="text-sm mt-1 font-mono">
-                   {order.packeta_shipment_id || "Nevytvořena"}
-                 </p>
-               </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Cena dopravy</Label>
+                <p className="text-sm mt-1">
+                  {order.shipping_amount != null
+                    ? `${(order.shipping_amount / 100).toFixed(2)} Kč`
+                    : '-'}
+                </p>
+              </div>
 
-               {order.packeta_barcode && (
-                 <div>
-                   <Label className="text-sm font-medium text-muted-foreground">Sledovací číslo</Label>
-                   <p className="text-sm mt-1">
-                     {order.packeta_tracking_url ? (
-                       <a
-                         href={order.packeta_tracking_url}
-                         target="_blank"
-                         rel="noopener noreferrer"
-                         className="font-mono text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                       >
-                         {order.packeta_barcode}
-                         <ExternalLink className="w-3 h-3" />
-                       </a>
-                     ) : (
-                       <span className="font-mono">{order.packeta_barcode}</span>
-                     )}
-                   </p>
-                 </div>
-               )}
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">ID zásilky</Label>
+                <p className="text-sm mt-1 font-mono">
+                  {order.packeta_shipment_id || 'Nevytvořena'}
+                </p>
+              </div>
 
-
+              {order.packeta_barcode && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Sledovací číslo
+                  </Label>
+                  <p className="text-sm mt-1">
+                    {order.packeta_tracking_url ? (
+                      <a
+                        href={order.packeta_tracking_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                      >
+                        {order.packeta_barcode}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="font-mono">{order.packeta_barcode}</span>
+                    )}
+                  </p>
+                </div>
+              )}
 
               <Separator />
 
               <div className="space-y-2">
-                {((order.packeta_point_id && order.delivery_method !== 'home_delivery') || 
-                  (order.delivery_method === 'home_delivery' && order.delivery_address)) && 
-                  order.status === "paid" && !order.packeta_shipment_id && (
-                  <Button
-                    onClick={createPacketaShipment}
-                    disabled={loading}
-                    className="w-full"
-                    size="sm"
-                  >
-                    <Package className="w-4 h-4 mr-2" />
-                    Vytvořit zásilku
-                  </Button>
-                )}
-                
+                {((order.packeta_point_id && order.delivery_method !== 'home_delivery') ||
+                  (order.delivery_method === 'home_delivery' && order.delivery_address)) &&
+                  order.status === 'paid' &&
+                  !order.packeta_shipment_id && (
+                    <Button
+                      onClick={createPacketaShipment}
+                      disabled={loading}
+                      className="w-full"
+                      size="sm"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Vytvořit zásilku
+                    </Button>
+                  )}
+
                 {order.packeta_shipment_id && (
                   <div className="space-y-2">
                     <Button
@@ -756,33 +810,33 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                       <Printer className="w-4 h-4 mr-2" />
                       Tisknout štítek
                     </Button>
-                     <Button
-                       onClick={cancelPacketaShipment}
-                       variant="destructive"
-                       className="w-full"
-                       size="sm"
-                       disabled={loading}
-                     >
-                       <AlertCircle className="w-4 h-4 mr-2" />
-                       Zrušit zásilku
-                     </Button>
-                   </div>
-                 )}
-                 
-                 {/* Rollback inventáře - pouze pro zaplacené objednávky */}
-                 {(order.status === "paid" || order.status === "shipped") && (
-                   <Button
-                     onClick={rollbackInventory}
-                     variant="destructive"
-                     className="w-full"
-                     size="sm"
-                     disabled={loading}
-                   >
-                     <AlertCircle className="w-4 h-4 mr-2" />
-                     Vrátit do skladu & Zrušit
-                   </Button>
-                 )}
-               </div>
+                    <Button
+                      onClick={cancelPacketaShipment}
+                      variant="destructive"
+                      className="w-full"
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      Zrušit zásilku
+                    </Button>
+                  </div>
+                )}
+
+                {/* Rollback inventáře - pouze pro zaplacené objednávky */}
+                {(order.status === 'paid' || order.status === 'shipped') && (
+                  <Button
+                    onClick={rollbackInventory}
+                    variant="destructive"
+                    className="w-full"
+                    size="sm"
+                    disabled={loading}
+                  >
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    Vrátit do skladu & Zrušit
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -800,14 +854,22 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                   {/* Communications */}
                   {communications.map((comm) => (
                     <div key={comm.id} className="flex gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        comm.automated ? 'bg-blue-100' : 'bg-green-100'
-                      }`}>
-                        {comm.icon === 'shopping-cart' && <Package className="w-4 h-4 text-blue-600" />}
-                        {comm.icon === 'check-circle' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          comm.automated ? 'bg-blue-100' : 'bg-green-100'
+                        }`}
+                      >
+                        {comm.icon === 'shopping-cart' && (
+                          <Package className="w-4 h-4 text-blue-600" />
+                        )}
+                        {comm.icon === 'check-circle' && (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        )}
                         {comm.icon === 'truck' && <Truck className="w-4 h-4 text-blue-600" />}
                         {comm.icon === 'package' && <Package className="w-4 h-4 text-blue-600" />}
-                        {comm.icon === 'message-circle' && <Mail className="w-4 h-4 text-green-600" />}
+                        {comm.icon === 'message-circle' && (
+                          <Mail className="w-4 h-4 text-green-600" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -825,7 +887,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Legacy timeline events */}
                   {timeline.map((event, idx) => (
                     <div key={`timeline-${idx}`} className="flex gap-3">
@@ -841,7 +903,7 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                       </div>
                     </div>
                   ))}
-                  
+
                   {communications.length === 0 && timeline.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       Žádná historie komunikace

@@ -1,5 +1,5 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -52,13 +52,15 @@ Deno.serve(async (req: Request) => {
       type: payload.type,
       orderId: record.id,
       status: record.status,
-      oldStatus: oldRecord?.status
+      oldStatus: oldRecord?.status,
     });
 
     // Handle new orders (INSERT)
     if (payload.type === 'INSERT') {
       await sendOrderConfirmationEmail(record);
-      await sendTelegramNotification(`🛒 Nová objednávka!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\nEmail: ${record.customer_email}\nCelkem: ${formatPrice(record.amount_total)} Kč\n\n✉️ Potvrzovací email odeslán.`);
+      await sendTelegramNotification(
+        `🛒 Nová objednávka!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\nEmail: ${record.customer_email}\nCelkem: ${formatPrice(record.amount_total)} Kč\n\n✉️ Potvrzovací email odeslán.`
+      );
       return new Response('Order confirmation sent', { status: 200 });
     }
 
@@ -67,20 +69,23 @@ Deno.serve(async (req: Request) => {
       // Check if status changed
       if (record.status !== oldRecord?.status) {
         await sendOrderStatusEmail(record, oldRecord.status);
-        await sendTelegramNotification(`📋 Změna stavu objednávky\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\nStav: ${getStatusText(oldRecord.status)} → ${getStatusText(record.status)}\n\n✉️ Notifikační email odeslán.`);
+        await sendTelegramNotification(
+          `📋 Změna stavu objednávky\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\nStav: ${getStatusText(oldRecord.status)} → ${getStatusText(record.status)}\n\n✉️ Notifikační email odeslán.`
+        );
         return new Response('Status update email sent', { status: 200 });
       }
 
       // Check if tracking info was added
       if (record.packeta_tracking_url && !oldRecord?.packeta_tracking_url) {
         await sendShippingEmail(record);
-        await sendTelegramNotification(`📦 Objednávka odeslána!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\n🚚 Sledování: ${record.packeta_tracking_url}\n${record.packeta_shipment_id ? `📋 Číslo zásilky: ${record.packeta_shipment_id}\n` : ''}\n✉️ Tracking email odeslán.`);
+        await sendTelegramNotification(
+          `📦 Objednávka odeslána!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\n🚚 Sledování: ${record.packeta_tracking_url}\n${record.packeta_shipment_id ? `📋 Číslo zásilky: ${record.packeta_shipment_id}\n` : ''}\n✉️ Tracking email odeslán.`
+        );
         return new Response('Shipping email sent', { status: 200 });
       }
     }
 
     return new Response('No email action needed', { status: 200 });
-
   } catch (error) {
     console.error('Error processing order email trigger:', error);
     return new Response(`Error: ${error.message}`, { status: 500 });
@@ -93,18 +98,18 @@ async function sendOrderConfirmationEmail(order: OrderRecord) {
   await sendEmail({
     to: order.customer_email,
     subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
-    html: emailHtml
+    html: emailHtml,
   });
 }
 
 async function sendOrderStatusEmail(order: OrderRecord, oldStatus: string) {
   const statusMessages = {
-    'new': 'Nová objednávka',
-    'paid': 'Zaplaceno',
-    'processing': 'Zpracovává se',
-    'shipped': 'Odesláno',
-    'delivered': 'Doručeno',
-    'cancelled': 'Zrušeno'
+    new: 'Nová objednávka',
+    paid: 'Zaplaceno',
+    processing: 'Zpracovává se',
+    shipped: 'Odesláno',
+    delivered: 'Doručeno',
+    cancelled: 'Zrušeno',
   };
 
   const emailHtml = generateStatusUpdateEmail(order, oldStatus, statusMessages);
@@ -112,7 +117,7 @@ async function sendOrderStatusEmail(order: OrderRecord, oldStatus: string) {
   await sendEmail({
     to: order.customer_email,
     subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
-    html: emailHtml
+    html: emailHtml,
   });
 }
 
@@ -122,15 +127,15 @@ async function sendShippingEmail(order: OrderRecord) {
   await sendEmail({
     to: order.customer_email,
     subject: `Vaše objednávka byla odeslána #${order.id.slice(-8)}`,
-    html: emailHtml
+    html: emailHtml,
   });
 }
 
-async function sendEmail({ to, subject, html }: { to: string, subject: string, html: string }) {
+async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      Authorization: `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -187,7 +192,9 @@ async function sendTelegramNotification(message: string) {
 
 function generateOrderConfirmationEmail(order: OrderRecord): string {
   const items = Array.isArray(order.items) ? order.items : [];
-  const itemsHtml = items.map(item => `
+  const itemsHtml = items
+    .map(
+      (item) => `
     <tr>
       <td style="padding: 16px 0; border-bottom: 1px solid #000; font-size: 14px;">
         <div style="font-weight: 500;">${item.name || item.product_name || 'Produkt'}</div>
@@ -200,7 +207,9 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
         ${formatPrice(item.price_cents || 0)} Kč
       </td>
     </tr>
-  `).join('');
+  `
+    )
+    .join('');
 
   return `
     <!DOCTYPE html>
@@ -282,7 +291,11 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
   `;
 }
 
-function generateStatusUpdateEmail(order: OrderRecord, oldStatus: string, statusMessages: Record<string, string>): string {
+function generateStatusUpdateEmail(
+  order: OrderRecord,
+  oldStatus: string,
+  statusMessages: Record<string, string>
+): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -322,14 +335,18 @@ function generateStatusUpdateEmail(order: OrderRecord, oldStatus: string, status
             </div>
           </div>
 
-          ${order.packeta_tracking_url ? `
+          ${
+            order.packeta_tracking_url
+              ? `
             <div style="border: 1px solid #000; padding: 20px; margin: 32px 0;">
               <div style="margin: 0 0 12px 0; font-size: 14px; font-weight: 500;">Sledování zásilky</div>
               <a href="${order.packeta_tracking_url}" style="color: #000; text-decoration: underline; font-size: 14px; word-break: break-all;">
                 ${order.packeta_tracking_url}
               </a>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
 
         </div>
 
@@ -393,11 +410,15 @@ function generateShippingEmail(order: OrderRecord): string {
               Sledovat zásilku
             </a>
 
-            ${order.packeta_shipment_id ? `
+            ${
+              order.packeta_shipment_id
+                ? `
               <p style="margin: 20px 0 0 0; font-size: 12px; color: #666;">
                 Číslo zásilky: <strong>${order.packeta_shipment_id}</strong>
               </p>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
 
           <!-- Info Box -->
@@ -430,12 +451,12 @@ function formatPrice(priceCents: number): string {
 
 function getStatusText(status: string): string {
   const statusMap: Record<string, string> = {
-    'new': 'Nová',
-    'paid': 'Zaplaceno',
-    'processing': 'Zpracovává se',
-    'shipped': 'Odesláno',
-    'delivered': 'Doručeno',
-    'cancelled': 'Zrušeno'
+    new: 'Nová',
+    paid: 'Zaplaceno',
+    processing: 'Zpracovává se',
+    shipped: 'Odesláno',
+    delivered: 'Doručeno',
+    cancelled: 'Zrušeno',
   };
 
   return statusMap[status] || status;

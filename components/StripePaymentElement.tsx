@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface BillingData {
   email: string;
@@ -42,25 +42,34 @@ export default function StripePaymentElement({
 
     try {
       // Get cart items from localStorage (temporary solution)
-      const storedCart = localStorage.getItem("cart");
+      const storedCart = localStorage.getItem('cart');
       const cartItems = storedCart ? JSON.parse(storedCart) : [];
 
       if (cartItems.length === 0) {
-        setError("Košík je prázdný. Přidejte produkty do košíku před pokračováním k platbě.");
+        setError('Košík je prázdný. Přidejte produkty do košíku před pokračováním k platbě.');
         return;
       }
 
-      const deliveryMethod = pickupPoint ? "pickup" : "home_delivery";
+      const deliveryMethod = pickupPoint ? 'pickup' : 'home_delivery';
 
       const requestBody = {
-        items: cartItems.map((item: { name: string; price: number; quantity: number; image?: string; size?: string; productId?: string }) => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image,
-          size: item.size,
-          productId: item.productId,
-        })),
+        items: cartItems.map(
+          (item: {
+            name: string;
+            price: number;
+            quantity: number;
+            image?: string;
+            size?: string;
+            productId?: string;
+          }) => ({
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+            size: item.size,
+            productId: item.productId,
+          })
+        ),
         deliveryMethod,
         selectedPickupPoint: pickupPoint,
         formData: {
@@ -75,10 +84,10 @@ export default function StripePaymentElement({
         deliveryPrice: deliveryPriceCents / 100, // Convert back to CZK
       };
 
-      const response = await fetch("/api/stripe/checkout", {
-        method: "POST",
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
       });
@@ -94,24 +103,24 @@ export default function StripePaymentElement({
       if (url) {
         window.location.href = url;
       } else {
-        throw new Error("Neplatná odpověď ze serveru");
+        throw new Error('Neplatná odpověď ze serveru');
       }
     } catch (err) {
-      console.error("Payment error:", err);
-      let errorMessage = "Došlo k neočekávané chybě při zpracování platby";
-      
+      console.error('Payment error:', err);
+      let errorMessage = 'Došlo k neočekávané chybě při zpracování platby';
+
       if (err instanceof Error) {
-        if (err.message.includes("HTTP 400")) {
-          errorMessage = "Neplatné údaje objednávky. Zkontrolujte prosím všechny povinné údaje.";
-        } else if (err.message.includes("HTTP 500")) {
-          errorMessage = "Chyba serveru. Zkuste to prosím za chvíli znovu.";
-        } else if (err.message.includes("network") || err.message.includes("fetch")) {
-          errorMessage = "Problém s připojením. Zkontrolujte internetové připojení a zkuste znovu.";
+        if (err.message.includes('HTTP 400')) {
+          errorMessage = 'Neplatné údaje objednávky. Zkontrolujte prosím všechny povinné údaje.';
+        } else if (err.message.includes('HTTP 500')) {
+          errorMessage = 'Chyba serveru. Zkuste to prosím za chvíli znovu.';
+        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+          errorMessage = 'Problém s připojením. Zkontrolujte internetové připojení a zkuste znovu.';
         } else {
           errorMessage = err.message;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -136,13 +145,13 @@ export default function StripePaymentElement({
           disabled={isLoading}
           className="w-full bg-black text-white py-3 text-sm tracking-wide uppercase rounded-none disabled:opacity-50"
         >
-          {isLoading ? "Vytváření platby..." : "Zaplatit kartou"}
+          {isLoading ? 'Vytváření platby...' : 'Zaplatit kartou'}
         </Button>
       </div>
 
       <div className="text-xs text-gray-600 leading-tight">
-        Platba probíhá přes Stripe, který zajišťuje bezpečné zpracování plateb.
-        Vaše platební údaje nejsou uloženy na našem serveru.
+        Platba probíhá přes Stripe, který zajišťuje bezpečné zpracování plateb. Vaše platební údaje
+        nejsou uloženy na našem serveru.
       </div>
     </div>
   );

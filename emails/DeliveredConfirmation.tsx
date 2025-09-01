@@ -8,8 +8,8 @@ import {
   Text,
   Button,
   Hr,
-} from "@react-email/components";
-import { emailStyles, emailTheme, BRAND } from "./theme";
+} from '@react-email/components';
+import { emailStyles, emailTheme, BRAND } from './theme';
 
 interface Props {
   orderId: string;
@@ -44,18 +44,21 @@ export default function DeliveredConfirmation({
   return (
     <Html>
       <Head />
-      <Preview>Objednávka {orderId} byla doručena! - {BRAND.name}</Preview>
-      <Body style={{ backgroundColor: emailTheme.colors.background, fontFamily: emailTheme.fonts.primary }}>
+      <Preview>
+        Objednávka {orderId} byla doručena! - {BRAND.name}
+      </Preview>
+      <Body
+        style={{
+          backgroundColor: emailTheme.colors.background,
+          fontFamily: emailTheme.fonts.primary,
+        }}
+      >
         <Container style={emailStyles.container}>
           {/* Brand Header */}
-          <Text style={emailStyles.logo}>
-            {BRAND.name}
-          </Text>
+          <Text style={emailStyles.logo}>{BRAND.name}</Text>
 
           {/* Main Heading */}
-          <Text style={emailStyles.h1}>
-            Vaše objednávka byla doručena! ✅
-          </Text>
+          <Text style={emailStyles.h1}>Vaše objednávka byla doručena! ✅</Text>
 
           {/* Greeting */}
           <Text style={emailStyles.body}>
@@ -67,19 +70,20 @@ export default function DeliveredConfirmation({
           </Text>
 
           {/* Delivery Details Section */}
-          <Section style={{
-            ...emailStyles.section,
-            backgroundColor: emailTheme.colors.success + '10',
-            padding: '20px',
-            borderRadius: emailTheme.borderRadius.md,
-            border: `1px solid ${emailTheme.colors.success}30`,
-          }}>
-            <Text style={emailStyles.h3}>
-              Detaily doručení
-            </Text>
+          <Section
+            style={{
+              ...emailStyles.section,
+              backgroundColor: emailTheme.colors.success + '10',
+              padding: '20px',
+              borderRadius: emailTheme.borderRadius.md,
+              border: `1px solid ${emailTheme.colors.success}30`,
+            }}
+          >
+            <Text style={emailStyles.h3}>Detaily doručení</Text>
 
             <Text style={emailStyles.body}>
-              <strong>Číslo objednávky:</strong> {orderId}<br />
+              <strong>Číslo objednávky:</strong> {orderId}
+              <br />
               <strong>Doručeno:</strong> {formatDeliveryDate(currentDate)}
               {productNames.length > 0 && (
                 <>
@@ -91,29 +95,37 @@ export default function DeliveredConfirmation({
           </Section>
 
           {/* Success Message */}
-          <Section style={{
-            ...emailStyles.section,
-            textAlign: 'center',
-            margin: '32px 0',
-          }}>
-            <Text style={{
-              fontSize: '48px',
-              margin: '0 0 16px 0',
-            }}>
+          <Section
+            style={{
+              ...emailStyles.section,
+              textAlign: 'center',
+              margin: '32px 0',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: '48px',
+                margin: '0 0 16px 0',
+              }}
+            >
               🎉
             </Text>
-            <Text style={{
-              ...emailStyles.h2,
-              margin: '0 0 8px 0',
-              color: emailTheme.colors.success,
-            }}>
+            <Text
+              style={{
+                ...emailStyles.h2,
+                margin: '0 0 8px 0',
+                color: emailTheme.colors.success,
+              }}
+            >
               Doručení dokončeno!
             </Text>
-            <Text style={{
-              ...emailStyles.body,
-              margin: '0',
-              fontSize: '18px',
-            }}>
+            <Text
+              style={{
+                ...emailStyles.body,
+                margin: '0',
+                fontSize: '18px',
+              }}
+            >
               Doufáme, že jste s nákupem spokojeni
             </Text>
           </Section>
@@ -122,23 +134,20 @@ export default function DeliveredConfirmation({
 
           {/* Feedback Request */}
           <Section style={emailStyles.section}>
-            <Text style={emailStyles.h3}>
-              Vaše zpětná vazba je pro nás důležitá
-            </Text>
+            <Text style={emailStyles.h3}>Vaše zpětná vazba je pro nás důležitá</Text>
 
             <Text style={emailStyles.body}>
-              Pomohli byste nám zlepšit naše služby? Zanechte prosím hodnocení vašeho nákupu.
-              Vaše zkušenost je pro nás velmi cenná a pomáhá ostatním zákazníkům při rozhodování.
+              Pomohli byste nám zlepšit naše služby? Zanechte prosím hodnocení vašeho nákupu. Vaše
+              zkušenost je pro nás velmi cenná a pomáhá ostatním zákazníkům při rozhodování.
             </Text>
 
-            <div style={{
-              textAlign: 'center',
-              margin: '24px 0',
-            }}>
-              <Button
-                href={feedbackUrl}
-                style={emailStyles.button.primary}
-              >
+            <div
+              style={{
+                textAlign: 'center',
+                margin: '24px 0',
+              }}
+            >
+              <Button href={feedbackUrl} style={emailStyles.button.primary}>
                 ⭐ Zanechat hodnocení
               </Button>
             </div>
@@ -150,14 +159,14 @@ export default function DeliveredConfirmation({
 
           {/* Care Instructions */}
           <Section style={emailStyles.section}>
-            <Text style={emailStyles.h3}>
-              Péče o výrobek
-            </Text>
+            <Text style={emailStyles.h3}>Péče o výrobek</Text>
             <Text style={emailStyles.body}>
-              • Pro zachování kvality doporučujeme praní v chladné vodě<br />
-              • Nepoužívejte bělidla nebo agresivní prací prostředky<br />
-              • Sušte na vzduchu, ne v sušičce<br />
-              • Žehlete z rubu při nízké teplotě
+              • Pro zachování kvality doporučujeme praní v chladné vodě
+              <br />
+              • Nepoužívejte bělidla nebo agresivní prací prostředky
+              <br />
+              • Sušte na vzduchu, ne v sušičce
+              <br />• Žehlete z rubu při nízké teplotě
             </Text>
           </Section>
 
@@ -166,37 +175,44 @@ export default function DeliveredConfirmation({
           {/* Customer Support */}
           <Section style={emailStyles.section}>
             <Text style={emailStyles.body}>
-              Máte-li jakékoliv problémy s výrobkem nebo potřebujete pomoc,
-              neváhejte nás kontaktovat na <strong>{BRAND.supportEmail}</strong>.
-              Jsme tu pro vás!
+              Máte-li jakékoliv problémy s výrobkem nebo potřebujete pomoc, neváhejte nás
+              kontaktovat na <strong>{BRAND.supportEmail}</strong>. Jsme tu pro vás!
             </Text>
           </Section>
 
           {/* Thank You Section */}
-          <Section style={{
-            ...emailStyles.section,
-            textAlign: 'center',
-            backgroundColor: emailTheme.colors.gray50,
-            padding: '32px',
-            borderRadius: emailTheme.borderRadius.lg,
-            marginTop: '32px',
-          }}>
-            <Text style={{
-              ...emailStyles.h3,
-              margin: '0 0 16px 0',
-            }}>
+          <Section
+            style={{
+              ...emailStyles.section,
+              textAlign: 'center',
+              backgroundColor: emailTheme.colors.gray50,
+              padding: '32px',
+              borderRadius: emailTheme.borderRadius.lg,
+              marginTop: '32px',
+            }}
+          >
+            <Text
+              style={{
+                ...emailStyles.h3,
+                margin: '0 0 16px 0',
+              }}
+            >
               Děkujeme za Vaši důvěru! 🙏
             </Text>
-            <Text style={{
-              ...emailStyles.body,
-              margin: '0 0 16px 0',
-            }}>
+            <Text
+              style={{
+                ...emailStyles.body,
+                margin: '0 0 16px 0',
+              }}
+            >
               Jste součástí {BRAND.name} komunity a velmi si toho vážíme.
             </Text>
-            <Text style={{
-              ...emailStyles.small,
-              margin: '0',
-            }}>
+            <Text
+              style={{
+                ...emailStyles.small,
+                margin: '0',
+              }}
+            >
               Sledujte nás pro novinky o nových kolekcích a exkluzivních nabídkách.
             </Text>
           </Section>
@@ -204,8 +220,8 @@ export default function DeliveredConfirmation({
           {/* Footer */}
           <Section style={emailStyles.footer}>
             <Text style={{ margin: '0', ...emailStyles.small }}>
-              Tento e-mail potvrzuje úspěšné doručení Vaší objednávky.<br />
-              © 2024 {BRAND.name}. Všechna práva vyhrazena.
+              Tento e-mail potvrzuje úspěšné doručení Vaší objednávky.
+              <br />© 2024 {BRAND.name}. Všechna práva vyhrazena.
             </Text>
           </Section>
         </Container>

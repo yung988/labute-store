@@ -1,11 +1,11 @@
-"use client";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Package, TrendingDown, RefreshCw } from "lucide-react";
-import { Product } from "@/types/products";
+'use client';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Package, TrendingDown, RefreshCw } from 'lucide-react';
+import { Product } from '@/types/products';
 
 type ProductWithStock = Product & {
   total_stock: number;
@@ -21,12 +21,12 @@ export default function InventoryTable() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/inventory");
+      const res = await fetch('/api/admin/inventory');
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load");
+      if (!res.ok) throw new Error(json.error || 'Failed to load');
       setProducts(json.products);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
@@ -39,15 +39,15 @@ export default function InventoryTable() {
   const updateStock = async (productId: string, size: string, newStock: number) => {
     try {
       const res = await fetch(`/api/admin/inventory/${productId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ size, stock: newStock }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Update failed");
+      if (!res.ok) throw new Error(json.error || 'Update failed');
       await load(); // Reload data
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Update failed");
+      setError(e instanceof Error ? e.message : 'Update failed');
     }
   };
 
@@ -55,20 +55,26 @@ export default function InventoryTable() {
   if (error) return <div className="text-red-500">Error: {error}</div>;
 
   // Calculate alerts
-  const lowStockItems = products.flatMap(product => 
-    product.skus?.filter(sku => sku.stock <= 5 && sku.stock > 0).map(sku => ({
-      ...sku,
-      productName: product.name,
-      productId: product.id
-    })) || []
+  const lowStockItems = products.flatMap(
+    (product) =>
+      product.skus
+        ?.filter((sku) => sku.stock <= 5 && sku.stock > 0)
+        .map((sku) => ({
+          ...sku,
+          productName: product.name,
+          productId: product.id,
+        })) || []
   );
 
-  const outOfStockItems = products.flatMap(product => 
-    product.skus?.filter(sku => sku.stock === 0).map(sku => ({
-      ...sku,
-      productName: product.name,
-      productId: product.id
-    })) || []
+  const outOfStockItems = products.flatMap(
+    (product) =>
+      product.skus
+        ?.filter((sku) => sku.stock === 0)
+        .map((sku) => ({
+          ...sku,
+          productName: product.name,
+          productId: product.id,
+        })) || []
   );
 
   const totalProducts = products.length;
@@ -102,9 +108,7 @@ export default function InventoryTable() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-900 mb-2">
-                  {outOfStockItems.length}
-                </div>
+                <div className="text-2xl font-bold text-red-900 mb-2">{outOfStockItems.length}</div>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {outOfStockItems.slice(0, 5).map((item, idx) => (
                     <div key={idx} className="text-sm text-red-700">
@@ -136,7 +140,9 @@ export default function InventoryTable() {
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {lowStockItems.slice(0, 5).map((item, idx) => (
                     <div key={idx} className="text-sm text-orange-700 flex justify-between">
-                      <span>{item.productName} - {item.size}</span>
+                      <span>
+                        {item.productName} - {item.size}
+                      </span>
                       <Badge variant="outline" className="text-orange-800 border-orange-300">
                         {item.stock} ks
                       </Badge>
@@ -154,91 +160,112 @@ export default function InventoryTable() {
         </div>
       )}
 
-       {/* Inventory table */}
-       <Card>
-         <CardHeader>
-           <CardTitle className="flex items-center gap-2">
-             <Package className="w-5 h-5" />
-             Skladové zásoby
-           </CardTitle>
-         </CardHeader>
-         <CardContent>
-           <div className="overflow-auto">
-         <table className="min-w-full border text-sm">
-           <thead className="bg-muted/50">
-             <tr>
-               <th className="p-3 border font-semibold text-left">Produkt</th>
-               <th className="p-3 border font-semibold text-left">Slug</th>
-               <th className="p-3 border font-semibold text-left">Cena</th>
-               <th className="p-3 border font-semibold text-left">Velikost</th>
-               <th className="p-3 border font-semibold text-left">Skladem</th>
-               <th className="p-3 border font-semibold text-left">Status</th>
-               <th className="p-3 border font-semibold text-left">Akce</th>
-             </tr>
-           </thead>
-          <tbody>
-             {products.map((product) =>
-               product.skus?.map((sku) => (
-                 <tr key={`${product.id}-${sku.size}`} className="hover:bg-muted/20 transition-colors">
-                   <td className="p-3 border align-top font-medium">{product.name}</td>
-                   <td className="p-3 border align-top text-muted-foreground">{product.slug}</td>
-                   <td className="p-3 border align-top font-semibold">{(product.price_cents / 100).toFixed(2)} Kč</td>
-                   <td className="p-3 border align-top">{sku.size}</td>
-                   <td className="p-3 border align-top">
-                     <Input
-                       type="number"
-                       value={sku.stock}
-                       onChange={(e) => {
-                         const newStock = parseInt(e.target.value) || 0;
-                         updateStock(product.id, sku.size, newStock);
-                       }}
-                       className="w-20 h-8"
-                       min="0"
-                     />
-                   </td>
-                   <td className="p-3 border align-top">
-                     <Badge variant={sku.stock === 0 ? "destructive" : sku.stock < 5 ? "secondary" : "default"} className="text-xs">
-                       {sku.stock === 0 ? 'Vyprodáno' : sku.stock < 5 ? 'Nízké zásoby' : 'Skladem'}
-                     </Badge>
-                   </td>
-                   <td className="p-3 border align-top">
-                     <div className="flex gap-1">
-                       <Button
-                         size="sm"
-                         variant="outline"
-                         onClick={() => updateStock(product.id, sku.size, sku.stock + 1)}
-                         className="h-8 px-2"
-                       >
-                         +1
-                       </Button>
-                       <Button
-                         size="sm"
-                         variant="outline"
-                         onClick={() => updateStock(product.id, sku.size, Math.max(0, sku.stock - 1))}
-                         className="h-8 px-2"
-                       >
-                         -1
-                       </Button>
-                     </div>
-                   </td>
-                 </tr>
-               )) || (
-                 <tr key={product.id}>
-                   <td colSpan={7} className="p-3 border text-center text-muted-foreground">
-                     Žádné varianty nejsou definovány
-                   </td>
-                 </tr>
-               )
-             )}
-          </tbody>
-        </table>
-        
-        {products.length === 0 && (
-          <div className="text-center text-muted-foreground py-8">
-            No products found
+      {/* Inventory table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Skladové zásoby
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <table className="min-w-full border text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-3 border font-semibold text-left">Produkt</th>
+                  <th className="p-3 border font-semibold text-left">Slug</th>
+                  <th className="p-3 border font-semibold text-left">Cena</th>
+                  <th className="p-3 border font-semibold text-left">Velikost</th>
+                  <th className="p-3 border font-semibold text-left">Skladem</th>
+                  <th className="p-3 border font-semibold text-left">Status</th>
+                  <th className="p-3 border font-semibold text-left">Akce</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map(
+                  (product) =>
+                    product.skus?.map((sku) => (
+                      <tr
+                        key={`${product.id}-${sku.size}`}
+                        className="hover:bg-muted/20 transition-colors"
+                      >
+                        <td className="p-3 border align-top font-medium">{product.name}</td>
+                        <td className="p-3 border align-top text-muted-foreground">
+                          {product.slug}
+                        </td>
+                        <td className="p-3 border align-top font-semibold">
+                          {(product.price_cents / 100).toFixed(2)} Kč
+                        </td>
+                        <td className="p-3 border align-top">{sku.size}</td>
+                        <td className="p-3 border align-top">
+                          <Input
+                            type="number"
+                            value={sku.stock}
+                            onChange={(e) => {
+                              const newStock = parseInt(e.target.value) || 0;
+                              updateStock(product.id, sku.size, newStock);
+                            }}
+                            className="w-20 h-8"
+                            min="0"
+                          />
+                        </td>
+                        <td className="p-3 border align-top">
+                          <Badge
+                            variant={
+                              sku.stock === 0
+                                ? 'destructive'
+                                : sku.stock < 5
+                                  ? 'secondary'
+                                  : 'default'
+                            }
+                            className="text-xs"
+                          >
+                            {sku.stock === 0
+                              ? 'Vyprodáno'
+                              : sku.stock < 5
+                                ? 'Nízké zásoby'
+                                : 'Skladem'}
+                          </Badge>
+                        </td>
+                        <td className="p-3 border align-top">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateStock(product.id, sku.size, sku.stock + 1)}
+                              className="h-8 px-2"
+                            >
+                              +1
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                updateStock(product.id, sku.size, Math.max(0, sku.stock - 1))
+                              }
+                              className="h-8 px-2"
+                            >
+                              -1
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )) || (
+                      <tr key={product.id}>
+                        <td colSpan={7} className="p-3 border text-center text-muted-foreground">
+                          Žádné varianty nejsou definovány
+                        </td>
+                      </tr>
+                    )
+                )}
+              </tbody>
+            </table>
+
+            {products.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">No products found</div>
+            )}
           </div>
-        )}
-      </div>
         </CardContent>
       </Card>
     </div>

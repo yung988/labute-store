@@ -4,13 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      sessionId, 
-      items, 
-      customerEmail, 
-      customerName, 
-      totalAmount 
-    } = body;
+    const { sessionId, items, customerEmail, customerName, totalAmount } = body;
 
     if (!sessionId || !items || items.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -21,19 +15,22 @@ export async function POST(request: NextRequest) {
     // Upsert abandoned cart (update if exists, insert if not)
     const { data, error } = await supabase
       .from('abandoned_carts')
-      .upsert({
-        session_id: sessionId,
-        customer_email: customerEmail,
-        customer_name: customerName,
-        cart_items: items,
-        total_amount: totalAmount,
-        updated_at: new Date().toISOString(),
-        // Reset abandoned_at when cart is updated
-        abandoned_at: null,
-        email_sent_at: null
-      }, {
-        onConflict: 'session_id'
-      })
+      .upsert(
+        {
+          session_id: sessionId,
+          customer_email: customerEmail,
+          customer_name: customerName,
+          cart_items: items,
+          total_amount: totalAmount,
+          updated_at: new Date().toISOString(),
+          // Reset abandoned_at when cart is updated
+          abandoned_at: null,
+          email_sent_at: null,
+        },
+        {
+          onConflict: 'session_id',
+        }
+      )
       .select()
       .single();
 
@@ -65,7 +62,7 @@ export async function DELETE(request: NextRequest) {
       .from('abandoned_carts')
       .update({
         recovered_at: new Date().toISOString(),
-        abandoned_at: null
+        abandoned_at: null,
       })
       .eq('session_id', sessionId);
 

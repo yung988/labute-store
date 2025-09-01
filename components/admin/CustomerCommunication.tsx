@@ -1,25 +1,31 @@
-"use client";
-import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+'use client';
+import { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 // import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { 
-  Mail, 
-  Send, 
-  Search, 
-  Filter, 
-  Users, 
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Mail,
+  Send,
+  Search,
+  Filter,
+  Users,
   MessageCircle,
   RefreshCw,
   CheckCircle,
-  AlertCircle
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+  AlertCircle,
+} from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 type Customer = {
   id: string;
@@ -44,39 +50,44 @@ export default function CustomerCommunication() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [emailDialog, setEmailDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerDetailView, setCustomerDetailView] = useState<string | null>(null);
-  const [customerOrders, setCustomerOrders] = useState<Array<{
-    id: string;
-    created_at: string;
-    amount_total: number | null;
-    status: string;
-    delivery_method?: string;
-  }>>([]);
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailContent, setEmailContent] = useState("");
+  const [customerOrders, setCustomerOrders] = useState<
+    Array<{
+      id: string;
+      created_at: string;
+      amount_total: number | null;
+      status: string;
+      delivery_method?: string;
+    }>
+  >([]);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailContent, setEmailContent] = useState('');
   const [emailTemplates] = useState<EmailTemplate[]>([
     {
-      id: "order-confirmation",
-      name: "Potvrzení objednávky",
-      subject: "Potvrzení vaší objednávky #{orderId}",
-      content: "Dobrý den {customerName},\n\nděkujeme za vaši objednávku #{orderId}.\n\nVaše objednávka je momentálně zpracovávána a brzy bude odeslána.\n\nDěkujeme za důvěru.\n\nS pozdravem,\nVáš tým"
+      id: 'order-confirmation',
+      name: 'Potvrzení objednávky',
+      subject: 'Potvrzení vaší objednávky #{orderId}',
+      content:
+        'Dobrý den {customerName},\n\nděkujeme za vaši objednávku #{orderId}.\n\nVaše objednávka je momentálně zpracovávána a brzy bude odeslána.\n\nDěkujeme za důvěru.\n\nS pozdravem,\nVáš tým',
     },
     {
-      id: "shipping-notification",
-      name: "Oznámení o odeslání",
-      subject: "Vaše objednávka #{orderId} byla odeslána",
-      content: "Dobrý den {customerName},\n\nvaše objednávka #{orderId} byla právě odeslána.\n\nMůžete ji sledovat na: {trackingUrl}\n\nOčekávaný čas doručení: 2-3 pracovní dny.\n\nS pozdravem,\nVáš tým"
+      id: 'shipping-notification',
+      name: 'Oznámení o odeslání',
+      subject: 'Vaše objednávka #{orderId} byla odeslána',
+      content:
+        'Dobrý den {customerName},\n\nvaše objednávka #{orderId} byla právě odeslána.\n\nMůžete ji sledovat na: {trackingUrl}\n\nOčekávaný čas doručení: 2-3 pracovní dny.\n\nS pozdravem,\nVáš tým',
     },
     {
-      id: "delay-notification",
-      name: "Oznámení o zpoždění",
-      subject: "Informace o zpoždění objednávky #{orderId}",
-      content: "Dobrý den {customerName},\n\nomlouváme se, ale vaše objednávka #{orderId} se bohužel zpozdí.\n\nNový předpokládaný termín dodání: {newDate}\n\nZa zpoždění se upřímně omlouváme.\n\nS pozdravem,\nVáš tým"
-    }
+      id: 'delay-notification',
+      name: 'Oznámení o zpoždění',
+      subject: 'Informace o zpoždění objednávky #{orderId}',
+      content:
+        'Dobrý den {customerName},\n\nomlouváme se, ale vaše objednávka #{orderId} se bohužel zpozdí.\n\nNový předpokládaný termín dodání: {newDate}\n\nZa zpoždění se upřímně omlouváme.\n\nS pozdravem,\nVáš tým',
+    },
   ]);
 
   const loadCustomers = async () => {
@@ -84,7 +95,7 @@ export default function CustomerCommunication() {
     setError(null);
     try {
       const supabase = createClient();
-      
+
       // Get unique customers with their order statistics
       const { data: ordersData, error } = await supabase
         .from('orders')
@@ -95,8 +106,8 @@ export default function CustomerCommunication() {
 
       // Process data to get unique customers with stats
       const customerMap = new Map<string, Customer>();
-      
-      ordersData?.forEach(order => {
+
+      ordersData?.forEach((order) => {
         const email = order.customer_email;
         if (!email) return;
 
@@ -120,16 +131,18 @@ export default function CustomerCommunication() {
             created_at: order.created_at,
             amount_total: order.amount_total || 0,
             last_order_date: order.created_at,
-            order_count: 1
+            order_count: 1,
           });
         }
       });
 
-      setCustomers(Array.from(customerMap.values()).sort((a, b) => 
-        new Date(b.last_order_date).getTime() - new Date(a.last_order_date).getTime()
-      ));
+      setCustomers(
+        Array.from(customerMap.values()).sort(
+          (a, b) => new Date(b.last_order_date).getTime() - new Date(a.last_order_date).getTime()
+        )
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load customers");
+      setError(e instanceof Error ? e.message : 'Failed to load customers');
     } finally {
       setLoading(false);
     }
@@ -160,15 +173,16 @@ export default function CustomerCommunication() {
     let filtered = customers;
 
     if (searchQuery) {
-      filtered = filtered.filter(customer =>
-        customer.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.customer_phone?.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (customer) =>
+          customer.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.customer_phone?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(customer => customer.status === statusFilter);
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((customer) => customer.status === statusFilter);
     }
 
     return filtered;
@@ -176,18 +190,18 @@ export default function CustomerCommunication() {
 
   const sendEmail = async () => {
     if (!selectedCustomer || !emailSubject || !emailContent) {
-      alert("Vyplňte všechna povinná pole");
+      alert('Vyplňte všechna povinná pole');
       return;
     }
 
     try {
       setLoading(true);
-      
+
       // Replace placeholders
       const finalSubject = emailSubject
         .replace('{customerName}', selectedCustomer.customer_name || 'Zákazník')
         .replace('{orderId}', 'XXXX'); // Would need actual order ID
-      
+
       const finalContent = emailContent
         .replace('{customerName}', selectedCustomer.customer_name || 'Zákazník')
         .replace('{orderId}', 'XXXX'); // Would need actual order ID
@@ -198,8 +212,8 @@ export default function CustomerCommunication() {
         body: JSON.stringify({
           to: selectedCustomer.customer_email,
           subject: finalSubject,
-          content: finalContent
-        })
+          content: finalContent,
+        }),
       });
 
       if (!response.ok) {
@@ -209,8 +223,8 @@ export default function CustomerCommunication() {
       alert('Email byl úspěšně odeslán!');
       setEmailDialog(false);
       setSelectedCustomer(null);
-      setEmailSubject("");
-      setEmailContent("");
+      setEmailSubject('');
+      setEmailContent('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send email');
     } finally {
@@ -226,21 +240,31 @@ export default function CustomerCommunication() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Zaplaceno
+          </Badge>
+        );
       case 'shipped':
         return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Odesláno</Badge>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Zrušeno
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const statusCounts = useMemo(() => {
-    const statuses = ["new", "paid", "processing", "shipped", "cancelled", "refunded"];
+    const statuses = ['new', 'paid', 'processing', 'shipped', 'cancelled', 'refunded'];
     const counts: Record<string, number> = { all: customers.length };
-    statuses.forEach(status => {
-      counts[status] = customers.filter(c => c.status === status).length;
+    statuses.forEach((status) => {
+      counts[status] = customers.filter((c) => c.status === status).length;
     });
     return counts;
   }, [customers]);
@@ -357,7 +381,9 @@ export default function CustomerCommunication() {
                   {filteredCustomers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                        {searchQuery || statusFilter !== 'all' ? 'Žádní zákazníci nenalezeni' : 'Zatím žádní zákazníci'}
+                        {searchQuery || statusFilter !== 'all'
+                          ? 'Žádní zákazníci nenalezeni'
+                          : 'Zatím žádní zákazníci'}
                       </td>
                     </tr>
                   ) : (
@@ -365,8 +391,12 @@ export default function CustomerCommunication() {
                       <tr key={customer.id} className="border-t hover:bg-muted/30">
                         <td className="p-3">
                           <div>
-                            <div className="font-medium">{customer.customer_name || "Nezadáno"}</div>
-                            <div className="text-sm text-muted-foreground">{customer.customer_email}</div>
+                            <div className="font-medium">
+                              {customer.customer_name || 'Nezadáno'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {customer.customer_email}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3">
@@ -389,9 +419,7 @@ export default function CustomerCommunication() {
                             )}
                           </div>
                         </td>
-                        <td className="p-3">
-                          {getStatusBadge(customer.status)}
-                        </td>
+                        <td className="p-3">{getStatusBadge(customer.status)}</td>
                         <td className="p-3">
                           <div className="text-center">
                             <div className="text-lg font-bold">{customer.order_count}</div>
@@ -400,7 +428,9 @@ export default function CustomerCommunication() {
                         </td>
                         <td className="p-3">
                           <div className="font-semibold">
-                            {customer.amount_total ? `${(customer.amount_total / 100).toFixed(2)} Kč` : '0 Kč'}
+                            {customer.amount_total
+                              ? `${(customer.amount_total / 100).toFixed(2)} Kč`
+                              : '0 Kč'}
                           </div>
                         </td>
                         <td className="p-3">
@@ -446,16 +476,17 @@ export default function CustomerCommunication() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Poslat email zákazníkovi: {selectedCustomer?.customer_name || selectedCustomer?.customer_email}
+              Poslat email zákazníkovi:{' '}
+              {selectedCustomer?.customer_name || selectedCustomer?.customer_email}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {/* Email Templates */}
             <div>
               <Label>Rychlé šablony</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
-                {emailTemplates.map(template => (
+                {emailTemplates.map((template) => (
                   <Button
                     key={template.id}
                     variant="outline"
@@ -518,7 +549,7 @@ export default function CustomerCommunication() {
               Detail zákazníka: {customerDetailView}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Customer Summary */}
             {customerOrders.length > 0 && (
@@ -534,13 +565,27 @@ export default function CustomerCommunication() {
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold">
-                        {(customerOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / 100).toFixed(0)} Kč
+                        {(
+                          customerOrders.reduce(
+                            (sum, order) => sum + (order.amount_total || 0),
+                            0
+                          ) / 100
+                        ).toFixed(0)}{' '}
+                        Kč
                       </div>
                       <div className="text-sm text-muted-foreground">Celková hodnota</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold">
-                        {(customerOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / customerOrders.length / 100).toFixed(0)} Kč
+                        {(
+                          customerOrders.reduce(
+                            (sum, order) => sum + (order.amount_total || 0),
+                            0
+                          ) /
+                          customerOrders.length /
+                          100
+                        ).toFixed(0)}{' '}
+                        Kč
                       </div>
                       <div className="text-sm text-muted-foreground">Průměrná objednávka</div>
                     </div>
@@ -562,42 +607,53 @@ export default function CustomerCommunication() {
               </CardHeader>
               <CardContent>
                 {customerOrders.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Žádné objednávky
-                  </div>
+                  <div className="text-center py-8 text-muted-foreground">Žádné objednávky</div>
                 ) : (
                   <div className="space-y-3">
                     {customerOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div
+                        key={order.id}
+                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                      >
                         <div className="flex-1">
-                          <div className="font-medium">
-                            Objednávka #{order.id.slice(-8)}
-                          </div>
+                          <div className="font-medium">Objednávka #{order.id.slice(-8)}</div>
                           <div className="text-sm text-muted-foreground">
                             {new Date(order.created_at).toLocaleString()}
                           </div>
                           {order.delivery_method && (
                             <div className="text-xs text-muted-foreground">
-                              {order.delivery_method === 'pickup' ? 'Výdejní místo' : 'Doručení domů'}
+                              {order.delivery_method === 'pickup'
+                                ? 'Výdejní místo'
+                                : 'Doručení domů'}
                             </div>
                           )}
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-right">
                             <div className="font-semibold">
-                              {order.amount_total ? `${(order.amount_total / 100).toFixed(2)} Kč` : '-'}
+                              {order.amount_total
+                                ? `${(order.amount_total / 100).toFixed(2)} Kč`
+                                : '-'}
                             </div>
                           </div>
-                          <Badge variant={
-                            order.status === 'paid' ? 'default' :
-                            order.status === 'shipped' ? 'secondary' :
-                            order.status === 'cancelled' ? 'destructive' : 'outline'
-                          }>
+                          <Badge
+                            variant={
+                              order.status === 'paid'
+                                ? 'default'
+                                : order.status === 'shipped'
+                                  ? 'secondary'
+                                  : order.status === 'cancelled'
+                                    ? 'destructive'
+                                    : 'outline'
+                            }
+                          >
                             {order.status === 'paid' && 'Zaplaceno'}
                             {order.status === 'shipped' && 'Odesláno'}
                             {order.status === 'cancelled' && 'Zrušeno'}
                             {order.status === 'processing' && 'Zpracovává se'}
-                            {!['paid', 'shipped', 'cancelled', 'processing'].includes(order.status) && order.status}
+                            {!['paid', 'shipped', 'cancelled', 'processing'].includes(
+                              order.status
+                            ) && order.status}
                           </Badge>
                         </div>
                       </div>

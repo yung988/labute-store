@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { ShoppingBag } from "lucide-react";
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { useCart } from "@/context/CartContext";
-import { CartSidebar } from "@/components/CartSidebar";
+import { ShoppingBag } from 'lucide-react';
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import { useCart } from '@/context/CartContext';
+import { CartSidebar } from '@/components/CartSidebar';
 
 export function CartTrigger() {
   const { totalItems, isSidebarOpen, setIsSidebarOpen } = useCart();
@@ -24,7 +24,7 @@ export function CartTrigger() {
           </span>
         )}
       </Button>
-      
+
       <CartSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </>
   );

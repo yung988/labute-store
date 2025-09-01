@@ -1,5 +1,5 @@
 ---
-description: "Code review, security, and quality assurance agent"
+description: 'Code review, security, and quality assurance agent'
 mode: subagent
 model: grok-code
 temperature: 0.1
@@ -12,9 +12,9 @@ tools:
   write: false
 permissions:
   bash:
-    "*": "deny"
+    '*': 'deny'
   edit:
-    "**/*": "deny"
+    '**/*': 'deny'
 ---
 
 # Review Agent

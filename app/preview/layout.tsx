@@ -1,15 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Email Preview - Yeezuz2020 Store",
-  description: "Preview email templates",
+  title: 'Email Preview - Yeezuz2020 Store',
+  description: 'Preview email templates',
 };
 
-export default function PreviewLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function PreviewLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto py-8">

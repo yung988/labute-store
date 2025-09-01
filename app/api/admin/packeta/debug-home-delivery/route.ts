@@ -1,29 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: NextRequest) {
   const { orderId } = await req.json();
 
   // Get order details
   const { data: order, error: orderError } = await supabaseAdmin
-    .from("orders")
-    .select("*")
-    .eq("id", orderId)
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
     .single();
 
   if (orderError || !order) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    return NextResponse.json({ error: 'Order not found' }, { status: 404 });
   }
 
   // Check if it's home delivery
   const isHomeDelivery = order.delivery_method === 'home_delivery';
-  
+
   if (!isHomeDelivery) {
-    return NextResponse.json({ error: "This is not a home delivery order" }, { status: 400 });
+    return NextResponse.json({ error: 'This is not a home delivery order' }, { status: 400 });
   }
-  
+
   if (!order.delivery_address || !order.delivery_city || !order.delivery_postal_code) {
-    return NextResponse.json({ error: "Missing delivery address for home delivery order" }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing delivery address for home delivery order' },
+      { status: 400 }
+    );
   }
 
   // Check required environment variables
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
   const safeAmount = Math.min(amountCZK, maxAllowedValue);
 
   // Format phone number for Packeta API (must have +420 prefix)
-  let formattedPhone = order.customer_phone || "";
+  let formattedPhone = order.customer_phone || '';
   if (formattedPhone && !formattedPhone.startsWith('+')) {
     // If phone doesn't start with +, assume it's Czech number and add +420
     formattedPhone = `+420${formattedPhone}`;
@@ -53,14 +56,19 @@ export async function POST(req: NextRequest) {
   const packetaOrderId = orderId.slice(-8);
 
   // Split customer name into first name and last name
-  const customerName = order.customer_name || "";
+  const customerName = order.customer_name || '';
   const nameParts = customerName.trim().split(' ');
-  const firstName = nameParts[0] || "";
+  const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || firstName; // If no lastname, use firstname
 
   // Build XML request for Packeta REST API
   function xmlEscape(v: string) {
-    return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+    return v
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
   }
 
   // Home delivery XML structure
@@ -95,7 +103,7 @@ export async function POST(req: NextRequest) {
       delivery_address: order.delivery_address,
       delivery_city: order.delivery_city,
       delivery_postal_code: order.delivery_postal_code,
-      amount_total: order.amount_total
+      amount_total: order.amount_total,
     },
     processed: {
       firstName,
@@ -103,9 +111,9 @@ export async function POST(req: NextRequest) {
       formattedPhone,
       packetaOrderId,
       safeAmount,
-      totalWeightKg
+      totalWeightKg,
     },
     xmlBody,
-    apiUrl: process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest'
+    apiUrl: process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest',
   });
 }

@@ -27,7 +27,8 @@ export const emailTheme = {
   },
 
   fonts: {
-    primary: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    primary:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     mono: 'Menlo, Monaco, "Courier New", monospace',
   },
 

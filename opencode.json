@@ -3,20 +3,13 @@
   "mcp": {
     "fetch": {
       "type": "local",
-      "command": [
-        "uvx",
-        "mcp-server-fetch"
-      ],
+      "command": ["uvx", "mcp-server-fetch"],
       "enabled": true,
       "environment": {}
     },
     "perplexity-ask": {
       "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "server-perplexity-ask"
-      ],
+      "command": ["npx", "-y", "server-perplexity-ask"],
       "enabled": true,
       "environment": {
         "PERPLEXITY_API_KEY": "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"
@@ -24,10 +17,7 @@
     },
     "playwright": {
       "type": "local",
-      "command": [
-        "npx",
-        "@playwright/mcp@latest"
-      ],
+      "command": ["npx", "@playwright/mcp@latest"],
       "enabled": true,
       "environment": {}
     },

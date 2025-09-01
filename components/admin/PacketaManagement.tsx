@@ -1,15 +1,21 @@
-"use client";
-import { useEffect, useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Truck, 
-  Package, 
-  Printer, 
-  RefreshCw, 
+'use client';
+import { useEffect, useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Truck,
+  Package,
+  Printer,
+  RefreshCw,
   Search,
   CheckCircle,
   AlertCircle,
@@ -17,10 +23,10 @@ import {
   MapPin,
   Eye,
   X,
-  Filter
-} from "lucide-react";
-import { formatOrderId } from "@/lib/product-images";
-import { createClient } from "@/lib/supabase/client";
+  Filter,
+} from 'lucide-react';
+import { formatOrderId } from '@/lib/product-images';
+import { createClient } from '@/lib/supabase/client';
 
 type PacketaShipment = {
   id: string;
@@ -39,8 +45,8 @@ export default function PacketaManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const loadShipments = async () => {
     setLoading(true);
@@ -53,10 +59,10 @@ export default function PacketaManagement() {
         .not('packeta_shipment_id', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw new Error(error.message || "Failed to load");
-      
+      if (error) throw new Error(error.message || 'Failed to load');
+
       // Transform data to match expected format
-      const transformedData = ordersData.map(order => ({
+      const transformedData = ordersData.map((order) => ({
         id: order.id,
         order_id: order.id,
         packeta_shipment_id: order.packeta_shipment_id,
@@ -65,12 +71,12 @@ export default function PacketaManagement() {
         status: order.status,
         created_at: order.created_at,
         amount_total: order.amount_total,
-        packeta_point_id: order.packeta_point_id
+        packeta_point_id: order.packeta_point_id,
       }));
-      
+
       setShipments(transformedData);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
@@ -84,36 +90,37 @@ export default function PacketaManagement() {
     let filtered = shipments;
 
     if (searchQuery) {
-      filtered = filtered.filter(shipment =>
-        shipment.order_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        shipment.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        shipment.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        shipment.packeta_shipment_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        formatOrderId(shipment.order_id).toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (shipment) =>
+          shipment.order_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          shipment.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          shipment.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          shipment.packeta_shipment_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          formatOrderId(shipment.order_id).toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(shipment => shipment.status === statusFilter);
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((shipment) => shipment.status === statusFilter);
     }
 
     return filtered;
   }, [shipments, searchQuery, statusFilter]);
 
-    const printLabel = async (orderId: string, format: string = 'A6') => {
-      try {
-        // Otevřít přímo API endpoint, který vrátí PDF (bez ukládání do bucketu)
-        const url = `/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}&direct=true`;
-        console.log(`🔗 Opening direct PDF: ${url}`);
-        window.open(url, '_blank');
-      } catch (e: unknown) {
-        console.error(`❌ Print label error:`, e);
-        setError(e instanceof Error ? e.message : "Failed to print label");
-      }
-    };
+  const printLabel = async (orderId: string, format: string = 'A6') => {
+    try {
+      // Otevřít přímo API endpoint, který vrátí PDF (bez ukládání do bucketu)
+      const url = `/api/admin/packeta/print-label/${orderId}?format=${encodeURIComponent(format)}&direct=true`;
+      console.log(`🔗 Opening direct PDF: ${url}`);
+      window.open(url, '_blank');
+    } catch (e: unknown) {
+      console.error(`❌ Print label error:`, e);
+      setError(e instanceof Error ? e.message : 'Failed to print label');
+    }
+  };
 
   const toggleOrderSelection = (orderId: string) => {
-    setSelectedOrders(prev => {
+    setSelectedOrders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(orderId)) {
         newSet.delete(orderId);
@@ -128,92 +135,91 @@ export default function PacketaManagement() {
     if (selectedOrders.size === filteredShipments.length) {
       setSelectedOrders(new Set());
     } else {
-      setSelectedOrders(new Set(filteredShipments.map(s => s.order_id)));
+      setSelectedOrders(new Set(filteredShipments.map((s) => s.order_id)));
     }
   };
 
-   const bulkPrintLabels = async () => {
-     if (selectedOrders.size === 0) {
-       alert("Vyberte alespoň jednu objednávku");
-       return;
-     }
+  const bulkPrintLabels = async () => {
+    if (selectedOrders.size === 0) {
+      alert('Vyberte alespoň jednu objednávku');
+      return;
+    }
 
-     try {
-       setLoading(true);
-       console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
+    try {
+      setLoading(true);
+      console.log(`📦 Bulk printing ${selectedOrders.size} labels`);
 
+      // Otevřít přímo endpoint, který vrátí PDF (bez ukládání do bucketu)
+      const url = '/api/admin/packeta/bulk-print-labels?direct=true';
+      console.log(`🔗 Opening bulk direct PDF for ${selectedOrders.size} orders`);
 
+      // Otevřít v novém tabu přes formulářový POST (window.open neumí POST)
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+      form.target = '_blank';
 
-        // Otevřít přímo endpoint, který vrátí PDF (bez ukládání do bucketu)
-        const url = '/api/admin/packeta/bulk-print-labels?direct=true';
-        console.log(`🔗 Opening bulk direct PDF for ${selectedOrders.size} orders`);
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = JSON.stringify({ orderIds: Array.from(selectedOrders), format: 'A6' });
+      form.appendChild(input);
 
-        // Otevřít v novém tabu přes formulářový POST (window.open neumí POST)
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = url;
-        form.target = '_blank';
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
 
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'payload';
-        input.value = JSON.stringify({ orderIds: Array.from(selectedOrders), format: 'A6' });
-        form.appendChild(input);
+      // Pozn.: Zbytek UI notifikací necháme na uživateli po otevření PDF
 
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-
-        // Pozn.: Zbytek UI notifikací necháme na uživateli po otevření PDF
-
-       setSelectedOrders(new Set());
-     } catch (e: unknown) {
-       console.error(`❌ Bulk print error:`, e);
-       setError(e instanceof Error ? e.message : "Failed to bulk print labels");
-     } finally {
-       setLoading(false);
-     }
-   };
+      setSelectedOrders(new Set());
+    } catch (e: unknown) {
+      console.error(`❌ Bulk print error:`, e);
+      setError(e instanceof Error ? e.message : 'Failed to bulk print labels');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const trackShipment = async (packetaId: string) => {
     try {
       const response = await fetch(`/api/admin/packeta/track/${packetaId}`);
       const json = await response.json();
-      if (!response.ok) throw new Error(json.error || "Failed to track");
+      if (!response.ok) throw new Error(json.error || 'Failed to track');
       alert(`Status: ${json.status}`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to track");
+      setError(e instanceof Error ? e.message : 'Failed to track');
     }
   };
 
   const cancelShipment = async (orderId: string) => {
-    if (!confirm("Opravdu chcete zrušit tuto zásilku?")) return;
-    
+    if (!confirm('Opravdu chcete zrušit tuto zásilku?')) return;
+
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/packeta/cancel-shipment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId })
+      const response = await fetch('/api/admin/packeta/cancel-shipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
       });
       const json = await response.json();
-      if (!response.ok) throw new Error(json.error || "Failed to cancel");
-      
-      alert("Zásilka byla úspěšně zrušena");
+      if (!response.ok) throw new Error(json.error || 'Failed to cancel');
+
+      alert('Zásilka byla úspěšně zrušena');
       loadShipments();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to cancel shipment");
+      setError(e instanceof Error ? e.message : 'Failed to cancel shipment');
     } finally {
       setLoading(false);
     }
   };
 
   const bulkStatusCheck = async () => {
-    if (!confirm("Zkontrolovat stavy všech aktivních Packeta zásilek? Toto může chvíli trvat.")) return;
+    if (!confirm('Zkontrolovat stavy všech aktivních Packeta zásilek? Toto může chvíli trvat.'))
+      return;
 
     try {
       setLoading(true);
-      
+
       // Call the Next.js API route instead of edge function
       const response = await fetch('/api/admin/run-packeta-cron', {
         method: 'POST',
@@ -232,7 +238,7 @@ export default function PacketaManagement() {
       alert(`✅ Zkontrolováno: ${data.checked} zásilek, aktualizováno: ${data.updated} objednávek`);
       loadShipments();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Status check failed");
+      setError(e instanceof Error ? e.message : 'Status check failed');
     } finally {
       setLoading(false);
     }
@@ -241,23 +247,43 @@ export default function PacketaManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Zaplaceno
+          </Badge>
+        );
       case 'shipped':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Truck className="w-3 h-3 mr-1" />Odesláno</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <Truck className="w-3 h-3 mr-1" />
+            Odesláno
+          </Badge>
+        );
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Zrušeno
+          </Badge>
+        );
       case 'processing':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><Clock className="w-3 h-3 mr-1" />Zpracovává se</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Zpracovává se
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const statusCounts = useMemo(() => {
-    const statuses = ["paid", "processing", "shipped", "cancelled"];
+    const statuses = ['paid', 'processing', 'shipped', 'cancelled'];
     const counts: Record<string, number> = { all: shipments.length };
-    statuses.forEach(status => {
-      counts[status] = shipments.filter(s => s.status === status).length;
+    statuses.forEach((status) => {
+      counts[status] = shipments.filter((s) => s.status === status).length;
     });
     return counts;
   }, [shipments]);
@@ -317,7 +343,7 @@ export default function PacketaManagement() {
               <span className="font-medium">Vybráno {selectedOrders.size} zásilek</span>
               <div className="flex gap-2">
                 <Button onClick={bulkPrintLabels} disabled={loading} size="sm">
-                  {loading ? "Připravuji..." : "Hromadný tisk štítků"}
+                  {loading ? 'Připravuji...' : 'Hromadný tisk štítků'}
                   <Printer className="w-4 h-4 ml-2" />
                 </Button>
                 <Button variant="outline" onClick={() => setSelectedOrders(new Set())} size="sm">
@@ -373,7 +399,9 @@ export default function PacketaManagement() {
               <SelectContent>
                 <SelectItem value="all">Všechny ({statusCounts.all})</SelectItem>
                 <SelectItem value="paid">Zaplacené ({statusCounts.paid})</SelectItem>
-                <SelectItem value="processing">Zpracovávají se ({statusCounts.processing})</SelectItem>
+                <SelectItem value="processing">
+                  Zpracovávají se ({statusCounts.processing})
+                </SelectItem>
                 <SelectItem value="shipped">Odesláno ({statusCounts.shipped})</SelectItem>
                 <SelectItem value="cancelled">Zrušeno ({statusCounts.cancelled})</SelectItem>
               </SelectContent>
@@ -396,7 +424,10 @@ export default function PacketaManagement() {
                     <th className="p-3 text-left">
                       <input
                         type="checkbox"
-                        checked={filteredShipments.length > 0 && selectedOrders.size === filteredShipments.length}
+                        checked={
+                          filteredShipments.length > 0 &&
+                          selectedOrders.size === filteredShipments.length
+                        }
                         onChange={toggleSelectAll}
                         className="rounded"
                       />
@@ -415,7 +446,9 @@ export default function PacketaManagement() {
                   {filteredShipments.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="text-center py-8 text-muted-foreground">
-                        {searchQuery || statusFilter !== 'all' ? 'Žádné zásilky nenalezeny' : 'Zatím žádné zásilky'}
+                        {searchQuery || statusFilter !== 'all'
+                          ? 'Žádné zásilky nenalezeny'
+                          : 'Zatím žádné zásilky'}
                       </td>
                     </tr>
                   ) : (
@@ -435,28 +468,30 @@ export default function PacketaManagement() {
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="font-mono text-sm">
-                            {shipment.packeta_shipment_id}
-                          </div>
+                          <div className="font-mono text-sm">{shipment.packeta_shipment_id}</div>
                         </td>
                         <td className="p-3">
                           <div>
-                            <div className="font-medium">{shipment.customer_name || "Nezadáno"}</div>
-                            <div className="text-sm text-muted-foreground">{shipment.customer_email}</div>
+                            <div className="font-medium">
+                              {shipment.customer_name || 'Nezadáno'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {shipment.customer_email}
+                            </div>
                           </div>
                         </td>
-                        <td className="p-3">
-                          {getStatusBadge(shipment.status)}
-                        </td>
+                        <td className="p-3">{getStatusBadge(shipment.status)}</td>
                         <td className="p-3">
                           <div className="font-semibold">
-                            {shipment.amount_total ? `${(shipment.amount_total / 100).toFixed(2)} Kč` : '-'}
+                            {shipment.amount_total
+                              ? `${(shipment.amount_total / 100).toFixed(2)} Kč`
+                              : '-'}
                           </div>
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1 text-sm">
                             <MapPin className="w-3 h-3" />
-                            {shipment.packeta_point_id || "Nezadáno"}
+                            {shipment.packeta_point_id || 'Nezadáno'}
                           </div>
                         </td>
                         <td className="p-3">

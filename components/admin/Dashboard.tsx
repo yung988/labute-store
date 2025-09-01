@@ -1,8 +1,8 @@
-"use client";
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+'use client';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   BarChart3,
   ShoppingCart,
@@ -22,9 +22,9 @@ import {
   ArrowRight,
   Bell,
   Zap,
-  Calendar
-} from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+  Calendar,
+} from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 type DashboardStats = {
   totalOrders: number;
@@ -66,7 +66,10 @@ type DashboardStats = {
 };
 
 type NavigationProps = {
-  onNavigateAction: (section: 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail', orderId?: string) => void;
+  onNavigateAction: (
+    section: 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail',
+    orderId?: string
+  ) => void;
 };
 
 export default function Dashboard({ onNavigateAction }: NavigationProps) {
@@ -82,8 +85,8 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
     alerts: {
       lowStock: [],
       oldOrders: [],
-      pendingShipments: 0
-    }
+      pendingShipments: 0,
+    },
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +97,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
     setError(null);
     try {
       const supabase = createClient();
-      
+
       // Get all orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
@@ -116,8 +119,8 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
           alerts: {
             lowStock: [],
             oldOrders: [],
-            pendingShipments: 0
-          }
+            pendingShipments: 0,
+          },
         });
         return;
       }
@@ -125,20 +128,22 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       // Calculate stats
       const totalOrders = orders.length;
       const totalRevenue = orders.reduce((sum, order) => sum + (order.amount_total || 0), 0);
-      
+
       // Unique customers
-      const uniqueEmails = new Set(orders.filter(o => o.customer_email).map(o => o.customer_email));
+      const uniqueEmails = new Set(
+        orders.filter((o) => o.customer_email).map((o) => o.customer_email)
+      );
       const totalCustomers = uniqueEmails.size;
 
       // Recent orders (last 7 days)
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
-      const recentOrders = orders.filter(o => new Date(o.created_at) > lastWeek).length;
+      const recentOrders = orders.filter((o) => new Date(o.created_at) > lastWeek).length;
 
       // Today's orders
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayOrders = orders.filter(o => {
+      const todayOrders = orders.filter((o) => {
         const orderDate = new Date(o.created_at);
         orderDate.setHours(0, 0, 0, 0);
         return orderDate.getTime() === today.getTime();
@@ -146,16 +151,16 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
 
       // Status breakdown
       const statusBreakdown: Record<string, number> = {};
-      orders.forEach(order => {
+      orders.forEach((order) => {
         statusBreakdown[order.status] = (statusBreakdown[order.status] || 0) + 1;
       });
 
       // Packeta stats
-      const packetaOrders = orders.filter(o => o.packeta_shipment_id);
+      const packetaOrders = orders.filter((o) => o.packeta_shipment_id);
       const packetaStats = {
         total: packetaOrders.length,
-        shipped: packetaOrders.filter(o => o.status === 'shipped').length,
-        pending: packetaOrders.filter(o => o.status !== 'shipped').length
+        shipped: packetaOrders.filter((o) => o.status === 'shipped').length,
+        pending: packetaOrders.filter((o) => o.status !== 'shipped').length,
       };
 
       // Recent orders list (last 10)
@@ -164,13 +169,17 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       // Calculate alerts - objednávky které jsou zaplacené ale ještě nevyřízené
       const now = new Date();
       const oldOrders = orders
-        .filter(o => (o.status === 'paid' || o.status === 'new' || o.status === 'processing') && o.status !== 'shipped')
-        .map(o => {
+        .filter(
+          (o) =>
+            (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
+            o.status !== 'shipped'
+        )
+        .map((o) => {
           const createdAt = new Date(o.created_at);
           const daysOld = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
           return { ...o, days_old: daysOld };
         })
-        .filter(o => o.days_old > 1) // Zkrátím na 1 den místo 3
+        .filter((o) => o.days_old > 1) // Zkrátím na 1 den místo 3
         .slice(0, 5);
 
       // Get low stock items (we'll fetch this from inventory API)
@@ -185,25 +194,30 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
         const inventoryRes = await fetch('/api/admin/inventory');
         if (inventoryRes.ok) {
           const inventoryData = await inventoryRes.json();
-          lowStock = inventoryData.products
-            ?.filter((p: { total_stock: number; low_stock_threshold: number }) => p.total_stock <= p.low_stock_threshold)
-            .map((p: { name: string; total_stock: number; low_stock_threshold: number }) => ({
-              product_name: p.name,
-              size: 'Všechny velikosti',
-              current_stock: p.total_stock,
-              threshold: p.low_stock_threshold
-            }))
-            .slice(0, 5) || [];
+          lowStock =
+            inventoryData.products
+              ?.filter(
+                (p: { total_stock: number; low_stock_threshold: number }) =>
+                  p.total_stock <= p.low_stock_threshold
+              )
+              .map((p: { name: string; total_stock: number; low_stock_threshold: number }) => ({
+                product_name: p.name,
+                size: 'Všechny velikosti',
+                current_stock: p.total_stock,
+                threshold: p.low_stock_threshold,
+              }))
+              .slice(0, 5) || [];
         }
       } catch {
         // Ignore inventory errors for now
       }
 
-      const pendingShipments = orders.filter(o => 
-        (o.status === 'paid' || o.status === 'new' || o.status === 'processing') && 
-        !o.packeta_shipment_id && 
-        o.status !== 'shipped' && 
-        o.status !== 'cancelled'
+      const pendingShipments = orders.filter(
+        (o) =>
+          (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
+          !o.packeta_shipment_id &&
+          o.status !== 'shipped' &&
+          o.status !== 'cancelled'
       ).length;
 
       setStats({
@@ -218,12 +232,11 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
         alerts: {
           lowStock,
           oldOrders,
-          pendingShipments
-        }
+          pendingShipments,
+        },
       });
-
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load stats");
+      setError(e instanceof Error ? e.message : 'Failed to load stats');
     } finally {
       setLoading(false);
     }
@@ -233,17 +246,20 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
     loadStats();
   }, []);
 
-  const handleQuickAction = async (orderId: string, action: 'create_shipment' | 'mark_shipped' | 'mark_processing') => {
-    setProcessingActions(prev => new Set([...prev, `${orderId}-${action}`]));
-    
+  const handleQuickAction = async (
+    orderId: string,
+    action: 'create_shipment' | 'mark_shipped' | 'mark_processing'
+  ) => {
+    setProcessingActions((prev) => new Set([...prev, `${orderId}-${action}`]));
+
     try {
       if (action === 'create_shipment') {
         const response = await fetch('/api/admin/packeta/create-shipment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId })
+          body: JSON.stringify({ orderId }),
         });
-        
+
         if (response.ok) {
           await loadStats(); // Refresh data
         } else {
@@ -253,9 +269,9 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
         const response = await fetch(`/api/admin/orders/${orderId}/quick-actions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action })
+          body: JSON.stringify({ action }),
         });
-        
+
         if (response.ok) {
           await loadStats(); // Refresh data
         } else {
@@ -265,7 +281,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
     } catch (error) {
       console.error('Quick action failed:', error);
     } finally {
-      setProcessingActions(prev => {
+      setProcessingActions((prev) => {
         const newSet = new Set(prev);
         newSet.delete(`${orderId}-${action}`);
         return newSet;
@@ -276,15 +292,40 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Zaplaceno</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Zaplaceno
+          </Badge>
+        );
       case 'new':
-        return <Badge className="bg-green-100 text-green-800 border-green-200"><CheckCircle className="w-3 h-3 mr-1" />Nová objednávka</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Nová objednávka
+          </Badge>
+        );
       case 'shipped':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Truck className="w-3 h-3 mr-1" />Odesláno</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <Truck className="w-3 h-3 mr-1" />
+            Odesláno
+          </Badge>
+        );
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800 border-red-200"><AlertCircle className="w-3 h-3 mr-1" />Zrušeno</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Zrušeno
+          </Badge>
+        );
       case 'processing':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200"><Clock className="w-3 h-3 mr-1" />Zpracovává se</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Zpracovává se
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -307,9 +348,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Přehled obchodu a statistiky
-          </p>
+          <p className="text-muted-foreground">Přehled obchodu a statistiky</p>
         </div>
         <Button onClick={loadStats} variant="outline" disabled={loading} size="sm">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -325,7 +364,9 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       )}
 
       {/* Alerts Section */}
-      {(stats.alerts.lowStock.length > 0 || stats.alerts.oldOrders.length > 0 || stats.alerts.pendingShipments > 0) && (
+      {(stats.alerts.lowStock.length > 0 ||
+        stats.alerts.oldOrders.length > 0 ||
+        stats.alerts.pendingShipments > 0) && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
@@ -345,9 +386,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                   <div className="text-2xl font-bold text-orange-900">
                     {stats.alerts.lowStock.length}
                   </div>
-                  <p className="text-xs text-orange-700">
-                    produktů má nízké zásoby
-                  </p>
+                  <p className="text-xs text-orange-700">produktů má nízké zásoby</p>
                   <Button
                     size="sm"
                     variant="outline"
@@ -375,12 +414,13 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                   <div className="text-2xl font-bold text-red-900">
                     {stats.alerts.oldOrders.length}
                   </div>
-                  <p className="text-xs text-red-700">
-                    objednávek čeká více než 1 den
-                  </p>
+                  <p className="text-xs text-red-700">objednávek čeká více než 1 den</p>
                   <div className="mt-3 space-y-2">
                     {stats.alerts.oldOrders.slice(0, 2).map((order) => (
-                      <div key={order.id} className="flex items-center justify-between text-xs bg-white/50 p-2 rounded">
+                      <div
+                        key={order.id}
+                        className="flex items-center justify-between text-xs bg-white/50 p-2 rounded"
+                      >
                         <span className="font-medium">{order.customer_email}</span>
                         <span className="text-red-600">{order.days_old} dní</span>
                       </div>
@@ -411,9 +451,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                   <div className="text-2xl font-bold text-blue-900">
                     {stats.alerts.pendingShipments}
                   </div>
-                  <p className="text-xs text-blue-700">
-                    objednávek čeká na vytvoření zásilky
-                  </p>
+                  <p className="text-xs text-blue-700">objednávek čeká na vytvoření zásilky</p>
                   <Button
                     size="sm"
                     variant="outline"
@@ -431,7 +469,10 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
 
       {/* Main Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateAction('orders')}>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onNavigateAction('orders')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -462,7 +503,10 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateAction('customers')}>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onNavigateAction('customers')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -477,7 +521,10 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigateAction('inventory')}>
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onNavigateAction('inventory')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -486,7 +533,9 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                 {stats.alerts.lowStock.length > 0 && (
                   <div className="flex items-center gap-1 mt-1">
                     <Zap className="w-3 h-3 text-orange-500" />
-                    <span className="text-xs text-orange-600">{stats.alerts.lowStock.length} nízké zásoby</span>
+                    <span className="text-xs text-orange-600">
+                      {stats.alerts.lowStock.length} nízké zásoby
+                    </span>
                   </div>
                 )}
               </div>
@@ -512,9 +561,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
             <div className="space-y-3">
               {Object.entries(stats.statusBreakdown).map(([status, count]) => (
                 <div key={status} className="flex items-center">
-                  <div className="flex items-center gap-2 flex-1">
-                    {getStatusBadge(status)}
-                  </div>
+                  <div className="flex items-center gap-2 flex-1">{getStatusBadge(status)}</div>
                   <div className="font-semibold">{count}</div>
                 </div>
               ))}
@@ -553,9 +600,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       <Card>
         <CardHeader>
           <CardTitle>Poslední objednávky</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Nejnovější objednávky s rychlými akcemi
-          </p>
+          <p className="text-sm text-muted-foreground">Nejnovější objednávky s rychlými akcemi</p>
         </CardHeader>
         <CardContent>
           {stats.recentOrdersList.length === 0 ? (
@@ -578,9 +623,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                       <p className="text-sm font-medium leading-none">
                         {order.customer_name || 'Nezadáno'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.customer_email}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{order.customer_email}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleString()}

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import sendOrderStatusEmail from "@/lib/stripe/send-status-email";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import sendOrderStatusEmail from '@/lib/stripe/send-status-email';
 
 // Simple fetch with timeout and retries for transient Packeta issues (e.g., 5xx/504)
 async function fetchWithRetry(
@@ -54,54 +54,57 @@ function verifyCronSecret(req: NextRequest): boolean {
 // Map Packeta status to our internal status
 function mapPacketaStatusToOrderStatus(packetaStatus: string): string {
   const statusMap: Record<string, string> = {
-    'created': 'processing',
-    'handed_to_carrier': 'shipped', 
-    'in_transit': 'shipped',
-    'ready_for_pickup': 'shipped',
-    'delivered': 'delivered',
-    'returned': 'returned',
-    'cancelled': 'cancelled'
+    created: 'processing',
+    handed_to_carrier: 'shipped',
+    in_transit: 'shipped',
+    ready_for_pickup: 'shipped',
+    delivered: 'delivered',
+    returned: 'returned',
+    cancelled: 'cancelled',
   };
-  
+
   return statusMap[packetaStatus.toLowerCase()] || 'processing';
 }
 
 export async function GET(req: NextRequest) {
   // Verify authorization
   if (!verifyCronSecret(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
     console.error('❌ PACKETA_API_PASSWORD is not set on Vercel!');
     return NextResponse.json(
-      { error: 'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.' },
+      {
+        error:
+          'Packeta API password is not configured on Vercel. Please set PACKETA_API_PASSWORD environment variable.',
+      },
       { status: 500 }
     );
   }
 
   try {
-    console.log("🕐 Starting Packeta status check cron job");
+    console.log('🕐 Starting Packeta status check cron job');
 
     // Get all active orders with Packeta shipments that are not delivered/cancelled
     const { data: orders, error: ordersError } = await supabaseAdmin
-      .from("orders")
-      .select("id, packeta_shipment_id, status, customer_email, customer_name, items")
-      .not("packeta_shipment_id", "is", null)
-      .not("status", "in", '("delivered","cancelled","returned")');
+      .from('orders')
+      .select('id, packeta_shipment_id, status, customer_email, customer_name, items')
+      .not('packeta_shipment_id', 'is', null)
+      .not('status', 'in', '("delivered","cancelled","returned")');
 
     if (ordersError) {
-      console.error("❌ Error fetching orders:", ordersError);
+      console.error('❌ Error fetching orders:', ordersError);
       return NextResponse.json({ error: ordersError.message }, { status: 500 });
     }
 
     if (!orders || orders.length === 0) {
-      console.log("ℹ️ No active shipments to check");
-      return NextResponse.json({ 
-        success: true, 
-        message: "No active shipments to check",
-        checked: 0
+      console.log('ℹ️ No active shipments to check');
+      return NextResponse.json({
+        success: true,
+        message: 'No active shipments to check',
+        checked: 0,
       });
     }
 
@@ -116,41 +119,41 @@ export async function GET(req: NextRequest) {
         console.log(`Checking shipment ${order.packeta_shipment_id} for order ${order.id}`);
 
         // Call Packeta XML API to get current status
-         const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+        const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetStatus>
   <apiPassword>${process.env.PACKETA_API_PASSWORD}</apiPassword>
   <packetId>${order.packeta_shipment_id}</packetId>
 </packetStatus>`;
 
-         const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
-         
-         const trackingResponse = await fetchWithRetry(
-           apiUrl,
-           {
-             method: "POST",
-             headers: {
-               "Content-Type": "application/xml",
-               "Accept": "application/xml",
-               "User-Agent": "labute-store/cron (Packeta status check)"
-             },
-             body: xmlBody,
-           },
-           { retries: 3, timeoutMs: 20000, backoffMs: 800 }
-         );
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
+
+        const trackingResponse = await fetchWithRetry(
+          apiUrl,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/xml',
+              Accept: 'application/xml',
+              'User-Agent': 'labute-store/cron (Packeta status check)',
+            },
+            body: xmlBody,
+          },
+          { retries: 3, timeoutMs: 20000, backoffMs: 800 }
+        );
 
         if (!trackingResponse.ok) {
-          const contentType = trackingResponse.headers.get("content-type") || "";
-          const xAzureRef = trackingResponse.headers.get("x-azure-ref") || trackingResponse.headers.get("x-azure-ref-originshield") || undefined;
+          const contentType = trackingResponse.headers.get('content-type') || '';
+          const xAzureRef =
+            trackingResponse.headers.get('x-azure-ref') ||
+            trackingResponse.headers.get('x-azure-ref-originshield') ||
+            undefined;
           const errorText = await trackingResponse.text();
-          console.error(
-            `❌ Packeta API error for ${order.packeta_shipment_id}:`,
-            {
-              status: trackingResponse.status,
-              contentType,
-              xAzureRef,
-              snippet: errorText?.slice(0, 300)
-            }
-          );
+          console.error(`❌ Packeta API error for ${order.packeta_shipment_id}:`, {
+            status: trackingResponse.status,
+            contentType,
+            xAzureRef,
+            snippet: errorText?.slice(0, 300),
+          });
           errors.push(`${order.id}: ${trackingResponse.status} ${errorText}`);
           continue;
         }
@@ -159,7 +162,7 @@ export async function GET(req: NextRequest) {
         // Packeta API returns XML, not JSON - parse status from XML
         const statusMatch = trackingData.match(/<status[^>]*>([^<]*)<\/status>/);
         const packetaStatus = statusMatch ? statusMatch[1] : null;
-        
+
         if (!packetaStatus) {
           console.warn(`⚠️ No status found for ${order.packeta_shipment_id}`);
           continue;
@@ -171,16 +174,18 @@ export async function GET(req: NextRequest) {
 
         // Only update if status changed
         if (newStatus !== previousStatus) {
-          console.log(`🔄 Status change for ${order.id}: ${previousStatus} → ${newStatus} (Packeta: ${packetaStatus})`);
+          console.log(
+            `🔄 Status change for ${order.id}: ${previousStatus} → ${newStatus} (Packeta: ${packetaStatus})`
+          );
 
           // Update order status
           const { error: updateError } = await supabaseAdmin
-            .from("orders")
-            .update({ 
+            .from('orders')
+            .update({
               status: newStatus,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
-            .eq("id", order.id);
+            .eq('id', order.id);
 
           if (updateError) {
             console.error(`❌ Failed to update order ${order.id}:`, updateError);
@@ -193,14 +198,17 @@ export async function GET(req: NextRequest) {
           // Send status email to customer
           if (order.customer_email) {
             try {
-              await sendOrderStatusEmail({
-                id: order.id,
-                customer_email: order.customer_email,
-                customer_name: order.customer_name,
-                status: newStatus,
-                items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
-                packeta_shipment_id: order.packeta_shipment_id
-              }, previousStatus);
+              await sendOrderStatusEmail(
+                {
+                  id: order.id,
+                  customer_email: order.customer_email,
+                  customer_name: order.customer_name,
+                  status: newStatus,
+                  items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+                  packeta_shipment_id: order.packeta_shipment_id,
+                },
+                previousStatus
+              );
 
               console.log(`📧 Status email sent to ${order.customer_email}`);
             } catch (emailError) {
@@ -213,8 +221,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Add small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 200));
-
+        await new Promise((resolve) => setTimeout(resolve, 200));
       } catch (error) {
         console.error(`❌ Error processing order ${order.id}:`, error);
         errors.push(`${order.id}: ${error}`);
@@ -222,29 +229,27 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log(`✅ Packeta status check completed: ${updatedCount}/${orders.length} orders updated`);
+    console.log(
+      `✅ Packeta status check completed: ${updatedCount}/${orders.length} orders updated`
+    );
 
     return NextResponse.json({
       success: true,
       checked: orders.length,
       updated: updatedCount,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
     });
-
   } catch (error) {
-    console.error("❌ Cron job error:", error);
-    return NextResponse.json(
-      { error: "Cron job failed" },
-      { status: 500 }
-    );
+    console.error('❌ Cron job error:', error);
+    return NextResponse.json({ error: 'Cron job failed' }, { status: 500 });
   }
 }
 
 // Health check
 export async function POST() {
-  return NextResponse.json({ 
-    status: "ok", 
-    cron: "packeta-status-check",
-    timestamp: new Date().toISOString()
+  return NextResponse.json({
+    status: 'ok',
+    cron: 'packeta-status-check',
+    timestamp: new Date().toISOString(),
   });
 }

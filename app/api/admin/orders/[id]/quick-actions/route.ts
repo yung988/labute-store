@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { action } = await request.json();
     const { id: orderId } = await params;
@@ -15,9 +12,9 @@ export async function POST(
       case 'mark_shipped':
         const { error: updateError } = await supabase
           .from('orders')
-          .update({ 
+          .update({
             status: 'shipped',
-            shipped_at: new Date().toISOString()
+            shipped_at: new Date().toISOString(),
           })
           .eq('id', orderId);
 
@@ -30,9 +27,9 @@ export async function POST(
       case 'mark_processing':
         const { error: processingError } = await supabase
           .from('orders')
-          .update({ 
+          .update({
             status: 'processing',
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', orderId);
 
@@ -40,7 +37,10 @@ export async function POST(
           throw new Error(processingError.message);
         }
 
-        return NextResponse.json({ success: true, message: 'Objednávka označena jako zpracovává se' });
+        return NextResponse.json({
+          success: true,
+          message: 'Objednávka označena jako zpracovává se',
+        });
 
       default:
         return NextResponse.json({ error: 'Neznámá akce' }, { status: 400 });

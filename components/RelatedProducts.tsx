@@ -1,5 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
+import Image from 'next/image';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
 interface RelatedProductsProps {
@@ -20,20 +20,22 @@ interface SimpleProduct {
 // Funkce pro načtení náhodných produktů
 async function getRandomProducts(
   currentProductId: string,
-  limit: number = 4,
+  limit: number = 4
 ): Promise<SimpleProduct[]> {
   try {
     const supabase = await createClient();
-    
+
     const { data: allProducts } = await supabase
       .from('products')
-      .select(`
+      .select(
+        `
         id,
         name,
         slug,
         price_cents,
         product_images!left(url, is_main)
-      `)
+      `
+      )
       .neq('id', currentProductId)
       .order('id');
 
@@ -50,10 +52,11 @@ async function getRandomProducts(
       price: p.price_cents,
       status: 'active',
       image_url:
-        p.product_images?.find((img: { is_main?: boolean; url: string }) => img.is_main)?.url || p.product_images?.[0]?.url,
+        p.product_images?.find((img: { is_main?: boolean; url: string }) => img.is_main)?.url ||
+        p.product_images?.[0]?.url,
     }));
   } catch (error) {
-    console.error("Error loading related products:", error);
+    console.error('Error loading related products:', error);
     return [];
   }
 }
@@ -76,13 +79,13 @@ export async function RelatedProducts({ currentProductId, limit = 4 }: RelatedPr
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2">
           {relatedProducts.map((product) => {
             const priceFormatted = product.price
-              ? `${(product.price / 100).toLocaleString("cs-CZ")} Kč`
-              : "Cena na dotaz";
+              ? `${(product.price / 100).toLocaleString('cs-CZ')} Kč`
+              : 'Cena na dotaz';
 
             return (
               <Link
                 key={product.id}
-                href={product.slug ? `/product/${product.slug}` : "/"}
+                href={product.slug ? `/product/${product.slug}` : '/'}
                 className="group block"
               >
                 <div className="space-y-3">

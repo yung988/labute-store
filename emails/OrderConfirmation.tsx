@@ -1,14 +1,5 @@
-import {
-  Html,
-  Head,
-  Preview,
-  Body,
-  Container,
-  Section,
-  Text,
-  Hr,
-} from "@react-email/components";
-import { emailStyles, emailTheme, BRAND } from "./theme";
+import { Html, Head, Preview, Body, Container, Section, Text, Hr } from '@react-email/components';
+import { emailStyles, emailTheme, BRAND } from './theme';
 
 interface OrderItem {
   name: string;
@@ -56,18 +47,21 @@ export default function OrderConfirmation({
   return (
     <Html>
       <Head />
-      <Preview>Potvrzení objednávky {orderId} - {BRAND.name}</Preview>
-      <Body style={{ backgroundColor: emailTheme.colors.background, fontFamily: emailTheme.fonts.primary }}>
+      <Preview>
+        Potvrzení objednávky {orderId} - {BRAND.name}
+      </Preview>
+      <Body
+        style={{
+          backgroundColor: emailTheme.colors.background,
+          fontFamily: emailTheme.fonts.primary,
+        }}
+      >
         <Container style={emailStyles.container}>
           {/* Brand Header */}
-          <Text style={emailStyles.logo}>
-            {BRAND.name}
-          </Text>
+          <Text style={emailStyles.logo}>{BRAND.name}</Text>
 
           {/* Main Heading */}
-          <Text style={emailStyles.h1}>
-            Děkujeme za Vaši objednávku! 🎉
-          </Text>
+          <Text style={emailStyles.h1}>Děkujeme za Vaši objednávku! 🎉</Text>
 
           {/* Greeting */}
           <Text style={emailStyles.body}>
@@ -80,13 +74,13 @@ export default function OrderConfirmation({
 
           {/* Order Details Section */}
           <Section style={emailStyles.section}>
-            <Text style={emailStyles.h3}>
-              Detaily objednávky
-            </Text>
+            <Text style={emailStyles.h3}>Detaily objednávky</Text>
 
             <Text style={emailStyles.body}>
-              <strong>Číslo objednávky:</strong> {orderId}<br />
-              <strong>Datum objednávky:</strong> {formattedDate}<br />
+              <strong>Číslo objednávky:</strong> {orderId}
+              <br />
+              <strong>Datum objednávky:</strong> {formattedDate}
+              <br />
               <strong>E-mail:</strong> {customerEmail}
             </Text>
           </Section>
@@ -94,12 +88,12 @@ export default function OrderConfirmation({
           {/* Shipping Address */}
           {shippingAddress && (
             <Section style={emailStyles.section}>
-              <Text style={emailStyles.h3}>
-                Dodací adresa
-              </Text>
+              <Text style={emailStyles.h3}>Dodací adresa</Text>
               <Text style={emailStyles.body}>
-                {shippingAddress.street}<br />
-                {shippingAddress.postalCode} {shippingAddress.city}<br />
+                {shippingAddress.street}
+                <br />
+                {shippingAddress.postalCode} {shippingAddress.city}
+                <br />
                 {shippingAddress.country}
               </Text>
             </Section>
@@ -109,52 +103,62 @@ export default function OrderConfirmation({
 
           {/* Order Items */}
           <Section style={emailStyles.section}>
-            <Text style={emailStyles.h3}>
-              Objednané položky
-            </Text>
+            <Text style={emailStyles.h3}>Objednané položky</Text>
 
             {items.map((item, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 0',
-                borderBottom: index < items.length - 1 ? `1px solid ${emailTheme.colors.gray200}` : 'none',
-              }}>
-                <Text style={{
-                  margin: '0',
-                  fontSize: '16px',
-                  color: emailTheme.colors.foreground,
-                  fontFamily: emailTheme.fonts.primary,
-                }}>
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 0',
+                  borderBottom:
+                    index < items.length - 1 ? `1px solid ${emailTheme.colors.gray200}` : 'none',
+                }}
+              >
+                <Text
+                  style={{
+                    margin: '0',
+                    fontSize: '16px',
+                    color: emailTheme.colors.foreground,
+                    fontFamily: emailTheme.fonts.primary,
+                  }}
+                >
                   <strong>{item.qty}×</strong> {item.name}
                 </Text>
-                <Text style={{
-                  margin: '0',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  color: emailTheme.colors.foreground,
-                  fontFamily: emailTheme.fonts.primary,
-                }}>
+                <Text
+                  style={{
+                    margin: '0',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: emailTheme.colors.foreground,
+                    fontFamily: emailTheme.fonts.primary,
+                  }}
+                >
                   {item.price}
                 </Text>
               </div>
             ))}
 
             {/* Order Total */}
-            <div style={{
-              padding: '16px 0',
-              marginTop: '16px',
-              borderTop: `2px solid ${emailTheme.colors.gray300}`,
-              textAlign: 'right',
-            }}>
-              <Text style={{
-                margin: '0',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: emailTheme.colors.foreground,
-                fontFamily: emailTheme.fonts.primary,
-              }}>
+            <div
+              style={{
+                padding: '16px 0',
+                marginTop: '16px',
+                borderTop: `2px solid ${emailTheme.colors.gray300}`,
+                textAlign: 'right',
+              }}
+            >
+              <Text
+                style={{
+                  margin: '0',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  color: emailTheme.colors.foreground,
+                  fontFamily: emailTheme.fonts.primary,
+                }}
+              >
                 Celkem: {total}
               </Text>
             </div>
@@ -164,12 +168,12 @@ export default function OrderConfirmation({
 
           {/* Next Steps */}
           <Section style={emailStyles.section}>
-            <Text style={emailStyles.h3}>
-              Co bude dál?
-            </Text>
+            <Text style={emailStyles.h3}>Co bude dál?</Text>
             <Text style={emailStyles.body}>
-              1. Vaši objednávku připravujeme k odeslání<br />
-              2. Jakmile bude zásilka odeslána, pošleme Vám sledovací číslo<br />
+              1. Vaši objednávku připravujeme k odeslání
+              <br />
+              2. Jakmile bude zásilka odeslána, pošleme Vám sledovací číslo
+              <br />
               3. Očekávaná doba doručení je 2-5 pracovních dnů
             </Text>
           </Section>
@@ -185,8 +189,8 @@ export default function OrderConfirmation({
           {/* Footer */}
           <Section style={emailStyles.footer}>
             <Text style={{ margin: '0', ...emailStyles.small }}>
-              Tento e-mail slouží jako automatické potvrzení objednávky.<br />
-              © 2024 {BRAND.name}. Všechna práva vyhrazena.
+              Tento e-mail slouží jako automatické potvrzení objednávky.
+              <br />© 2024 {BRAND.name}. Všechna práva vyhrazena.
             </Text>
           </Section>
         </Container>

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { X, ShoppingBag, Minus, Plus } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import * as React from "react";
-import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { useCart } from "@/context/CartContext";
-import { formatCurrency } from "@/lib/utils";
+import { X, ShoppingBag, Minus, Plus } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import * as React from 'react';
+import { createPortal } from 'react-dom';
+import { Button } from '@/components/ui/button';
+import { useCart } from '@/context/CartContext';
+import { formatCurrency } from '@/lib/utils';
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -28,17 +28,17 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   // Close on escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
 
     if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
     }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "unset";
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
 
@@ -49,7 +49,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
       {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black/30 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={{ zIndex: 999999 }}
         onClick={onClose}
@@ -58,17 +58,16 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
       {/* Sidebar */}
       <div
         className={`fixed right-0 top-0 w-full max-w-md bg-white shadow-xl flex flex-col will-change-transform ${
-          dragging ? "transition-none" : "transition-transform duration-300 ease-in-out"
+          dragging ? 'transition-none' : 'transition-transform duration-300 ease-in-out'
         }`}
         style={{
           zIndex: 1000000,
-          height: "100svh",
-          maxHeight: "100svh",
-          transform:
-            isOpen
-              ? `translate3d(${Math.max(0, dragX)}px, 0, 0)`
-              : "translate3d(100%, 0, 0)",
-          touchAction: "pan-y",
+          height: '100svh',
+          maxHeight: '100svh',
+          transform: isOpen
+            ? `translate3d(${Math.max(0, dragX)}px, 0, 0)`
+            : 'translate3d(100%, 0, 0)',
+          touchAction: 'pan-y',
         }}
         onTouchStart={(e) => {
           if (!isOpen) return;
@@ -104,10 +103,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               Košík ({totalItems})
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-50 transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -133,17 +129,12 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
                 {items.map((item, index) => (
                   <div
-                    key={`${item.id}-${item.size || "no-size"}-${index}`}
+                    key={`${item.id}-${item.size || 'no-size'}-${index}`}
                     className="flex gap-4 pb-6 border-b border-gray-100 last:border-b-0"
                   >
                     {item.image && (
                       <div className="relative w-20 h-20 bg-gray-50 rounded overflow-hidden">
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                        />
+                        <Image src={item.image} alt={item.name} fill className="object-cover" />
                       </div>
                     )}
                     <div className="flex-1 space-y-2">
@@ -197,7 +188,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               {/* Footer */}
               <div
                 className="p-6 border-t border-gray-100 bg-gray-50 flex-shrink-0"
-                style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+                style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
               >
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">

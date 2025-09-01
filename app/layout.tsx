@@ -1,26 +1,26 @@
-import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import { ThemeProvider } from "next-themes";
-import { CartProvider } from "@/context/CartContext";
-import { ConditionalLayout } from "@/components/ConditionalLayout";
-import { ReactLenis } from "lenis/react";
-import "./globals.css";
-import { PostHogProvider } from "@/components/PostHogProvider";
+import type { Metadata } from 'next';
+import { Geist } from 'next/font/google';
+import { ThemeProvider } from 'next-themes';
+import { CartProvider } from '@/context/CartContext';
+import { ConditionalLayout } from '@/components/ConditionalLayout';
+import { ReactLenis } from 'lenis/react';
+import './globals.css';
+import { PostHogProvider } from '@/components/PostHogProvider';
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+  : 'http://localhost:3000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Yeezuz2020 Store",
-  description: "2020",
+  title: 'Yeezuz2020 Store',
+  description: '2020',
 };
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  display: "swap",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  display: 'swap',
+  subsets: ['latin'],
 });
 
 export default function RootLayout({
@@ -43,9 +43,7 @@ export default function RootLayout({
               disableTransitionOnChange
             >
               <CartProvider>
-                <ConditionalLayout>
-                  {children}
-                </ConditionalLayout>
+                <ConditionalLayout>{children}</ConditionalLayout>
               </CartProvider>
             </ThemeProvider>
           </ReactLenis>

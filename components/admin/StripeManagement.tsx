@@ -1,10 +1,17 @@
-"use client";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RefreshCw, CreditCard, Package, AlertCircle } from "lucide-react";
+'use client';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { RefreshCw, CreditCard, Package, AlertCircle } from 'lucide-react';
 
 interface StripeProduct {
   id: string;
@@ -20,14 +27,18 @@ interface StripeProduct {
 export default function StripeManagement() {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<StripeProduct[]>([]);
-  const [syncResult, setSyncResult] = useState<{ created: number; updated: number; errors: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{
+    created: number;
+    updated: number;
+    errors: number;
+  } | null>(null);
 
   const syncProducts = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/stripe/sync-products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -36,7 +47,9 @@ export default function StripeManagement() {
       alert(`✅ ${data.message}`);
       await loadProducts();
     } catch (error: unknown) {
-      alert(`❌ Chyba při synchronizaci: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `❌ Chyba při synchronizaci: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setLoading(false);
     }
@@ -71,14 +84,10 @@ export default function StripeManagement() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold text-blue-800 mb-2">🔄 Synchronizace produktů</h3>
             <p className="text-sm text-blue-700 mb-3">
-              Synchronizuje produkty z vašeho webu do Stripe Product Catalog.
-              Tím umožníte lepší správu produktů a pokročilé funkce Stripe.
+              Synchronizuje produkty z vašeho webu do Stripe Product Catalog. Tím umožníte lepší
+              správu produktů a pokročilé funkce Stripe.
             </p>
-            <Button
-              onClick={syncProducts}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
+            <Button onClick={syncProducts} disabled={loading} className="flex items-center gap-2">
               {loading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
@@ -127,14 +136,15 @@ export default function StripeManagement() {
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell className="font-mono text-sm">{product.id}</TableCell>
                       <TableCell>
-                        <Badge variant={product.active ? "default" : "secondary"}>
+                        <Badge variant={product.active ? 'default' : 'secondary'}>
                           {product.active ? 'Aktivní' : 'Neaktivní'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {product.default_price ? (
                           <span className="font-medium">
-                            {(product.default_price.unit_amount / 100).toFixed(2)} {product.default_price.currency.toUpperCase()}
+                            {(product.default_price.unit_amount / 100).toFixed(2)}{' '}
+                            {product.default_price.currency.toUpperCase()}
                           </span>
                         ) : (
                           'N/A'

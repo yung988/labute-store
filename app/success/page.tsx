@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -17,7 +17,7 @@ function SuccessContent() {
       localStorage.removeItem('checkout-form-data');
       localStorage.removeItem('checkout-delivery-method');
       localStorage.removeItem('checkout-pickup-point');
-      
+
       // Pošli storage event aby se aktualizoval košík v jiných tabech
       window.dispatchEvent(new StorageEvent('storage', { key: 'cart', newValue: null }));
     }
@@ -37,17 +37,17 @@ function SuccessContent() {
       <div className="text-center max-w-md w-full mx-auto">
         <div className="mb-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg 
-              className="w-8 h-8 text-green-600" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M5 13l4 4L19 7" 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
               />
             </svg>
           </div>
@@ -58,7 +58,8 @@ function SuccessContent() {
             Platba byla úspěšná!
           </h2>
           <p className="text-sm text-gray-600 leading-relaxed px-2">
-            Děkujeme za vaši objednávku. Brzy vám pošleme e-mail s potvrzením a informacemi o doručení.
+            Děkujeme za vaši objednávku. Brzy vám pošleme e-mail s potvrzením a informacemi o
+            doručení.
           </p>
         </div>
 
@@ -68,11 +69,9 @@ function SuccessContent() {
               Pokračovat v nákupu
             </Button>
           </Link>
-          
+
           {sessionId && (
-            <p className="text-xs text-gray-400 break-all px-2">
-              ID platby: {sessionId}
-            </p>
+            <p className="text-xs text-gray-400 break-all px-2">ID platby: {sessionId}</p>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
-import { hasEnvVars } from "../utils";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+import { hasEnvVars } from '../utils';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -24,18 +24,16 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
   // Do not run code between createServerClient and
@@ -47,11 +45,11 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (request.nextUrl.pathname.startsWith("/admin")) {
+  if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       // Protect admin: redirect unauthenticated users to login
       const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
+      url.pathname = '/auth/login';
       return NextResponse.redirect(url);
     }
 
@@ -60,8 +58,8 @@ export async function updateSession(request: NextRequest) {
     if (!userRole || !['shopmanager', 'superadmin'].includes(userRole)) {
       // Redirect unauthorized users to error page
       const url = request.nextUrl.clone();
-      url.pathname = "/auth/error";
-      url.searchParams.set("message", "Unauthorized access - insufficient permissions");
+      url.pathname = '/auth/error';
+      url.searchParams.set('message', 'Unauthorized access - insufficient permissions');
       return NextResponse.redirect(url);
     }
   }

@@ -1,5 +1,5 @@
 ---
-description: "Documentation authoring and examples agent"
+description: 'Documentation authoring and examples agent'
 mode: subagent
 model: grok-code
 temperature: 0.1
@@ -12,11 +12,11 @@ tools:
   bash: false
 permissions:
   bash:
-    "*": "deny"
+    '*': 'deny'
   edit:
-    "**/*.env*": "deny"
-    "**/*.key": "deny"
-    "**/*.secret": "deny"
+    '**/*.env*': 'deny'
+    '**/*.key': 'deny'
+    '**/*.secret': 'deny'
 ---
 
 # Documentation Agent (documentation)
@@ -27,6 +27,7 @@ Purpose:
 Update README, specs, and examples with clear, actionable docs.
 
 Workflow:
+
 - Propose doc changes and structure; ask for approval
 - Apply changes with minimal diffs and consistent style
 

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { MapPin } from "lucide-react";
-import Script from "next/script";
-import { useEffect, useState } from "react";
+import { MapPin } from 'lucide-react';
+import Script from 'next/script';
+import { useEffect, useState } from 'react';
 interface PacketaPoint {
   id: string;
   name?: string;
@@ -22,8 +22,6 @@ interface ZasilkovnaWidgetProps {
   appIdentity?: string;
 }
 
-
-
 declare global {
   interface Window {
     packetaCallback?: (point: ZasilkovnaPoint | null) => void;
@@ -41,9 +39,9 @@ declare global {
 
 export default function ZasilkovnaWidget({
   onPointSelect,
-  country = "cz",
-  language = "cs",
-  appIdentity = "yeezuz2020.store",
+  country = 'cz',
+  language = 'cs',
+  appIdentity = 'yeezuz2020.store',
 }: ZasilkovnaWidgetProps) {
   const [selectedPoint, setSelectedPoint] = useState<ZasilkovnaPoint | null>(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
@@ -72,7 +70,7 @@ export default function ZasilkovnaWidget({
   }, [onPointSelect]);
 
   if (!apiKey) {
-    console.error("NEXT_PUBLIC_ZASILKOVNA_API_KEY is not defined");
+    console.error('NEXT_PUBLIC_ZASILKOVNA_API_KEY is not defined');
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4">
         <p className="text-red-600 text-sm">
@@ -84,7 +82,9 @@ export default function ZasilkovnaWidget({
 
   const openWidget = () => {
     // Pro jistotu umožníme otevření i v případě, že skript je k dispozici, ale stav ještě není synchronizovaný
-    const canOpen = widgetLoaded || (typeof window !== 'undefined' && !!window.Packeta && !!window.Packeta.Widget);
+    const canOpen =
+      widgetLoaded ||
+      (typeof window !== 'undefined' && !!window.Packeta && !!window.Packeta.Widget);
     if (canOpen && window.Packeta && window.packetaCallback) {
       window.Packeta.Widget.pick(apiKey, window.packetaCallback, {
         appIdentity: appIdentity,
@@ -117,7 +117,10 @@ export default function ZasilkovnaWidget({
                 <button
                   type="button"
                   onClick={openWidget}
-                  disabled={!widgetLoaded && !(typeof window !== 'undefined' && window.Packeta && window.Packeta.Widget)}
+                  disabled={
+                    !widgetLoaded &&
+                    !(typeof window !== 'undefined' && window.Packeta && window.Packeta.Widget)
+                  }
                   className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 ml-4"
                 >
                   <MapPin className="w-4 h-4 mr-2" />

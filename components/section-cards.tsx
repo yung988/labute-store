@@ -1,7 +1,13 @@
-"use client";
-import { useEffect, useState } from "react";
-import { IconTrendingDown, IconTrendingUp, IconShoppingCart, IconUsers, IconTruck } from "@tabler/icons-react";
-import { Badge } from "@/components/ui/badge";
+'use client';
+import { useEffect, useState } from 'react';
+import {
+  IconTrendingDown,
+  IconTrendingUp,
+  IconShoppingCart,
+  IconUsers,
+  IconTruck,
+} from '@tabler/icons-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardAction,
@@ -9,8 +15,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
+} from '@/components/ui/card';
+import { createClient } from '@/lib/supabase/client';
 
 type AdminStats = {
   totalOrders: number;
@@ -47,13 +53,15 @@ export function SectionCards() {
         if (orders) {
           const totalOrders = orders.length;
           const totalRevenue = orders.reduce((sum, order) => sum + (order.amount_total || 0), 0);
-          const uniqueEmails = new Set(orders.filter(o => o.customer_email).map(o => o.customer_email));
+          const uniqueEmails = new Set(
+            orders.filter((o) => o.customer_email).map((o) => o.customer_email)
+          );
           const totalCustomers = uniqueEmails.size;
 
           // Today's orders
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const todayOrders = orders.filter(o => {
+          const todayOrders = orders.filter((o) => {
             const orderDate = new Date(o.created_at);
             orderDate.setHours(0, 0, 0, 0);
             return orderDate.getTime() === today.getTime();
@@ -62,14 +70,15 @@ export function SectionCards() {
           // Recent orders (last 7 days)
           const lastWeek = new Date();
           lastWeek.setDate(lastWeek.getDate() - 7);
-          const recentOrders = orders.filter(o => new Date(o.created_at) > lastWeek).length;
+          const recentOrders = orders.filter((o) => new Date(o.created_at) > lastWeek).length;
 
           // Pending shipments
-          const pendingShipments = orders.filter(o =>
-            (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
-            !o.packeta_shipment_id &&
-            o.status !== 'shipped' &&
-            o.status !== 'cancelled'
+          const pendingShipments = orders.filter(
+            (o) =>
+              (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
+              !o.packeta_shipment_id &&
+              o.status !== 'shipped' &&
+              o.status !== 'cancelled'
           ).length;
 
           setStats({
@@ -100,8 +109,7 @@ export function SectionCards() {
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              <IconTrendingUp />
-              +{stats.todayOrders} dnes
+              <IconTrendingUp />+{stats.todayOrders} dnes
             </Badge>
           </CardAction>
         </CardHeader>
@@ -132,9 +140,7 @@ export function SectionCards() {
           <div className="line-clamp-1 flex gap-2 font-medium">
             Aktivní prodej <IconTrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">
-            {stats.recentOrders} objednávek tento týden
-          </div>
+          <div className="text-muted-foreground">{stats.recentOrders} objednávek tento týden</div>
         </CardFooter>
       </Card>
 
@@ -155,9 +161,7 @@ export function SectionCards() {
           <div className="line-clamp-1 flex gap-2 font-medium">
             Zákaznická základna <IconTrendingUp className="size-4" />
           </div>
-          <div className="text-muted-foreground">
-            Aktivní uživatelé obchodu
-          </div>
+          <div className="text-muted-foreground">Aktivní uživatelé obchodu</div>
         </CardFooter>
       </Card>
 
@@ -168,7 +172,7 @@ export function SectionCards() {
             {stats.pendingShipments}
           </CardTitle>
           <CardAction>
-            <Badge variant={stats.pendingShipments > 0 ? "destructive" : "outline"}>
+            <Badge variant={stats.pendingShipments > 0 ? 'destructive' : 'outline'}>
               <IconTruck className="size-3 mr-1" />
               {stats.pendingShipments > 0 ? 'Vyžaduje pozornost' : 'Vše OK'}
             </Badge>
@@ -176,13 +180,16 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            {stats.pendingShipments > 0 ? 'Vyžaduje akci' : 'Vše zpracováno'} {stats.pendingShipments > 0 ? <IconTrendingDown className="size-4" /> : <IconTrendingUp className="size-4" />}
+            {stats.pendingShipments > 0 ? 'Vyžaduje akci' : 'Vše zpracováno'}{' '}
+            {stats.pendingShipments > 0 ? (
+              <IconTrendingDown className="size-4" />
+            ) : (
+              <IconTrendingUp className="size-4" />
+            )}
           </div>
-          <div className="text-muted-foreground">
-            Objednávky čekající na odeslání
-          </div>
+          <div className="text-muted-foreground">Objednávky čekající na odeslání</div>
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

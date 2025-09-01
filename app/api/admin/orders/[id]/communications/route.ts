@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const supabase = await createClient();
-    
+
     // Get order communications (emails sent, status changes, etc.)
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -22,7 +19,7 @@ export async function GET(
 
     // Build communication timeline from order data
     const communications = [];
-    
+
     // Order created
     communications.push({
       id: `created-${order.id}`,
@@ -31,7 +28,7 @@ export async function GET(
       title: 'Objednávka vytvořena',
       description: `Objednávka byla vytvořena zákazníkem ${order.customer_email}`,
       icon: 'shopping-cart',
-      automated: true
+      automated: true,
     });
 
     // Status changes (we can infer some from current status)
@@ -43,7 +40,7 @@ export async function GET(
         title: 'Platba přijata',
         description: 'Platba byla úspěšně zpracována přes Stripe',
         icon: 'check-circle',
-        automated: true
+        automated: true,
       });
     }
 
@@ -56,7 +53,7 @@ export async function GET(
         title: 'Zásilka vytvořena',
         description: `Packeta zásilka ID: ${order.packeta_shipment_id}`,
         icon: 'truck',
-        automated: true
+        automated: true,
       });
     }
 
@@ -67,31 +64,27 @@ export async function GET(
         timestamp: order.updated_at,
         type: 'order_shipped',
         title: 'Objednávka odeslána',
-        description: order.packeta_tracking_url ? 
-          `Zásilka odeslána. Tracking: ${order.packeta_tracking_url}` : 
-          'Zásilka byla odeslána',
+        description: order.packeta_tracking_url
+          ? `Zásilka odeslána. Tracking: ${order.packeta_tracking_url}`
+          : 'Zásilka byla odeslána',
         icon: 'package',
-        automated: true
+        automated: true,
       });
     }
 
     // Sort by timestamp
-    communications.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    communications.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
     return NextResponse.json({ communications });
   } catch (error) {
     console.error('Error loading communications:', error);
-    return NextResponse.json(
-      { error: 'Failed to load communications' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to load communications' }, { status: 500 });
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -106,15 +99,12 @@ export async function POST(
       title,
       description,
       icon: 'message-circle',
-      automated: false
+      automated: false,
     };
 
     return NextResponse.json({ communication });
   } catch (error) {
     console.error('Error adding communication:', error);
-    return NextResponse.json(
-      { error: 'Failed to add communication' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to add communication' }, { status: 500 });
   }
 }

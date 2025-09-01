@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import NewsletterSignup from "./NewsletterSignup";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import NewsletterSignup from './NewsletterSignup';
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/cart")) {
+  if (pathname?.startsWith('/cart')) {
     return null;
   }
   return (

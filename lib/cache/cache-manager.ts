@@ -25,7 +25,7 @@ class CacheManager {
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
-      ttl: ttlMs
+      ttl: ttlMs,
     };
 
     this.cache.set(key, entry);
@@ -70,7 +70,7 @@ class CacheManager {
   getStats() {
     return {
       entries: this.cache.size,
-      keys: Array.from(this.cache.keys())
+      keys: Array.from(this.cache.keys()),
     };
   }
 
@@ -87,7 +87,7 @@ class CacheManager {
       }
     }
 
-    keysToDelete.forEach(key => this.cache.delete(key));
+    keysToDelete.forEach((key) => this.cache.delete(key));
   }
 
   /**
@@ -95,9 +95,12 @@ class CacheManager {
    */
   private startCleanupInterval(): void {
     // Clean up every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanup();
+      },
+      5 * 60 * 1000
+    );
   }
 
   /**
@@ -135,7 +138,7 @@ export const CACHE_KEYS = {
 
   // Configuration
   CONFIG_SETTINGS: 'config:settings',
-  CONFIG_PACKETA: 'config:packeta'
+  CONFIG_PACKETA: 'config:packeta',
 } as const;
 
 // Cache TTL constants (in milliseconds)
@@ -156,7 +159,7 @@ export const CACHE_TTL = {
 
   // Very short-lived (1 minute) - for frequently changing data
   ORDER_STATS: 1 * 60 * 1000,
-  ADMIN_ORDERS_COUNT: 1 * 60 * 1000
+  ADMIN_ORDERS_COUNT: 1 * 60 * 1000,
 } as const;
 
 /**
@@ -192,7 +195,7 @@ export function invalidateCache(pattern: string): void {
   const keys = Array.from(cacheManager['cache'].keys());
   const regex = new RegExp(pattern.replace('*', '.*'));
 
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (regex.test(key)) {
       cacheManager.delete(key);
     }

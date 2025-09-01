@@ -1,8 +1,8 @@
-"use client";
-import React, { useState, useEffect, Suspense } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+'use client';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 import {
   BarChart3,
   Package,
@@ -13,24 +13,24 @@ import {
   X,
   LogOut,
   User as UserIcon,
-  Loader2
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+  Loader2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 // Lazy load admin components
-const OrdersTable = React.lazy(() => import("@/components/admin/OrdersTable"));
-const InventoryTable = React.lazy(() => import("@/components/admin/InventoryTable"));
-const PacketaManagement = React.lazy(() => import("@/components/admin/PacketaManagement"));
-const OrderDetailView = React.lazy(() => import("@/components/admin/OrderDetailView"));
-const CustomerCommunication = React.lazy(() => import("@/components/admin/CustomerCommunication"));
-const Dashboard = React.lazy(() => import("@/components/admin/Dashboard"));
+const OrdersTable = React.lazy(() => import('@/components/admin/OrdersTable'));
+const InventoryTable = React.lazy(() => import('@/components/admin/InventoryTable'));
+const PacketaManagement = React.lazy(() => import('@/components/admin/PacketaManagement'));
+const OrderDetailView = React.lazy(() => import('@/components/admin/OrderDetailView'));
+const CustomerCommunication = React.lazy(() => import('@/components/admin/CustomerCommunication'));
+const Dashboard = React.lazy(() => import('@/components/admin/Dashboard'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -42,7 +42,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-
 type AdminSection = 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail';
 
 export default function AdminPage() {
@@ -53,14 +52,16 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClient();
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
       if (error || !user) {
-        router.push("/auth/login");
+        router.push('/auth/login');
         return;
       }
 
@@ -76,7 +77,10 @@ export default function AdminPage() {
     const section = urlParams.get('section') as AdminSection;
     const orderId = urlParams.get('orderId');
 
-    if (section && ['dashboard', 'orders', 'inventory', 'packeta', 'customers', 'order-detail'].includes(section)) {
+    if (
+      section &&
+      ['dashboard', 'orders', 'inventory', 'packeta', 'customers', 'order-detail'].includes(section)
+    ) {
       setCurrentSection(section);
       if (orderId) {
         setSelectedOrderId(orderId);
@@ -113,7 +117,7 @@ export default function AdminPage() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/auth/login");
+    router.push('/auth/login');
   };
 
   if (loading) {
@@ -150,14 +154,16 @@ export default function AdminPage() {
       )}
 
       {/* Sidebar - STICKY */}
-      <div className={`
+      <div
+        className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         fixed lg:sticky lg:translate-x-0
         w-64 h-screen top-0
         bg-card border-r border-border
         z-50 transition-transform duration-300 ease-in-out
         flex flex-col
-      `}>
+      `}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
           <h1 className="text-xl font-bold">YEEZUZ2020 Store</h1>
@@ -178,7 +184,7 @@ export default function AdminPage() {
             return (
               <Button
                 key={item.id}
-                variant={currentSection === item.id ? "default" : "ghost"}
+                variant={currentSection === item.id ? 'default' : 'ghost'}
                 className="w-full justify-start h-10"
                 onClick={() => navigateToSection(item.id as AdminSection)}
               >
@@ -224,11 +230,7 @@ export default function AdminPage() {
       <div className="flex-1 min-h-screen">
         {/* Mobile header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-30">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-4 w-4" />
           </Button>
           <h2 className="font-semibold">YEEZUZ2020 Store</h2>
@@ -239,9 +241,7 @@ export default function AdminPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>
-                {user.email}
-              </DropdownMenuItem>
+              <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                 <LogOut className="w-4 h-4 mr-2" />

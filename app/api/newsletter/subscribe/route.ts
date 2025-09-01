@@ -27,38 +27,47 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existing) {
-      return NextResponse.json({ 
-        message: 'Email je již přihlášen k odběru novinek' 
-      }, { status: 200 });
+      return NextResponse.json(
+        {
+          message: 'Email je již přihlášen k odběru novinek',
+        },
+        { status: 200 }
+      );
     }
 
     // Přidat nového subscribera
-    const { error } = await supabase
-      .from('newsletter_subscribers')
-      .insert({
-        email: email.toLowerCase().trim(),
-        phone: phone?.trim() || null,
-        subscribed_at: new Date().toISOString(),
-        is_active: true,
-        source: 'website'
-      });
+    const { error } = await supabase.from('newsletter_subscribers').insert({
+      email: email.toLowerCase().trim(),
+      phone: phone?.trim() || null,
+      subscribed_at: new Date().toISOString(),
+      is_active: true,
+      source: 'website',
+    });
 
     if (error) {
       console.error('Newsletter subscription error:', error);
-      return NextResponse.json({ 
-        error: 'Chyba při přihlašování k odběru' 
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: 'Chyba při přihlašování k odběru',
+        },
+        { status: 500 }
+      );
     }
 
     // Úspěšná odpověď
-    return NextResponse.json({ 
-      message: 'Úspěšně přihlášeno k odběru novinek!' 
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        message: 'Úspěšně přihlášeno k odběru novinek!',
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Newsletter API error:', error);
-    return NextResponse.json({ 
-      error: 'Chyba serveru' 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Chyba serveru',
+      },
+      { status: 500 }
+    );
   }
 }

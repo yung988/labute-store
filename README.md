@@ -20,38 +20,42 @@ Modern e-commerce platform built with Next.js, Supabase, and React Email.
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd labute-store
    ```
 
 2. **Install dependencies with pnpm**
+
    ```bash
    pnpm install
    ```
 
 3. **Set up environment variables**
-   
+
    Copy `.env.example` to `.env.local` and fill in:
+
    ```env
    # Supabase
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   
+
    # Email (Resend)
    RESEND_API_KEY=your_resend_api_key
    FROM_EMAIL=info@yeezuz2020.store
-   
+
    # Stripe (optional)
    STRIPE_SECRET_KEY=your_stripe_secret_key
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_public_key
-   
+
    # PostHog (optional)
    NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
    ```
 
 4. **Run the development server**
+
    ```bash
    pnpm dev
    ```
@@ -80,6 +84,7 @@ The project includes a comprehensive email system with branded templates:
 - **Delivery Confirmation** - Sent when order is delivered
 
 ### Preview Email Templates
+
 ```bash
 # View email templates in browser
 pnpm dev
@@ -90,6 +95,7 @@ pnpm dev
 ```
 
 ### Send Test Emails
+
 ```bash
 curl -X POST http://localhost:3000/api/send-email \
   -H "Content-Type: application/json" \
@@ -113,7 +119,7 @@ pnpm lint         # Run ESLint
 
 # Package Management (IMPORTANT: Only use pnpm)
 pnpm add [package]           # Add dependency
-pnpm add -D [package]        # Add dev dependency  
+pnpm add -D [package]        # Add dev dependency
 pnpm remove [package]        # Remove dependency
 pnpm update                  # Update all dependencies
 ```
@@ -160,6 +166,7 @@ supabase gen types typescript --local > types/supabase.ts
 ### Vercel (Recommended)
 
 1. **Connect to Vercel**
+
    ```bash
    pnpm add -g vercel
    vercel
@@ -199,15 +206,18 @@ pnpm test:watch
 ## 📱 API Documentation
 
 ### Orders API
+
 - `GET /api/orders` - List orders
 - `POST /api/orders` - Create order
 - `GET /api/orders/[id]` - Get order details
 - `PUT /api/orders/[id]` - Update order
 
 ### Email API
+
 - `POST /api/send-email` - Send templated email
 
 ### Products API
+
 - `GET /api/products` - List products
 - `GET /api/products/[id]` - Get product details
 
@@ -228,22 +238,23 @@ pnpm test:watch
 
 ## 📄 Environment Variables Reference
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ |
-| `RESEND_API_KEY` | Resend email service key | ✅ |
-| `FROM_EMAIL` | Default sender email | ❌ |
-| `STRIPE_SECRET_KEY` | Stripe secret key | ❌ |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe public key | ❌ |
-| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics key | ❌ |
+| Variable                             | Description               | Required |
+| ------------------------------------ | ------------------------- | -------- |
+| `NEXT_PUBLIC_SUPABASE_URL`           | Supabase project URL      | ✅       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`      | Supabase anonymous key    | ✅       |
+| `SUPABASE_SERVICE_ROLE_KEY`          | Supabase service role key | ✅       |
+| `RESEND_API_KEY`                     | Resend email service key  | ✅       |
+| `FROM_EMAIL`                         | Default sender email      | ❌       |
+| `STRIPE_SECRET_KEY`                  | Stripe secret key         | ❌       |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe public key         | ❌       |
+| `NEXT_PUBLIC_POSTHOG_KEY`            | PostHog analytics key     | ❌       |
 
 ## 🆘 Troubleshooting
 
 ### Common Issues
 
 1. **pnpm not found**
+
    ```bash
    npm install -g pnpm
    ```

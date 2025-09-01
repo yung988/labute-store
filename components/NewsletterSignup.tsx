@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useState } from "react";
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface NewsletterSignupProps {
   compact?: boolean;
 }
 
 export default function NewsletterSignup({ compact = false }: NewsletterSignupProps) {
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -36,11 +36,11 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
       }
 
       setIsSubmitted(true);
-      setEmail("");
-      setPhone("");
+      setEmail('');
+      setPhone('');
     } catch (error) {
-      console.error("Newsletter signup error:", error);
-      alert(error instanceof Error ? error.message : "Došlo k chybě. Zkuste to prosím znovu.");
+      console.error('Newsletter signup error:', error);
+      alert(error instanceof Error ? error.message : 'Došlo k chybě. Zkuste to prosím znovu.');
     } finally {
       setIsSubmitting(false);
     }
@@ -49,7 +49,7 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
   if (isSubmitted) {
     return (
       <div
-        className={`w-full mx-auto text-center ${compact ? "max-w-md" : "max-w-3xl border border-gray-300 p-8"}`}
+        className={`w-full mx-auto text-center ${compact ? 'max-w-md' : 'max-w-3xl border border-gray-300 p-8'}`}
       >
         <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
           <svg
@@ -74,7 +74,7 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
 
   return (
     <div
-      className={`w-full mx-auto ${compact ? "max-w-md" : "max-w-3xl border border-gray-300 p-8"}`}
+      className={`w-full mx-auto ${compact ? 'max-w-md' : 'max-w-3xl border border-gray-300 p-8'}`}
     >
       {!compact && (
         <p className="text-center text-xs mb-8 font-medium">
@@ -115,7 +115,7 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
           disabled={isSubmitting}
           className="w-full bg-black text-white p-3 text-xs font-medium tracking-wide hover:bg-gray-900 transition-colors disabled:bg-zinc-300 disabled:text-zinc-500"
         >
-          {isSubmitting ? "PŘIHLAŠUJI..." : "PŘIHLÁSIT SE"}
+          {isSubmitting ? 'PŘIHLAŠUJI...' : 'PŘIHLÁSIT SE'}
         </button>
       </form>
 
@@ -124,11 +124,11 @@ export default function NewsletterSignup({ compact = false }: NewsletterSignupPr
         marketingových textových zpráv (např. promo akce, připomenutí košíku) od společnosti
         YEEZUZ2020. Souhlas není podmínkou nákupu. Mohou být účtovány poplatky za data. Četnost
         zpráv se liší. Odběr můžete kdykoli zrušit zasláním STOP nebo kliknutím na odkaz pro
-        odhlášení (pokud je k dispozici).{" "}
+        odhlášení (pokud je k dispozici).{' '}
         <Link href="/privacy" className="underline">
           Zásady ochrany osobních údajů
-        </Link>{" "}
-        &{" "}
+        </Link>{' '}
+        &{' '}
         <Link href="/podminky" className="underline">
           Podmínky
         </Link>

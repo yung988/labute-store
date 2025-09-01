@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { hasEnvVars } from "../utils";
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { hasEnvVars } from '../utils';
 
 /**
  * Type-safe admin user interface
@@ -18,14 +18,15 @@ export function isAdminUser(user: unknown): user is AdminUser {
   const u = user as Record<string, unknown>;
   return Boolean(
     u &&
-    typeof u === 'object' &&
-    typeof u.id === 'string' &&
-    typeof u.email === 'string' &&
-    (u.role === 'admin' || u.role === 'superadmin' ||
-     (u.user_metadata as Record<string, unknown>)?.role === 'admin' ||
-     (u.user_metadata as Record<string, unknown>)?.role === 'superadmin' ||
-     (u.app_metadata as Record<string, unknown>)?.role === 'admin' ||
-     (u.app_metadata as Record<string, unknown>)?.role === 'superadmin')
+      typeof u === 'object' &&
+      typeof u.id === 'string' &&
+      typeof u.email === 'string' &&
+      (u.role === 'admin' ||
+        u.role === 'superadmin' ||
+        (u.user_metadata as Record<string, unknown>)?.role === 'admin' ||
+        (u.user_metadata as Record<string, unknown>)?.role === 'superadmin' ||
+        (u.app_metadata as Record<string, unknown>)?.role === 'admin' ||
+        (u.app_metadata as Record<string, unknown>)?.role === 'superadmin')
   );
 }
 
@@ -40,10 +41,10 @@ export function verifyAdminRoleFromClaims(claims: unknown): boolean {
     (c.user_metadata as Record<string, unknown>)?.role === 'admin',
     (c.user_metadata as Record<string, unknown>)?.role === 'superadmin',
     (c.app_metadata as Record<string, unknown>)?.role === 'admin',
-    (c.app_metadata as Record<string, unknown>)?.role === 'superadmin'
+    (c.app_metadata as Record<string, unknown>)?.role === 'superadmin',
   ];
 
-  return roleChecks.some(check => check === true);
+  return roleChecks.some((check) => check === true);
 }
 
 /**
@@ -73,7 +74,7 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
             // No-op for verification
           },
         },
-      },
+      }
     );
 
     // Get user data
@@ -102,15 +103,14 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
       email: user.email || '',
       role: 'admin',
       user_metadata: user.user_metadata,
-      app_metadata: user.app_metadata
+      app_metadata: user.app_metadata,
     };
 
     return { isValid: true, user: adminUser };
-
   } catch (error) {
     return {
       isValid: false,
-      error: `Verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      error: `Verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
@@ -118,7 +118,9 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
 /**
  * Higher-order function to create admin-protected API route handler
  */
-export function withAdminAuth(handler: (request: NextRequest, user: AdminUser) => Promise<NextResponse>) {
+export function withAdminAuth(
+  handler: (request: NextRequest, user: AdminUser) => Promise<NextResponse>
+) {
   return async (request: NextRequest): Promise<NextResponse> => {
     const verification = await verifyAdminAccess(request);
 
@@ -126,7 +128,7 @@ export function withAdminAuth(handler: (request: NextRequest, user: AdminUser) =
       return NextResponse.json(
         {
           error: verification.error || 'Unauthorized',
-          code: 'ADMIN_ACCESS_DENIED'
+          code: 'ADMIN_ACCESS_DENIED',
         },
         { status: 403 }
       );
@@ -148,10 +150,10 @@ export function withAdminAuth(handler: (request: NextRequest, user: AdminUser) =
  */
 export function createAdminRedirect(request: NextRequest, message?: string): NextResponse {
   const url = request.nextUrl.clone();
-  url.pathname = "/auth/login";
+  url.pathname = '/auth/login';
 
   if (message) {
-    url.searchParams.set("message", message);
+    url.searchParams.set('message', message);
   }
 
   return NextResponse.redirect(url);
@@ -165,7 +167,7 @@ export function createAdminErrorResponse(message: string, status = 403): NextRes
     {
       error: message,
       code: 'ADMIN_ACCESS_DENIED',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     },
     { status }
   );

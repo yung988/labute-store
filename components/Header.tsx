@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { Search } from "lucide-react";
-import Link from "next/link";
-import { CartTrigger } from "@/components/CartTrigger";
-import { Button } from "@/components/ui/button";
-import { usePathname } from "next/navigation";
+import { Search } from 'lucide-react';
+import Link from 'next/link';
+import { CartTrigger } from '@/components/CartTrigger';
+import { Button } from '@/components/ui/button';
+import { usePathname } from 'next/navigation';
 
 export function Header() {
   const pathname = usePathname();
   // Hide header on cart page
-  if (pathname?.startsWith("/cart")) {
+  if (pathname?.startsWith('/cart')) {
     return null;
   }
 

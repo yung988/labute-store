@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 // Definice typů pro položky v košíku
 export type CartItem = {
@@ -18,7 +18,7 @@ export type CartItem = {
 
 type CartContextType = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "id">) => void;
+  addItem: (item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -38,7 +38,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error("useCart musí být použit uvnitř CartProvider");
+    throw new Error('useCart musí být použit uvnitř CartProvider');
   }
   return context;
 };
@@ -47,29 +47,29 @@ export const useCart = () => {
 export const useSpreeCart = () => {
   const cartContext = useContext(CartContext);
   if (!cartContext) {
-    throw new Error("useSpreeCart musí být použit uvnitř CartProvider");
+    throw new Error('useSpreeCart musí být použit uvnitř CartProvider');
   }
 
   // Convert local cart to Spree format
   const cart = {
-    line_items: cartContext.items.map(item => ({
+    line_items: cartContext.items.map((item) => ({
       id: item.id,
       productId: item.productId, // Přidáme productId pro inventory tracking
       variant: {
         name: item.name,
         price: item.price.toString(),
         option_values: item.size ? [{ name: 'size', presentation: item.size }] : [],
-        images: item.image ? [{ url: item.image }] : []
+        images: item.image ? [{ url: item.image }] : [],
       },
       product: {
         name: item.name,
-        images: item.image ? [{ url: item.image }] : []
+        images: item.image ? [{ url: item.image }] : [],
       },
       quantity: item.quantity,
-      total: (item.price * item.quantity).toString()
+      total: (item.price * item.quantity).toString(),
     })),
     total: cartContext.totalPrice.toString(),
-    number: `local-${Date.now()}`
+    number: `local-${Date.now()}`,
   };
 
   const updateItemQuantity = (lineItemId: string, quantity: number) => {
@@ -84,7 +84,7 @@ export const useSpreeCart = () => {
     cart,
     loading: !cartContext.isInitialized,
     updateItemQuantity,
-    removeItem
+    removeItem,
   };
 };
 
@@ -108,13 +108,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // Načtení košíku z localStorage při načtení stránky
   useEffect(() => {
-    const storedCart = localStorage.getItem("cart");
+    const storedCart = localStorage.getItem('cart');
     if (storedCart) {
       try {
         setItems(JSON.parse(storedCart));
       } catch (error) {
-        console.error("Chyba při načítání košíku:", error);
-        localStorage.removeItem("cart");
+        console.error('Chyba při načítání košíku:', error);
+        localStorage.removeItem('cart');
       }
     }
     setIsInitialized(true);
@@ -123,8 +123,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // Uložení košíku do localStorage při změně a poslech storage událostí
   useEffect(() => {
     if (isInitialized) {
-      localStorage.setItem("cart", JSON.stringify(items));
-      
+      localStorage.setItem('cart', JSON.stringify(items));
+
       // Track cart on server for abandoned cart detection
       if (items.length > 0) {
         trackCartOnServer();
@@ -138,24 +138,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       // Get customer info from localStorage if available (from checkout form)
       const customerEmail = localStorage.getItem('customer-email');
       const customerName = localStorage.getItem('customer-name');
-      
+
       await fetch('/api/cart/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          items: items.map(item => ({
+          items: items.map((item) => ({
             productId: item.productId,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
             size: item.size,
-            image: item.image
+            image: item.image,
           })),
           customerEmail,
           customerName,
-          totalAmount: totalPrice
-        })
+          totalAmount: totalPrice,
+        }),
       });
     } catch (error) {
       // Silently fail - cart tracking is not critical
@@ -165,9 +165,9 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key && e.key !== "cart") return;
+      if (e.key && e.key !== 'cart') return;
       try {
-        const stored = localStorage.getItem("cart");
+        const stored = localStorage.getItem('cart');
         if (!stored) {
           setItems([]);
           return;
@@ -176,8 +176,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setItems(parsed);
       } catch {}
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   // Spočítání celkového počtu položek v košíku
@@ -187,11 +187,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const totalPrice = items.reduce((total, item) => total + item.price * item.quantity, 0);
 
   // Přidání položky do košíku
-  const addItem = (newItem: Omit<CartItem, "id">) => {
+  const addItem = (newItem: Omit<CartItem, 'id'>) => {
     setItems((currentItems) => {
       // Kontrola, zda položka s daným productId a size již existuje
       const existingItemIndex = currentItems.findIndex(
-        (item) => item.productId === newItem.productId && item.size === newItem.size,
+        (item) => item.productId === newItem.productId && item.size === newItem.size
       );
 
       if (existingItemIndex !== -1) {
@@ -202,7 +202,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Přidání nové položky s jedinečným ID kombinujícím variantId a size
-      const uniqueId = `${newItem.variantId}-${newItem.size || "no-size"}`;
+      const uniqueId = `${newItem.variantId}-${newItem.size || 'no-size'}`;
       return [...currentItems, { ...newItem, id: uniqueId }];
     });
 
@@ -239,13 +239,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const empty: CartItem[] = [];
     setItems(empty);
     try {
-      localStorage.setItem("cart", JSON.stringify(empty));
+      localStorage.setItem('cart', JSON.stringify(empty));
     } catch {}
     try {
-      const event = new StorageEvent("storage", { key: "cart", newValue: JSON.stringify(empty) });
+      const event = new StorageEvent('storage', { key: 'cart', newValue: JSON.stringify(empty) });
       window.dispatchEvent(event);
     } catch {}
-    
+
     // Mark cart as recovered on server
     markCartAsRecovered();
   };
@@ -254,7 +254,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const markCartAsRecovered = async () => {
     try {
       await fetch(`/api/cart/track?sessionId=${sessionId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
     } catch (error) {
       console.debug('Cart recovery tracking failed:', error);

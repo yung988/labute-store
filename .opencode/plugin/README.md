@@ -24,18 +24,21 @@ Simple Telegram notifications for OpenCode sessions.
 ## Usage
 
 ### As OpenCode Plugin
+
 ```javascript
 // The plugin automatically responds to session events
-import { TelegramNotify } from "./telegram-notify.js"
+import { TelegramNotify } from './telegram-notify.js';
 ```
 
 **Commands you can use in OpenCode:**
+
 - `/send-last` - Send the last message to Telegram
 - `/send-to-phone` - Send the last message to your phone
 - `/last` - Same as `/send-last`
 - `/phone` - Same as `/send-to-phone`
 
 ### Standalone Bot
+
 ```bash
 # Run the bot directly
 bun telegram-bot.ts
@@ -58,6 +61,7 @@ bun telegram-notify.ts
    - Find your `chat_id` in the response
 
 3. **Configure Environment Variables**
+
    ```bash
    export TELEGRAM_BOT_TOKEN="your_bot_token_here"
    export TELEGRAM_CHAT_ID="your_chat_id_here"

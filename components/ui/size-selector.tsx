@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 // import { useState } from "react";
 
@@ -14,7 +14,7 @@ interface SizeSelectorProps {
 }
 
 export function SizeSelector({ onSizeChange, selectedSize, availableSizes }: SizeSelectorProps) {
-  const defaultSizes = ["S", "M", "L", "XL", "XXL"];
+  const defaultSizes = ['S', 'M', 'L', 'XL', 'XXL'];
   const sizes = availableSizes?.map((v) => v.size) || defaultSizes;
 
   const handleSizeChange = (size: ClothingSize) => {
@@ -37,15 +37,15 @@ export function SizeSelector({ onSizeChange, selectedSize, availableSizes }: Siz
               disabled={isOutOfStock}
               className={`w-12 h-12 flex items-center justify-center border ${
                 selectedSize === size
-                  ? "border-black bg-black text-white"
+                  ? 'border-black bg-black text-white'
                   : isOutOfStock
-                    ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "border-gray-300 hover:border-black"
+                    ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 hover:border-black'
               }`}
-              aria-label={`Velikost ${size}${isOutOfStock ? " - vyprodáno" : ""}`}
+              aria-label={`Velikost ${size}${isOutOfStock ? ' - vyprodáno' : ''}`}
               tabIndex={isOutOfStock ? -1 : 0}
               onKeyDown={(e) => {
-                if (!isOutOfStock && (e.key === "Enter" || e.key === " ")) {
+                if (!isOutOfStock && (e.key === 'Enter' || e.key === ' ')) {
                   e.preventDefault();
                   handleSizeChange(size);
                 }

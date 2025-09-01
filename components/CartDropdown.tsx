@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { ShoppingCart } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { ShoppingCart } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useCart } from "@/context/CartContext";
-import { formatCurrency } from "@/lib/utils";
+} from '@/components/ui/dropdown-menu';
+import { useCart } from '@/context/CartContext';
+import { formatCurrency } from '@/lib/utils';
 
 export function CartDropdown() {
   const {
@@ -62,7 +62,7 @@ export function CartDropdown() {
             <div className="max-h-80 overflow-y-auto">
               {items.map((item, index) => (
                 <div
-                  key={`${item.id}-${item.size || "no-size"}-${index}`}
+                  key={`${item.id}-${item.size || 'no-size'}-${index}`}
                   className="p-3 flex gap-3"
                 >
                   {item.image && (

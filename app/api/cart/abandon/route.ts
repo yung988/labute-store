@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase
       .from('abandoned_carts')
       .update({
-        abandoned_at: new Date().toISOString()
+        abandoned_at: new Date().toISOString(),
       })
       .eq('session_id', sessionId)
       .is('recovered_at', null); // Only mark as abandoned if not already recovered

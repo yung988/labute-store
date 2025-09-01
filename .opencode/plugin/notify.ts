@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin } from '@opencode-ai/plugin';
 
 export const Notify: Plugin = async ({ $ }) => {
   return {
@@ -7,5 +7,5 @@ export const Notify: Plugin = async ({ $ }) => {
     //     await $`say "Your code is done!"`
     //   }
     // },
-  }
-}
+  };
+};

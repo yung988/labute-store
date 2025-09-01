@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { type ClothingSize, SizeSelector } from "@/components/ui/size-selector";
-import { useCart } from "@/context/CartContext";
+import { useState } from 'react';
+import { type ClothingSize, SizeSelector } from '@/components/ui/size-selector';
+import { useCart } from '@/context/CartContext';
 
 interface BuyButtonProps {
   priceId: string;
@@ -37,7 +37,7 @@ export const BuyButton = ({
     productId,
     productName,
     price,
-    priceType: typeof price
+    priceType: typeof price,
   });
 
   const hasMultipleSizes = variants && variants.length > 1;
@@ -73,7 +73,7 @@ export const BuyButton = ({
     }
 
     if (!selectedVariantId) {
-      console.error("Could not determine product variant to add to cart.");
+      console.error('Could not determine product variant to add to cart.');
       if (shouldShowSizeSelector) setSizeError(true);
       return;
     }
@@ -118,7 +118,7 @@ export const BuyButton = ({
           disabled={loading}
           className="w-full bg-black text-white p-3 text-xs font-medium tracking-wide hover:bg-gray-900 transition-colors disabled:bg-zinc-300 disabled:text-zinc-500 uppercase"
         >
-          {loading ? "Přidávám do košíku..." : "Přidat do košíku"}
+          {loading ? 'Přidávám do košíku...' : 'Přidat do košíku'}
         </button>
       </div>
     </div>

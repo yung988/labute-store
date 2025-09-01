@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ orderId: string }> },
-) {
+export async function GET(req: NextRequest, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
   const { searchParams } = new URL(req.url);
-  const format = searchParams.get("format") || "A6";
-  const returnDirect = searchParams.get("direct") === "true"; // Debug parameter
+  const format = searchParams.get('format') || 'A6';
+  const returnDirect = searchParams.get('direct') === 'true'; // Debug parameter
 
   console.log(`🌐 Request details:`, {
     orderId,
@@ -20,24 +17,22 @@ export async function GET(
 
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
-    console.error("❌ PACKETA_API_PASSWORD is not set!");
+    console.error('❌ PACKETA_API_PASSWORD is not set!');
     return NextResponse.json(
       {
         error:
-          "Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.",
+          'Packeta API password is not configured. Please set PACKETA_API_PASSWORD environment variable.',
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
   console.log(
-    `🔑 Packeta API password is configured (length: ${process.env.PACKETA_API_PASSWORD.length})`,
+    `🔑 Packeta API password is configured (length: ${process.env.PACKETA_API_PASSWORD.length})`
   );
+  console.log(`🔑 Password starts with: ${process.env.PACKETA_API_PASSWORD.substring(0, 5)}...`);
   console.log(
-    `🔑 Password starts with: ${process.env.PACKETA_API_PASSWORD.substring(0, 5)}...`,
-  );
-  console.log(
-    `🔑 Password ends with: ...${process.env.PACKETA_API_PASSWORD.substring(process.env.PACKETA_API_PASSWORD.length - 5)}`,
+    `🔑 Password ends with: ...${process.env.PACKETA_API_PASSWORD.substring(process.env.PACKETA_API_PASSWORD.length - 5)}`
   );
 
   try {
@@ -45,36 +40,28 @@ export async function GET(
 
     // Get order with Packeta shipment ID
     const { data: order, error: orderError } = await supabaseAdmin
-      .from("orders")
-      .select("packeta_shipment_id")
-      .eq("id", orderId)
+      .from('orders')
+      .select('packeta_shipment_id')
+      .eq('id', orderId)
       .single();
 
     if (orderError || !order || !order.packeta_shipment_id) {
-      console.error("❌ Print label error:", {
+      console.error('❌ Print label error:', {
         orderId,
         orderError: orderError?.message,
         hasOrder: !!order,
         hasShipmentId: !!order?.packeta_shipment_id,
         shipmentId: order?.packeta_shipment_id,
       });
-      return NextResponse.json(
-        { error: "Order or Packeta shipment not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: 'Order or Packeta shipment not found' }, { status: 404 });
     }
 
-    console.log(
-      `✅ Found order with shipment ID: ${order.packeta_shipment_id}`,
-    );
+    console.log(`✅ Found order with shipment ID: ${order.packeta_shipment_id}`);
 
     // Validate shipment ID
-    if (!order.packeta_shipment_id || order.packeta_shipment_id.trim() === "") {
-      console.error("❌ Shipment ID is empty or null");
-      return NextResponse.json(
-        { error: "Shipment ID is missing or empty" },
-        { status: 400 },
-      );
+    if (!order.packeta_shipment_id || order.packeta_shipment_id.trim() === '') {
+      console.error('❌ Shipment ID is empty or null');
+      return NextResponse.json({ error: 'Shipment ID is missing or empty' }, { status: 400 });
     }
 
     // Get label from Packeta v5 API with timeout and retry
@@ -88,7 +75,7 @@ export async function GET(
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         console.log(
-          `🔄 Packeta label API attempt ${attempt}/${MAX_RETRIES} for ${order.packeta_shipment_id}`,
+          `🔄 Packeta label API attempt ${attempt}/${MAX_RETRIES} for ${order.packeta_shipment_id}`
         );
 
         const controller = new AbortController();
@@ -96,22 +83,21 @@ export async function GET(
 
         // Validate and set format - Packeta API supports specific label formats
         const formatMapping: Record<string, string> = {
-          A6: "A6 on A4", // Default A6 label on A4 page
-          "A6 on A4": "A6 on A4", // A6 label on A4 page
-          A6_on_A4: "A6 on A4", // A6 label on A4 page
-          "A6 on A6": "A6 on A6", // A6 label on A6 page
-          "A7 on A4": "A7 on A4", // A7 label on A4 page (may not be supported)
-          PDF: "A6 on A4", // Fallback to A6 on A4
-          ZPL: "A6 on A4", // Fallback to A6 on A4
+          A6: 'A6 on A4', // Default A6 label on A4 page
+          'A6 on A4': 'A6 on A4', // A6 label on A4 page
+          A6_on_A4: 'A6 on A4', // A6 label on A4 page
+          'A6 on A6': 'A6 on A6', // A6 label on A6 page
+          'A7 on A4': 'A7 on A4', // A7 label on A4 page (may not be supported)
+          PDF: 'A6 on A4', // Fallback to A6 on A4
+          ZPL: 'A6 on A4', // Fallback to A6 on A4
         };
-        const labelFormat = formatMapping[format] || "A6 on A4";
+        const labelFormat = formatMapping[format] || 'A6 on A4';
 
         console.log(`🏷️ Requested format: ${format}, using: ${labelFormat}`);
 
         console.log(`🏷️ Using label format: ${labelFormat}`);
 
-        const apiUrl =
-          process.env.PACKETA_API_URL || "https://www.zasilkovna.cz/api/rest";
+        const apiUrl = process.env.PACKETA_API_URL || 'https://www.zasilkovna.cz/api/rest';
 
         const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <packetLabelPdf>
@@ -130,10 +116,10 @@ export async function GET(
         });
 
         labelResponse = await fetch(`${apiUrl}`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/xml",
-            Accept: "application/pdf",
+            'Content-Type': 'application/xml',
+            Accept: 'application/pdf',
           },
           body: xmlBody,
           signal: controller.signal,
@@ -149,7 +135,7 @@ export async function GET(
         // For server errors (5xx including 504), retry
         const errorText = await labelResponse.text();
         console.log(
-          `⏳ Packeta label API returned ${labelResponse.status}, will retry: ${errorText.substring(0, 100)}...`,
+          `⏳ Packeta label API returned ${labelResponse.status}, will retry: ${errorText.substring(0, 100)}...`
         );
 
         if (attempt < MAX_RETRIES) {
@@ -160,16 +146,11 @@ export async function GET(
       } catch (error) {
         const err = error as Error;
         lastError = err;
-        console.log(
-          `❌ Packeta label API attempt ${attempt} failed:`,
-          err.message,
-        );
+        console.log(`❌ Packeta label API attempt ${attempt} failed:`, err.message);
 
         if (attempt < MAX_RETRIES) {
           const backoffTime = BASE_BACKOFF_MS * Math.pow(2, attempt - 1);
-          console.log(
-            `⏳ Network error, waiting ${backoffTime}ms before retry...`,
-          );
+          console.log(`⏳ Network error, waiting ${backoffTime}ms before retry...`);
           await new Promise((resolve) => setTimeout(resolve, backoffTime));
         }
       }
@@ -177,19 +158,19 @@ export async function GET(
 
     // Check if we got any response
     if (!labelResponse) {
-      const errorMsg = lastError ? lastError.message : "Unknown network error";
-      console.error("❌ Packeta label API failed after all retries:", errorMsg);
+      const errorMsg = lastError ? lastError.message : 'Unknown network error';
+      console.error('❌ Packeta label API failed after all retries:', errorMsg);
       return NextResponse.json(
         {
           error: `Packeta label API is temporarily unavailable after ${MAX_RETRIES} attempts. Please try again in a few minutes.`,
         },
-        { status: 503 },
+        { status: 503 }
       );
     }
 
     if (!labelResponse.ok) {
       const errorText = await labelResponse.text();
-      console.error("Packeta label API error:", {
+      console.error('Packeta label API error:', {
         status: labelResponse.status,
         statusText: labelResponse.statusText,
         error: errorText,
@@ -201,25 +182,24 @@ export async function GET(
         return NextResponse.json(
           {
             error:
-              "Packeta label API is temporarily unavailable (gateway timeout). Please try again in a few minutes.",
+              'Packeta label API is temporarily unavailable (gateway timeout). Please try again in a few minutes.',
           },
-          { status: 503 },
+          { status: 503 }
         );
       } else if (labelResponse.status >= 500) {
         return NextResponse.json(
           {
             error:
-              "Packeta label API is experiencing server issues. Please try again in a few minutes.",
+              'Packeta label API is experiencing server issues. Please try again in a few minutes.',
           },
-          { status: 503 },
+          { status: 503 }
         );
       } else if (labelResponse.status === 404) {
         return NextResponse.json(
           {
-            error:
-              "Shipment not found. Please check if the shipment exists in Packeta system.",
+            error: 'Shipment not found. Please check if the shipment exists in Packeta system.',
           },
-          { status: 404 },
+          { status: 404 }
         );
       }
 
@@ -227,110 +207,90 @@ export async function GET(
         {
           error: `Failed to get label from Packeta: ${labelResponse.status} ${labelResponse.statusText}`,
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     // Parse response as PDF (binary) or as XML with base64-encoded PDF
     let pdfBuffer: ArrayBuffer;
     try {
-      const contentType = labelResponse.headers.get("content-type") || "";
+      const contentType = labelResponse.headers.get('content-type') || '';
       if (
-        contentType.includes("application/pdf") ||
-        contentType.includes("application/octet-stream")
+        contentType.includes('application/pdf') ||
+        contentType.includes('application/octet-stream')
       ) {
-        console.log(
-          "📄 Response content-type indicates PDF, reading as arrayBuffer",
-        );
+        console.log('📄 Response content-type indicates PDF, reading as arrayBuffer');
         pdfBuffer = await labelResponse.arrayBuffer();
       } else {
         const responseText = await labelResponse.text();
-        console.log(
-          `📄 Packeta response received, size: ${responseText.length} bytes`,
-        );
+        console.log(`📄 Packeta response received, size: ${responseText.length} bytes`);
 
         // Debug: Check if response is empty
-        if (!responseText || responseText.trim() === "") {
-          console.error("❌ Packeta API returned empty response");
+        if (!responseText || responseText.trim() === '') {
+          console.error('❌ Packeta API returned empty response');
           return NextResponse.json(
-            { error: "Packeta API returned empty response" },
-            { status: 502 },
+            { error: 'Packeta API returned empty response' },
+            { status: 502 }
           );
         }
 
         // Check if response is XML with base64 PDF
-        if (
-          responseText.includes("<result>") &&
-          responseText.includes("</result>")
-        ) {
-          console.log("📄 Response contains base64 PDF data");
-          const resultMatch = responseText.match(
-            /<result>([\s\S]*?)<\/result>/,
-          );
-          const base64Data =
-            resultMatch && resultMatch[1] ? resultMatch[1].trim() : "";
+        if (responseText.includes('<result>') && responseText.includes('</result>')) {
+          console.log('📄 Response contains base64 PDF data');
+          const resultMatch = responseText.match(/<result>([\s\S]*?)<\/result>/);
+          const base64Data = resultMatch && resultMatch[1] ? resultMatch[1].trim() : '';
           if (!base64Data) {
-            console.error("❌ No PDF data found in XML response");
+            console.error('❌ No PDF data found in XML response');
             return NextResponse.json(
               {
-                error: "No PDF data found in Packeta response",
+                error: 'No PDF data found in Packeta response',
                 details: responseText.substring(0, 500),
               },
-              { status: 502 },
+              { status: 502 }
             );
           }
 
           // Decode base64 PDF safely (Node Buffer or browser atob)
           let bytesUint8: Uint8Array;
-          if (typeof Buffer !== "undefined") {
-            const nodeBuf = Buffer.from(base64Data, "base64");
-            bytesUint8 = new Uint8Array(
-              nodeBuf.buffer,
-              nodeBuf.byteOffset,
-              nodeBuf.byteLength,
-            );
-          } else if (typeof atob !== "undefined") {
+          if (typeof Buffer !== 'undefined') {
+            const nodeBuf = Buffer.from(base64Data, 'base64');
+            bytesUint8 = new Uint8Array(nodeBuf.buffer, nodeBuf.byteOffset, nodeBuf.byteLength);
+          } else if (typeof atob !== 'undefined') {
             const binaryString = atob(base64Data);
             bytesUint8 = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++)
               bytesUint8[i] = binaryString.charCodeAt(i);
           } else {
-            throw new Error("No base64 decoder available in this runtime");
+            throw new Error('No base64 decoder available in this runtime');
           }
           pdfBuffer = new ArrayBuffer(bytesUint8.byteLength);
           new Uint8Array(pdfBuffer).set(bytesUint8);
-          console.log(
-            `📄 Decoded PDF buffer size: ${pdfBuffer.byteLength} bytes`,
-          );
+          console.log(`📄 Decoded PDF buffer size: ${pdfBuffer.byteLength} bytes`);
         } else {
           // Fallback: unexpected content-type, attempt to treat as binary from text
-          console.log(
-            "📄 Unexpected content-type, attempting to read as binary from text",
-          );
+          console.log('📄 Unexpected content-type, attempting to read as binary from text');
           pdfBuffer = new TextEncoder().encode(responseText).buffer;
         }
       }
     } catch (parseError) {
-      console.error("❌ Error parsing Packeta response:", parseError);
-      const errorMessage =
-        parseError instanceof Error ? parseError.message : String(parseError);
+      console.error('❌ Error parsing Packeta response:', parseError);
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
       return NextResponse.json(
-        { error: "Error parsing Packeta response", details: errorMessage },
-        { status: 502 },
+        { error: 'Error parsing Packeta response', details: errorMessage },
+        { status: 502 }
       );
     }
 
     // If direct mode is requested, return PDF immediately without any storage operations
     if (returnDirect) {
-      console.log("📄 Returning PDF directly (direct mode, no storage)");
+      console.log('📄 Returning PDF directly (direct mode, no storage)');
       return new NextResponse(pdfBuffer, {
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="packeta-label-${orderId}.pdf"`,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `inline; filename="packeta-label-${orderId}.pdf"`,
         },
       });
     }
-
 
     // Test if we can create a simple text file first
     const testFileName = `test-${orderId}.txt`;
@@ -338,13 +298,12 @@ export async function GET(
 
     console.log(`🧪 Testing storage upload with text file: ${testFileName}`);
 
-    const { data: testUploadData, error: testUploadError } =
-      await supabaseAdmin.storage
-        .from("packeta-labels")
-        .upload(testFileName, testContent, {
-          contentType: "text/plain",
-          upsert: true,
-        });
+    const { data: testUploadData, error: testUploadError } = await supabaseAdmin.storage
+      .from('packeta-labels')
+      .upload(testFileName, testContent, {
+        contentType: 'text/plain',
+        upsert: true,
+      });
 
     console.log(`🧪 Test upload result:`, {
       data: testUploadData,
@@ -352,12 +311,10 @@ export async function GET(
     });
 
     if (testUploadError) {
-      console.error(
-        "❌ Even test upload failed, storage is not working properly",
-      );
+      console.error('❌ Even test upload failed, storage is not working properly');
       // Continue with fallback
     } else {
-      console.log("✅ Test upload successful, storage is working");
+      console.log('✅ Test upload successful, storage is working');
     }
 
     // Upload PDF to Supabase storage bucket
@@ -370,15 +327,15 @@ export async function GET(
 
     try {
       const result = await supabaseAdmin.storage
-        .from("packeta-labels")
+        .from('packeta-labels')
         .upload(fileName, pdfBuffer, {
-          contentType: "application/pdf",
+          contentType: 'application/pdf',
           upsert: true, // Allow overwriting existing files
         });
       uploadData = result.data;
       uploadError = result.error;
     } catch (uploadErr) {
-      console.error("❌ Upload threw exception:", uploadErr);
+      console.error('❌ Upload threw exception:', uploadErr);
       uploadError = uploadErr;
     }
 
@@ -386,61 +343,61 @@ export async function GET(
 
     // If upload failed, try to list bucket contents to see if we have access
     if (uploadError) {
-      console.log("🔍 Checking bucket access...");
+      console.log('🔍 Checking bucket access...');
       try {
         const { data: listData, error: listError } = await supabaseAdmin.storage
-          .from("packeta-labels")
-          .list("", {
+          .from('packeta-labels')
+          .list('', {
             limit: 10,
-            sortBy: { column: "name", order: "asc" },
+            sortBy: { column: 'name', order: 'asc' },
           });
-        console.log("📁 Bucket list result:", {
+        console.log('📁 Bucket list result:', {
           data: listData,
           error: listError,
         });
       } catch (listErr) {
-        console.error("❌ List bucket threw exception:", listErr);
+        console.error('❌ List bucket threw exception:', listErr);
       }
     }
 
     if (uploadError) {
-      console.error("❌ Error uploading PDF to storage:", uploadError);
+      console.error('❌ Error uploading PDF to storage:', uploadError);
       // Fallback: return PDF directly if storage upload fails
-      console.log("📄 Returning PDF directly due to storage error");
+      console.log('📄 Returning PDF directly due to storage error');
       return new NextResponse(pdfBuffer, {
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="packeta-label-${orderId}.pdf"`,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="packeta-label-${orderId}.pdf"`,
         },
       });
     }
 
     // Debug: Also return PDF directly if requested (even if storage works)
     if (returnDirect) {
-      console.log("🔧 Debug mode: Returning PDF directly (storage works)");
+      console.log('🔧 Debug mode: Returning PDF directly (storage works)');
       return new NextResponse(pdfBuffer, {
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
         },
       });
     }
 
     // Get public URL for the uploaded file
     const { data: publicUrlData } = supabaseAdmin.storage
-      .from("packeta-labels")
+      .from('packeta-labels')
       .getPublicUrl(fileName);
 
     console.log(`🔗 Public URL data:`, publicUrlData);
 
     if (!publicUrlData.publicUrl) {
-      console.error("❌ Error getting public URL for uploaded PDF");
+      console.error('❌ Error getting public URL for uploaded PDF');
       // Fallback: return PDF directly if URL generation fails
-      console.log("📄 Returning PDF directly due to URL generation error");
+      console.log('📄 Returning PDF directly due to URL generation error');
       return new NextResponse(pdfBuffer, {
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="packeta-label-${orderId}.pdf"`,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="packeta-label-${orderId}.pdf"`,
         },
       });
     }
@@ -450,18 +407,15 @@ export async function GET(
     // Update print tracking in database
     try {
       const { error: updateError } = await supabaseAdmin
-        .from("orders")
+        .from('orders')
         .update({
           label_printed_at: new Date().toISOString(),
           label_printed_count: 1,
         })
-        .eq("id", orderId);
+        .eq('id', orderId);
 
       if (updateError) {
-        console.warn(
-          `⚠️ Failed to update print tracking for order ${orderId}:`,
-          updateError,
-        );
+        console.warn(`⚠️ Failed to update print tracking for order ${orderId}:`, updateError);
       } else {
         console.log(`✅ Updated print tracking for order ${orderId}`);
       }
@@ -471,19 +425,17 @@ export async function GET(
 
     // Debug: Return PDF directly if requested
     if (returnDirect) {
-      console.log("🔧 Debug mode: Returning PDF directly");
+      console.log('🔧 Debug mode: Returning PDF directly');
       return new NextResponse(pdfBuffer, {
         headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="debug-packeta-label-${orderId}.pdf"`,
         },
       });
     }
 
     // Return the public URL instead of the PDF buffer
-    console.log(
-      `📤 Returning JSON response with URL: ${publicUrlData.publicUrl}`,
-    );
+    console.log(`📤 Returning JSON response with URL: ${publicUrlData.publicUrl}`);
 
     const response = NextResponse.json({
       success: true,
@@ -492,31 +444,22 @@ export async function GET(
     });
 
     // Add CORS headers to ensure proper response
-    response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    response.headers.set(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization",
-    );
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    console.log(
-      `✅ Response headers:`,
-      Object.fromEntries(response.headers.entries()),
-    );
+    console.log(`✅ Response headers:`, Object.fromEntries(response.headers.entries()));
 
     return response;
   } catch (error) {
-    console.error("❌ Error getting Packeta label:", error);
-    console.error(
-      "Stack trace:",
-      error instanceof Error ? error.stack : "No stack trace",
-    );
+    console.error('❌ Error getting Packeta label:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       {
-        error: "Failed to get label",
+        error: 'Failed to get label',
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

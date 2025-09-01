@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { X } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
+import { X } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 interface ProductGalleryProps {
   images: Array<{
@@ -19,12 +19,12 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   const openModal = (index: number) => {
     setSelectedImageIndex(index);
     // Prevent body scroll when modal is open
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     setSelectedImageIndex(null);
-    document.body.style.overflow = "unset";
+    document.body.style.overflow = 'unset';
   };
 
   const nextImage = () => {
@@ -59,7 +59,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               className="relative cursor-pointer group shrink-0 snap-start w-[82vw] max-w-[520px]"
               onClick={() => openModal(index)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") openModal(index);
+                if (e.key === 'Enter' || e.key === ' ') openModal(index);
               }}
               aria-label={`Zobrazit obrázek ${index + 1}`}
             >
@@ -87,7 +87,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
             className="relative cursor-pointer group w-full text-left"
             onClick={() => openModal(index)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") openModal(index);
+              if (e.key === 'Enter' || e.key === ' ') openModal(index);
             }}
           >
             <div className="relative overflow-hidden rounded-lg bg-white min-h-[400px]">
@@ -98,7 +98,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 height={800}
                 className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                 priority={index === 0}
-                style={{ minHeight: "400px" }}
+                style={{ minHeight: '400px' }}
               />
             </div>
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 rounded-lg flex items-center justify-center">
@@ -118,7 +118,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
           onClick={closeModal}
           onKeyDown={(e) => {
-            if (e.key === "Escape") closeModal();
+            if (e.key === 'Escape') closeModal();
           }}
         >
           {/* Close button */}

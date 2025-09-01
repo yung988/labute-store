@@ -5,27 +5,33 @@ Jednotný email systém pro YEEZUZ2020 store postavený na **React Email** a **R
 ## 📧 Dostupné šablony
 
 ### 1. Order Confirmation (`OrderConfirmation.tsx`)
+
 Potvrzení objednávky odesílané zákazníkovi po úspěšném vytvoření objednávky.
 
 **Obsahuje:**
+
 - Detaily objednávky (číslo, datum, položky)
 - Dodací adresu
 - Celkovou cenu
 - Informace o dalších krocích
 
 ### 2. Shipping Confirmation (`ShippingConfirmation.tsx`)
+
 Potvrzení odeslání zásilky se sledovacími informacemi.
 
 **Obsahuje:**
+
 - Sledovací číslo a odkaz
 - Informace o dopravci
 - Odhadované datum doručení
 - Instrukce pro příjem zásilky
 
 ### 3. Delivered Confirmation (`DeliveredConfirmation.tsx`)
+
 Potvrzení úspěšného doručení s výzvou k hodnocení.
 
 **Obsahuje:**
+
 - Potvrzení doručení
 - Výzvu k zanechání hodnocení
 - Instrukce pro péči o výrobek
@@ -71,11 +77,11 @@ await resend.emails.send({
       {
         name: 'Triko Labuť - Černá',
         qty: 1,
-        price: '1,200 Kč'
-      }
+        price: '1,200 Kč',
+      },
     ],
-    total: '1,200 Kč'
-  })
+    total: '1,200 Kč',
+  }),
 });
 ```
 
@@ -104,7 +110,7 @@ Všechny šablony můžete prohlížet v browseru:
 
 ```
 http://localhost:3000/preview/order-confirmation
-http://localhost:3000/preview/shipping-confirmation  
+http://localhost:3000/preview/shipping-confirmation
 http://localhost:3000/preview/delivered-confirmation
 ```
 
@@ -124,16 +130,16 @@ const props: OrderConfirmationProps = {
     {
       name: 'Triko Labuť - Černá',
       qty: 2,
-      price: '1,200 Kč'
-    }
+      price: '1,200 Kč',
+    },
   ],
   total: '2,400 Kč',
   shippingAddress: {
     street: 'Wenceslas Square 1',
     city: 'Praha',
     postalCode: '110 00',
-    country: 'Česká republika'
-  }
+    country: 'Česká republika',
+  },
 };
 ```
 
@@ -150,7 +156,7 @@ const props: ShippingConfirmationProps = {
   trackingNumber: 'DR1234567890CZ',
   shippingMethod: 'Balík do ruky',
   carrierName: 'Česká pošta',
-  estimatedDelivery: '2024-12-25T10:00:00Z'
+  estimatedDelivery: '2024-12-25T10:00:00Z',
 };
 ```
 
@@ -165,7 +171,7 @@ const props: DeliveredConfirmationProps = {
   customerEmail: 'jan.novak@email.cz',
   feedbackUrl: 'https://yeezuz2020.com/review/YZ-2024-001234',
   deliveryDate: new Date().toISOString(),
-  productNames: ['Triko Labuť - Černá', 'Mikina YEEZUZ2020 - Bílá']
+  productNames: ['Triko Labuť - Černá', 'Mikina YEEZUZ2020 - Bílá'],
 };
 ```
 
@@ -177,9 +183,9 @@ const props: DeliveredConfirmationProps = {
 // V emails/theme.ts
 export const BRAND = {
   name: 'YEEZUZ2020',
-  tagline: '2020', 
+  tagline: '2020',
   supportEmail: 'info@yeezuz2020.com',
-  website: 'https://yeezuz2020.com'
+  website: 'https://yeezuz2020.com',
 } as const;
 ```
 
@@ -189,12 +195,12 @@ export const BRAND = {
 // V emails/theme.ts
 export const emailTheme = {
   colors: {
-    primary: '#000000',        // Hlavní barva (tlačítka)
-    background: '#ffffff',     // Pozadí
-    foreground: '#000000',     // Text
+    primary: '#000000', // Hlavní barva (tlačítka)
+    background: '#ffffff', // Pozadí
+    foreground: '#000000', // Text
     // ... další barvy
-  }
-}
+  },
+};
 ```
 
 ### Vytvoření nové šablony
@@ -233,7 +239,7 @@ import { OrderConfirmation } from '@/emails';
 
 export async function POST(request: Request) {
   // ... vytvoření objednávky
-  
+
   // Odeslání potvrzovacího emailu
   await resend.emails.send({
     from: 'YEEZUZ2020 <info@yeezuz2020.store>',
@@ -245,8 +251,8 @@ export async function POST(request: Request) {
       customerEmail: order.customerEmail,
       items: order.items,
       total: order.total,
-      shippingAddress: order.shippingAddress
-    })
+      shippingAddress: order.shippingAddress,
+    }),
   });
 }
 ```
@@ -260,16 +266,19 @@ export async function POST(request: Request) {
 ## 🐛 Troubleshooting
 
 ### Email se neodešle
+
 1. Zkontrolujte `RESEND_API_KEY` v environment
 2. Ověřte platnost email adresy
 3. Zkontrolujte logy v Resend dashboard
 
 ### Preview nefunguje
+
 1. Ujistěte se, že jsou všechny komponenty správně exportované
 2. Zkontrolujte import cesty v preview stránkách
 3. Restartujte dev server
 
 ### Styling problémy
+
 1. Vždy používejte inline styly pro email
 2. Vyhněte se flexbox a grid v emailech
 3. Testujte v různých email klientech

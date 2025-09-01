@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { List } from 'react-window';
@@ -42,9 +42,8 @@ export function VirtualizedTable<T>({
   loadNextPage,
   onRowClick,
   className,
-  emptyMessage = "Žádná data k zobrazení"
+  emptyMessage = 'Žádná data k zobrazení',
 }: VirtualizedTableProps<T>) {
-
   // Check if item is loaded
   const isItemLoaded = (index: number) => {
     return !hasNextPage || index < items.length;
@@ -61,7 +60,7 @@ export function VirtualizedTable<T>({
       return (
         <div style={style} className="flex items-center justify-center p-4">
           <div className="text-muted-foreground">
-            {isNextPageLoading ? "Načítání..." : "Žádná data"}
+            {isNextPageLoading ? 'Načítání...' : 'Žádná data'}
           </div>
         </div>
       );
@@ -71,8 +70,8 @@ export function VirtualizedTable<T>({
       <div
         style={style}
         className={cn(
-          "border-b hover:bg-muted/50 cursor-pointer transition-colors",
-          onRowClick && "cursor-pointer"
+          'border-b hover:bg-muted/50 cursor-pointer transition-colors',
+          onRowClick && 'cursor-pointer'
         )}
         onClick={() => onRowClick?.(item, index)}
       >
@@ -80,7 +79,7 @@ export function VirtualizedTable<T>({
           {columns.map((column) => (
             <TableCell
               key={column.key}
-              className={cn("flex-shrink-0 p-4", column.className)}
+              className={cn('flex-shrink-0 p-4', column.className)}
               style={{ width: column.width }}
             >
               {column.render(item, index)}
@@ -94,14 +93,14 @@ export function VirtualizedTable<T>({
   // If no items and no loading, show empty message
   if (items.length === 0 && !isNextPageLoading) {
     return (
-      <div className={cn("flex items-center justify-center p-8 text-muted-foreground", className)}>
+      <div className={cn('flex items-center justify-center p-8 text-muted-foreground', className)}>
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className={cn("border rounded-lg overflow-hidden", className)}>
+    <div className={cn('border rounded-lg overflow-hidden', className)}>
       {/* Table Header */}
       <div className="border-b bg-muted/30">
         <TableHeader>
@@ -126,7 +125,13 @@ export function VirtualizedTable<T>({
           itemCount={hasNextPage ? items.length + 1 : items.length}
           loadMoreItems={loadMoreItems}
         >
-          {({ onItemsRendered, ref }: { onItemsRendered: (...args: unknown[]) => void; ref: React.Ref<unknown> }) => (
+          {({
+            onItemsRendered,
+            ref,
+          }: {
+            onItemsRendered: (...args: unknown[]) => void;
+            ref: React.Ref<unknown>;
+          }) => (
             <List
               ref={ref}
               height={containerHeight}

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       customer_name: customerName,
       customer_phone: '+420 123 456 789',
       packeta_point_id: null,
-      status: 'paid'
+      status: 'paid',
     };
 
     // Send confirmation email
@@ -89,9 +89,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Test email sent successfully',
       data: data,
-      testData: order
+      testData: order,
     });
-
   } catch (error) {
     console.error('Test email error:', error);
     return NextResponse.json({ error: 'Test email failed' }, { status: 500 });

@@ -29,5 +29,3 @@ Approval-first workflow:
 
 - Each agent begins by proposing a short plan and asks for approval before proceeding.
 - Per-agent `permissions` enforce tighter rules than repo defaults.
-
-

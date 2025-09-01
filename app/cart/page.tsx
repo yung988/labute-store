@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from "lucide-react";
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import ZasilkovnaWidget from "@/components/checkout/ZasilkovnaWidget";
-import { useCart } from "@/context/CartContext";
-import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { ChevronDown, ChevronUp, Minus, Package, Plus, X, MapPin } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import ZasilkovnaWidget from '@/components/checkout/ZasilkovnaWidget';
+import { useCart } from '@/context/CartContext';
+import { formatCurrency } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 export interface PacketaPoint {
   id: string;
@@ -20,8 +20,6 @@ export interface PacketaPoint {
 }
 
 type ZasilkovnaPoint = PacketaPoint;
-
-
 
 interface CartSummaryProps {
   isMobile?: boolean;
@@ -59,7 +57,7 @@ const CartSummary = ({
 
   return (
     <div
-      className={`bg-white ${isMobile ? "border-b border-gray-300" : "border border-gray-300 rounded-none"} ${!isMobile ? "sticky top-0 h-screen overflow-y-auto" : ""}`}
+      className={`bg-white ${isMobile ? 'border-b border-gray-300' : 'border border-gray-300 rounded-none'} ${!isMobile ? 'sticky top-0 h-screen overflow-y-auto' : ''}`}
     >
       {isMobile && (
         <div className="sticky top-0 bg-white border-b border-gray-300 p-4">
@@ -83,7 +81,7 @@ const CartSummary = ({
         <div className="space-y-4 mb-6">
           {items.map((item, index) => (
             <div
-              key={`${item.id}-${item.size || "no-size"}-${index}`}
+              key={`${item.id}-${item.size || 'no-size'}-${index}`}
               className="flex items-start gap-4 pb-4 border-b border-gray-200"
             >
               <div className="relative w-16 h-16 bg-gray-100 flex-shrink-0 border border-black">
@@ -95,7 +93,7 @@ const CartSummary = ({
                     className="object-contain"
                     onError={(e) => {
                       console.log('Image failed to load:', item.image);
-                      e.currentTarget.src = "/placeholder.svg";
+                      e.currentTarget.src = '/placeholder.svg';
                     }}
                   />
                 ) : (
@@ -137,9 +135,7 @@ const CartSummary = ({
               </div>
 
               <div className="text-right">
-                <p className="text-xs font-medium">
-                  {formatCurrency(item.price * item.quantity)}
-                </p>
+                <p className="text-xs font-medium">{formatCurrency(item.price * item.quantity)}</p>
               </div>
             </div>
           ))}
@@ -149,7 +145,7 @@ const CartSummary = ({
           <div className="text-center py-8 text-gray-500">
             <p className="text-xs">Váš košík je prázdný</p>
             <Button
-              onClick={() => window.location.href = '/'}
+              onClick={() => (window.location.href = '/')}
               className="mt-4 rounded-none"
               variant="outline"
             >
@@ -170,13 +166,14 @@ function CartForm() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [isCartCollapsed, setIsCartCollapsed] = useState(true);
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "home_delivery">("pickup");
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'home_delivery'>('pickup');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-
   // Server-quoted delivery price (authoritative price is used on server; UI shows quote)
-  const [deliveryPrice, setDeliveryPrice] = useState<number>(deliveryMethod === "pickup" ? 79 : 149);
+  const [deliveryPrice, setDeliveryPrice] = useState<number>(
+    deliveryMethod === 'pickup' ? 79 : 149
+  );
 
   useEffect(() => {
     const getQuote = async () => {
@@ -186,12 +183,15 @@ function CartForm() {
           return;
         }
         const quoteItems = items
-          .filter((it): it is typeof it & { productId: string } => 'productId' in it && typeof it.productId === 'string')
+          .filter(
+            (it): it is typeof it & { productId: string } =>
+              'productId' in it && typeof it.productId === 'string'
+          )
           .map((it) => ({ productId: it.productId, quantity: it.quantity }));
         const res = await fetch('/api/shipping/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: quoteItems, deliveryMethod })
+          body: JSON.stringify({ items: quoteItems, deliveryMethod }),
         });
         if (!res.ok) throw new Error('quote failed');
         const data = await res.json();
@@ -207,13 +207,13 @@ function CartForm() {
   }, [items, deliveryMethod, isInitialized]);
 
   const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    address: "",
-    city: "",
-    postalCode: "",
+    email: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    address: '',
+    city: '',
+    postalCode: '',
   });
 
   // Načti form data z localStorage při načtení
@@ -232,7 +232,7 @@ function CartForm() {
   useEffect(() => {
     const savedDeliveryMethod = localStorage.getItem('checkout-delivery-method');
     if (savedDeliveryMethod) {
-      setDeliveryMethod(savedDeliveryMethod as "pickup" | "home_delivery");
+      setDeliveryMethod(savedDeliveryMethod as 'pickup' | 'home_delivery');
     }
 
     const savedPickupPoint = localStorage.getItem('checkout-pickup-point');
@@ -256,15 +256,15 @@ function CartForm() {
     };
 
     checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
+    window.addEventListener('resize', checkIsMobile);
 
-    return () => window.removeEventListener("resize", checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
   // Pokud je košík prázdný, přesměruj zpět na obchod (ale počkej až se načte z localStorage)
   useEffect(() => {
     if (isInitialized && items.length === 0) {
-      router.push("/");
+      router.push('/');
     }
   }, [isInitialized, items.length, router]);
 
@@ -321,9 +321,13 @@ function CartForm() {
     }
   };
 
-  const isFormValid = formData.email && formData.firstName && formData.lastName && formData.phone &&
-    ((deliveryMethod === "pickup" && selectedPickupPoint) ||
-     (deliveryMethod === "home_delivery" && formData.address));
+  const isFormValid =
+    formData.email &&
+    formData.firstName &&
+    formData.lastName &&
+    formData.phone &&
+    ((deliveryMethod === 'pickup' && selectedPickupPoint) ||
+      (deliveryMethod === 'home_delivery' && formData.address));
 
   // Zobraz loading dokud se nenačte cart z localStorage
   if (!isInitialized) {
@@ -363,18 +367,20 @@ function CartForm() {
             <form className="space-y-8">
               {/* Možnosti doručení */}
               <div>
-                <h2 className="text-xs font-medium tracking-wide uppercase mb-6">Možnosti doručení</h2>
+                <h2 className="text-xs font-medium tracking-wide uppercase mb-6">
+                  Možnosti doručení
+                </h2>
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                    <button
+                  <button
                     type="button"
                     onClick={() => {
-                      setDeliveryMethod("home_delivery");
+                      setDeliveryMethod('home_delivery');
                       localStorage.setItem('checkout-delivery-method', 'home_delivery');
                     }}
                     className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${
-                      deliveryMethod === "home_delivery"
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      deliveryMethod === 'home_delivery'
+                        ? 'border-black bg-black text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     <Package className="w-4 h-4" />
@@ -384,13 +390,13 @@ function CartForm() {
                   <button
                     type="button"
                     onClick={() => {
-                      setDeliveryMethod("pickup");
+                      setDeliveryMethod('pickup');
                       localStorage.setItem('checkout-delivery-method', 'pickup');
                     }}
                     className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${
-                      deliveryMethod === "pickup"
-                        ? "border-black bg-black text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      deliveryMethod === 'pickup'
+                        ? 'border-black bg-black text-white'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     <MapPin className="w-4 h-4" />
@@ -398,13 +404,15 @@ function CartForm() {
                   </button>
                 </div>
 
-                {deliveryMethod === "pickup" ? (
+                {deliveryMethod === 'pickup' ? (
                   <div>
                     <div className="border-2 border-black p-6 mb-4">
                       <div className="flex items-center gap-3">
                         <MapPin className="w-6 h-6 text-black" />
                         <div className="flex-1">
-                          <h3 className="font-medium text-xs tracking-wide uppercase">Zásilkovna – výdejní místo</h3>
+                          <h3 className="font-medium text-xs tracking-wide uppercase">
+                            Zásilkovna – výdejní místo
+                          </h3>
                           <p className="text-xs text-gray-600">Vyberte pobočku / Z-BOX</p>
                         </div>
                         <div className="text-right">
@@ -428,7 +436,9 @@ function CartForm() {
                       <div className="mt-4 text-xs text-gray-700">
                         <p className="font-medium">{selectedPickupPoint.name}</p>
                         {selectedPickupPoint.street && <p>{selectedPickupPoint.street}</p>}
-                        <p>{`${selectedPickupPoint.zip ?? ""} ${selectedPickupPoint.city ?? ""}`.trim()}</p>
+                        <p>
+                          {`${selectedPickupPoint.zip ?? ''} ${selectedPickupPoint.city ?? ''}`.trim()}
+                        </p>
                       </div>
                     )}
 
@@ -480,7 +490,9 @@ function CartForm() {
                       <div className="flex items-center gap-3">
                         <Package className="w-6 h-6 text-black" />
                         <div className="flex-1">
-                          <h3 className="font-medium text-xs tracking-wide uppercase">Zásilkovna – doručení domů</h3>
+                          <h3 className="font-medium text-xs tracking-wide uppercase">
+                            Zásilkovna – doručení domů
+                          </h3>
                           <p className="text-xs text-gray-600">Doručení přímo na Vaši adresu</p>
                         </div>
                         <div className="text-right">
@@ -520,13 +532,13 @@ function CartForm() {
                       </div>
                       <AddressAutocomplete
                         value={formData.address}
-                        onChange={(value) => setFormData(prev => ({ ...prev, address: value }))}
+                        onChange={(value) => setFormData((prev) => ({ ...prev, address: value }))}
                         onAddressSelect={(address) => {
-                          setFormData(prev => ({
+                          setFormData((prev) => ({
                             ...prev,
                             address: address.fullAddress || address.street || '',
                             city: address.city || prev.city,
-                            postalCode: address.postalCode || prev.postalCode
+                            postalCode: address.postalCode || prev.postalCode,
                           }));
                         }}
                         onManualEntry={() => {
@@ -582,7 +594,8 @@ function CartForm() {
                   </Button>
 
                   <p className="text-[9px] text-center leading-tight text-gray-600">
-                    Kliknutím souhlasíte s našimi obchodními podmínkami a zásadami ochrany osobních údajů.
+                    Kliknutím souhlasíte s našimi obchodními podmínkami a zásadami ochrany osobních
+                    údajů.
                   </p>
                 </div>
               </div>

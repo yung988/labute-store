@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export interface CartItemForInventory {
   productId: string;
@@ -24,9 +24,11 @@ export interface InventoryUpdateResult {
  * @param items Položky z košíku/objednávky
  * @returns Výsledek operace s detaily o změnách
  */
-export async function decreaseInventory(items: CartItemForInventory[]): Promise<InventoryUpdateResult> {
+export async function decreaseInventory(
+  items: CartItemForInventory[]
+): Promise<InventoryUpdateResult> {
   const updatedItems: InventoryUpdateResult['updatedItems'] = [];
-  
+
   try {
     // Začneme transakci pro atomické operace
     for (const item of items) {
@@ -47,7 +49,7 @@ export async function decreaseInventory(items: CartItemForInventory[]): Promise<
         console.error(`SKU not found for product ${item.productId}, size ${item.size}:`, skuError);
         return {
           success: false,
-          error: `SKU nenalezeno pro produkt ${item.name}, velikost ${item.size}`
+          error: `SKU nenalezeno pro produkt ${item.name}, velikost ${item.size}`,
         };
       }
 
@@ -55,7 +57,7 @@ export async function decreaseInventory(items: CartItemForInventory[]): Promise<
       if (sku.stock < item.quantity) {
         return {
           success: false,
-          error: `Nedostatek zásob pro ${item.name} (velikost ${item.size}). Dostupné: ${sku.stock}, požadované: ${item.quantity}`
+          error: `Nedostatek zásob pro ${item.name} (velikost ${item.size}). Dostupné: ${sku.stock}, požadované: ${item.quantity}`,
         };
       }
 
@@ -70,7 +72,7 @@ export async function decreaseInventory(items: CartItemForInventory[]): Promise<
         console.error(`Failed to update stock for SKU ${sku.id}:`, updateError);
         return {
           success: false,
-          error: `Chyba při aktualizaci skladu pro ${item.name}`
+          error: `Chyba při aktualizaci skladu pro ${item.name}`,
         };
       }
 
@@ -79,22 +81,23 @@ export async function decreaseInventory(items: CartItemForInventory[]): Promise<
         productId: item.productId,
         size: item.size,
         oldStock: sku.stock,
-        newStock: newStock
+        newStock: newStock,
       });
 
-      console.log(`✅ Inventory updated: ${item.name} (${item.size}) - stock reduced from ${sku.stock} to ${newStock}`);
+      console.log(
+        `✅ Inventory updated: ${item.name} (${item.size}) - stock reduced from ${sku.stock} to ${newStock}`
+      );
     }
 
     return {
       success: true,
-      updatedItems
+      updatedItems,
     };
-
   } catch (error) {
     console.error('Error in decreaseInventory:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Neočekávaná chyba při aktualizaci skladu'
+      error: error instanceof Error ? error.message : 'Neočekávaná chyba při aktualizaci skladu',
     };
   }
 }
@@ -104,9 +107,11 @@ export async function decreaseInventory(items: CartItemForInventory[]): Promise<
  * @param items Položky k vrácení
  * @returns Výsledek operace
  */
-export async function increaseInventory(items: CartItemForInventory[]): Promise<InventoryUpdateResult> {
+export async function increaseInventory(
+  items: CartItemForInventory[]
+): Promise<InventoryUpdateResult> {
   const updatedItems: InventoryUpdateResult['updatedItems'] = [];
-  
+
   try {
     for (const item of items) {
       if (!item.size) {
@@ -144,22 +149,23 @@ export async function increaseInventory(items: CartItemForInventory[]): Promise<
         productId: item.productId,
         size: item.size,
         oldStock: sku.stock,
-        newStock: newStock
+        newStock: newStock,
       });
 
-      console.log(`🔄 Inventory rolled back: ${item.name} (${item.size}) - stock increased from ${sku.stock} to ${newStock}`);
+      console.log(
+        `🔄 Inventory rolled back: ${item.name} (${item.size}) - stock increased from ${sku.stock} to ${newStock}`
+      );
     }
 
     return {
       success: true,
-      updatedItems
+      updatedItems,
     };
-
   } catch (error) {
     console.error('Error in increaseInventory:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Neočekávaná chyba při rollback skladu'
+      error: error instanceof Error ? error.message : 'Neočekávaná chyba při rollback skladu',
     };
   }
 }
@@ -199,7 +205,9 @@ export async function checkInventoryAvailability(items: CartItemForInventory[]):
 
       // Zkontrolujeme dostupnost
       if (sku.stock < item.quantity) {
-        errors.push(`Nedostatek zásob pro ${item.name} (velikost ${item.size}). Dostupné: ${sku.stock}, požadované: ${item.quantity}`);
+        errors.push(
+          `Nedostatek zásob pro ${item.name} (velikost ${item.size}). Dostupné: ${sku.stock}, požadované: ${item.quantity}`
+        );
       } else if (sku.stock <= 5) {
         warnings.push(`Nízké zásoby pro ${item.name} (velikost ${item.size}): ${sku.stock} kusů`);
       }
@@ -208,15 +216,14 @@ export async function checkInventoryAvailability(items: CartItemForInventory[]):
     return {
       available: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
-
   } catch (error) {
     console.error('Error checking inventory availability:', error);
     return {
       available: false,
       errors: ['Chyba při kontrole dostupnosti zásob'],
-      warnings: []
+      warnings: [],
     };
   }
 }

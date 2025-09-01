@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { increaseInventory, type CartItemForInventory } from '@/lib/inventory';
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: orderId } = await params;
 
@@ -27,20 +24,31 @@ export async function POST(
 
     // Parsujeme položky objednávky
     let inventoryItems: CartItemForInventory[] = [];
-    
+
     try {
       const items = JSON.parse(order.items || '[]');
       inventoryItems = items
         .filter((item: { productId?: string; size?: string }) => item.productId && item.size)
-        .map((item: { productId: string; size: string; quantity: number; description?: string; name?: string }) => ({
-          productId: item.productId,
-          size: item.size,
-          quantity: item.quantity,
-          name: item.description || item.name || 'Unknown product'
-        }));
+        .map(
+          (item: {
+            productId: string;
+            size: string;
+            quantity: number;
+            description?: string;
+            name?: string;
+          }) => ({
+            productId: item.productId,
+            size: item.size,
+            quantity: item.quantity,
+            name: item.description || item.name || 'Unknown product',
+          })
+        );
     } catch (e) {
       console.error('Failed to parse order items:', e);
-      return NextResponse.json({ error: 'Chyba při parsování položek objednávky' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Chyba při parsování položek objednávky' },
+        { status: 500 }
+      );
     }
 
     if (inventoryItems.length === 0) {
@@ -51,17 +59,20 @@ export async function POST(
     const rollbackResult = await increaseInventory(inventoryItems);
 
     if (!rollbackResult.success) {
-      return NextResponse.json({ 
-        error: `Rollback selhal: ${rollbackResult.error}` 
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: `Rollback selhal: ${rollbackResult.error}`,
+        },
+        { status: 500 }
+      );
     }
 
     // Aktualizujeme status objednávky
     const { error: updateError } = await supabaseAdmin
       .from('orders')
-      .update({ 
+      .update({
         status: 'cancelled',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', orderId);
 
@@ -73,9 +84,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'Inventář byl úspěšně vrácen',
-      updatedItems: rollbackResult.updatedItems
+      updatedItems: rollbackResult.updatedItems,
     });
-
   } catch (error) {
     console.error('Error in inventory rollback:', error);
     return NextResponse.json(

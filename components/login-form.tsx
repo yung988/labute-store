@@ -1,27 +1,18 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
@@ -46,9 +37,9 @@ export function LoginForm({
         const userRole = user.user?.user_metadata?.role || user.user?.app_metadata?.role;
 
         if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'shopmanager') {
-          router.push("/admin");
+          router.push('/admin');
         } else {
-          router.push("/");
+          router.push('/');
         }
       } else {
         // Magic link mode
@@ -62,20 +53,18 @@ export function LoginForm({
         setIsMagicLinkSent(true);
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
+          <CardDescription>Enter your email below to login to your account</CardDescription>
         </CardHeader>
         <CardContent>
           {isMagicLinkSent ? (
@@ -99,7 +88,7 @@ export function LoginForm({
                 <div className="flex gap-2 mb-4">
                   <Button
                     type="button"
-                    variant={isPasswordMode ? "default" : "outline"}
+                    variant={isPasswordMode ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setIsPasswordMode(true)}
                   >
@@ -107,7 +96,7 @@ export function LoginForm({
                   </Button>
                   <Button
                     type="button"
-                    variant={!isPasswordMode ? "default" : "outline"}
+                    variant={!isPasswordMode ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setIsPasswordMode(false)}
                   >
@@ -152,9 +141,12 @@ export function LoginForm({
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading
-                    ? (isPasswordMode ? "Logging in..." : "Sending magic link...")
-                    : (isPasswordMode ? "Login" : "Send Magic Link")
-                  }
+                    ? isPasswordMode
+                      ? 'Logging in...'
+                      : 'Sending magic link...'
+                    : isPasswordMode
+                      ? 'Login'
+                      : 'Send Magic Link'}
                 </Button>
               </div>
             </form>

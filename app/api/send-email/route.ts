@@ -7,7 +7,7 @@ import {
   BRAND,
   type OrderConfirmationProps,
   type ShippingConfirmationProps,
-  type DeliveredConfirmationProps
+  type DeliveredConfirmationProps,
 } from '@/emails';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -25,10 +25,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check if API key is configured
     if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json(
-        { error: 'RESEND_API_KEY is not configured' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'RESEND_API_KEY is not configured' }, { status: 500 });
     }
 
     const body: EmailRequest = await request.json();
@@ -45,10 +42,7 @@ export async function POST(request: NextRequest) {
     // Validate email address
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(to)) {
-      return NextResponse.json(
-        { error: 'Invalid email address' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
     }
 
     let emailComponent;
@@ -80,7 +74,10 @@ export async function POST(request: NextRequest) {
 
       default:
         return NextResponse.json(
-          { error: 'Invalid email type. Must be: order-confirmation, shipping-confirmation, or delivered-confirmation' },
+          {
+            error:
+              'Invalid email type. Must be: order-confirmation, shipping-confirmation, or delivered-confirmation',
+          },
           { status: 400 }
         );
     }
@@ -112,11 +109,13 @@ export async function POST(request: NextRequest) {
       type,
       orderId,
     });
-
   } catch (error) {
     console.error('Email API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
@@ -138,7 +137,7 @@ export async function GET() {
             name: 'Triko Labuť - Černá',
             qty: 2,
             price: '1,200 Kč',
-          }
+          },
         ],
         total: '1,200 Kč',
         shippingAddress: {
@@ -147,7 +146,7 @@ export async function GET() {
           postalCode: '110 00',
           country: 'Česká republika',
         },
-      }
+      },
     },
     shippingConfirmation: {
       type: 'shipping-confirmation',
@@ -158,7 +157,7 @@ export async function GET() {
         customerEmail: 'customer@example.com',
         trackingUrl: 'https://tracking-url.com',
         trackingNumber: 'DR1234567890CZ',
-      }
+      },
     },
     deliveredConfirmation: {
       type: 'delivered-confirmation',
@@ -168,8 +167,8 @@ export async function GET() {
         customerName: 'Jan Novák',
         customerEmail: 'customer@example.com',
         feedbackUrl: 'https://feedback-url.com',
-      }
-    }
+      },
+    },
   };
 
   return NextResponse.json({
@@ -180,6 +179,6 @@ export async function GET() {
       orderConfirmation: '/preview/order-confirmation',
       shippingConfirmation: '/preview/shipping-confirmation',
       deliveredConfirmation: '/preview/delivered-confirmation',
-    }
+    },
   });
 }

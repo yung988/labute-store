@@ -66,7 +66,7 @@ export default function OrderPolicyPage() {
           <a href="/terms" className="underline">
             Obchodní podmínky
           </a>
-          ,{" "}
+          ,{' '}
           <a href="/privacy" className="underline">
             Zásady ochrany osobních údajů
           </a>

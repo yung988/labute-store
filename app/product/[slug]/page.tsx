@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { BuyButton } from "@/components/BuyButton";
-import { ProductGallery } from "@/components/ProductGallery";
-import { RelatedProducts } from "@/components/RelatedProducts";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { BuyButton } from '@/components/BuyButton';
+import { ProductGallery } from '@/components/ProductGallery';
+import { RelatedProducts } from '@/components/RelatedProducts';
 import { createClient } from '@/lib/supabase/server';
 
 // Force this page to be dynamic to avoid build-time execution of cookies() in Supabase client
@@ -37,7 +37,8 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
 
     const { data: productWithDetails } = await supabase
       .from('products')
-      .select(`
+      .select(
+        `
         id,
         name,
         slug,
@@ -45,7 +46,8 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
         price_cents,
         product_images!left(id, url, is_main),
         skus!left(id, size, stock)
-      `)
+      `
+      )
       .eq('slug', slug)
       .single();
 
@@ -54,17 +56,19 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
     }
 
     // Seřadíme obrázky - hlavní obrázek první
-    const sortedImages = productWithDetails.product_images?.sort(
-      (a: { is_main?: boolean }, b: { is_main?: boolean }) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)
-    ) || [];
+    const sortedImages =
+      productWithDetails.product_images?.sort(
+        (a: { is_main?: boolean }, b: { is_main?: boolean }) =>
+          (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0)
+      ) || [];
 
     // Zjistíme, zda má produkt varianty velikostí (oblečení)
     const isClothing = productWithDetails.skus && productWithDetails.skus.length > 0;
 
     const amount = Number(productWithDetails.price_cents) / 100 || 0;
     const priceFormatted = amount
-      ? `${amount.toLocaleString("cs-CZ")} Kč`
-      : "Cena není k dispozici";
+      ? `${amount.toLocaleString('cs-CZ')} Kč`
+      : 'Cena není k dispozici';
 
     // Debug: log raw price data
     console.log('Product price debug:', {
@@ -75,13 +79,13 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
       amount: amount,
       amount_type: typeof amount,
       priceFormatted: priceFormatted,
-      priceAmount: amount
+      priceAmount: amount,
     });
 
     return {
       id: productWithDetails.id,
       name: productWithDetails.name,
-      description: productWithDetails.description ?? "",
+      description: productWithDetails.description ?? '',
       images: sortedImages.map((img: { id: string; url: string }) => ({
         id: img.id,
         url: img.url,
@@ -89,17 +93,18 @@ async function getProduct(slug: string): Promise<TransformedProduct | null> {
       })),
       price: priceFormatted,
       priceAmount: amount,
-      priceId: "", // pro stripe
+      priceId: '', // pro stripe
       isClothing,
       priceInCents: productWithDetails.price_cents,
-      variants: productWithDetails.skus?.map((variant: { id: string; size: string }) => ({
-        id: variant.id,
-        size: variant.size,
-        stockQuantity: 10, // Default stock value
-      })) || [],
+      variants:
+        productWithDetails.skus?.map((variant: { id: string; size: string }) => ({
+          id: variant.id,
+          size: variant.size,
+          stockQuantity: 10, // Default stock value
+        })) || [],
     };
   } catch (error) {
-    console.error("Error loading product:", error);
+    console.error('Error loading product:', error);
     return null;
   }
 }
@@ -114,13 +119,13 @@ interface ProductPageProps {
 function parseNumberedTracks(description: string): string[] {
   if (!description) return [];
   // Take part after the first ':' if present ("obsahuje tyto skladby: ...")
-  const text = description.split(":").slice(1).join(":") || description;
+  const text = description.split(':').slice(1).join(':') || description;
   // Match segments like "1 Title ..." up to the next number or end
   const regex = /\b(\d{1,2})\s+([^\d]+?)(?=(?:\s\d{1,2}\s)|$)/g;
   const tracks: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = regex.exec(text)) !== null) {
-    const title = m[2].trim().replace(/^[-–•\s]+/, "");
+    const title = m[2].trim().replace(/^[-–•\s]+/, '');
     if (title) tracks.push(title);
   }
   return tracks;
@@ -229,7 +234,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   productName={product.name}
                   productId={product.id}
                   price={product.priceAmount}
-                  image={product.images?.[0]?.url || "/placeholder.jpg"}
+                  image={product.images?.[0]?.url || '/placeholder.jpg'}
                   variants={product.variants}
                 />
 

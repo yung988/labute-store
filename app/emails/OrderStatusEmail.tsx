@@ -1,4 +1,4 @@
-import { Html, Head, Body, Container, Section, Text, Heading, Hr } from "@react-email/components";
+import { Html, Head, Body, Container, Section, Text, Heading, Hr } from '@react-email/components';
 
 interface OrderStatusEmailProps {
   customerName?: string;
@@ -16,39 +16,42 @@ interface OrderStatusEmailProps {
 const getStatusMessage = (status: string) => {
   const messages = {
     paid: {
-      title: "Platba přijata",
-      description: "Vaše platba byla úspěšně přijata a objednávka bude brzy zpracována."
+      title: 'Platba přijata',
+      description: 'Vaše platba byla úspěšně přijata a objednávka bude brzy zpracována.',
     },
     processing: {
-      title: "Objednávka se zpracovává", 
-      description: "Vaše objednávka je právě připravována k odeslání."
+      title: 'Objednávka se zpracovává',
+      description: 'Vaše objednávka je právě připravována k odeslání.',
     },
     shipped: {
-      title: "Objednávka odeslána",
-      description: "Vaše objednávka byla odeslána a brzy bude doručena."
+      title: 'Objednávka odeslána',
+      description: 'Vaše objednávka byla odeslána a brzy bude doručena.',
     },
     cancelled: {
-      title: "Objednávka zrušena",
-      description: "Vaše objednávka byla zrušena. Pokud jste již zaplatili, peníze vám budou vráceny."
+      title: 'Objednávka zrušena',
+      description:
+        'Vaše objednávka byla zrušena. Pokud jste již zaplatili, peníze vám budou vráceny.',
     },
     refunded: {
-      title: "Platba vrácena",
-      description: "Platba za vaši objednávku byla vrácena na váš účet."
+      title: 'Platba vrácena',
+      description: 'Platba za vaši objednávku byla vrácena na váš účet.',
+    },
+  };
+
+  return (
+    messages[status as keyof typeof messages] || {
+      title: 'Změna stavu objednávky',
+      description: `Stav vaší objednávky byl změněn na: ${status}`,
     }
-  };
-  
-  return messages[status as keyof typeof messages] || {
-    title: "Změna stavu objednávky",
-    description: `Stav vaší objednávky byl změněn na: ${status}`
-  };
+  );
 };
 
 export default function OrderStatusEmail({
-  customerName = "Zákazník",
+  customerName = 'Zákazník',
   orderId,
   status,
   items = [],
-  packetaId
+  packetaId,
 }: OrderStatusEmailProps) {
   const statusInfo = getStatusMessage(status);
 
@@ -58,22 +61,23 @@ export default function OrderStatusEmail({
       <Body style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#f4f4f4' }}>
         <Container style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'white' }}>
           <Section style={{ padding: '20px' }}>
-            <Heading style={{ color: '#333', textAlign: 'center' }}>
-              {statusInfo.title}
-            </Heading>
-            
-            <Text style={{ fontSize: '16px', color: '#333' }}>
-              Dobrý den {customerName},
-            </Text>
-            
+            <Heading style={{ color: '#333', textAlign: 'center' }}>{statusInfo.title}</Heading>
+
+            <Text style={{ fontSize: '16px', color: '#333' }}>Dobrý den {customerName},</Text>
+
             <Text style={{ fontSize: '16px', color: '#666', lineHeight: '1.5' }}>
               {statusInfo.description}
             </Text>
 
-            <Section style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '5px', margin: '20px 0' }}>
-              <Text style={{ margin: '0', fontWeight: 'bold' }}>
-                Číslo objednávky: {orderId}
-              </Text>
+            <Section
+              style={{
+                backgroundColor: '#f8f9fa',
+                padding: '15px',
+                borderRadius: '5px',
+                margin: '20px 0',
+              }}
+            >
+              <Text style={{ margin: '0', fontWeight: 'bold' }}>Číslo objednávky: {orderId}</Text>
               <Text style={{ margin: '5px 0 0 0', color: '#666' }}>
                 Nový stav: <strong style={{ color: '#28a745' }}>{status}</strong>
               </Text>
@@ -86,9 +90,7 @@ export default function OrderStatusEmail({
                 </Heading>
                 {items.map((item, idx) => (
                   <div key={idx} style={{ padding: '10px 0', borderBottom: '1px solid #eee' }}>
-                    <Text style={{ margin: '0', fontWeight: 'bold' }}>
-                      {item.name}
-                    </Text>
+                    <Text style={{ margin: '0', fontWeight: 'bold' }}>{item.name}</Text>
                     <Text style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>
                       Množství: {item.quantity || 1}
                       {item.size && ` | Velikost: ${item.size}`}
@@ -100,7 +102,14 @@ export default function OrderStatusEmail({
             )}
 
             {packetaId && (
-              <Section style={{ backgroundColor: '#e3f2fd', padding: '15px', borderRadius: '5px', margin: '20px 0' }}>
+              <Section
+                style={{
+                  backgroundColor: '#e3f2fd',
+                  padding: '15px',
+                  borderRadius: '5px',
+                  margin: '20px 0',
+                }}
+              >
                 <Text style={{ margin: '0', fontWeight: 'bold', color: '#1976d2' }}>
                   📦 Informace o zásilce
                 </Text>
@@ -109,8 +118,10 @@ export default function OrderStatusEmail({
                 </Text>
                 <Text style={{ margin: '5px 0 0 0', color: '#666' }}>
                   Zásilku můžete sledovat na:
-                  <a href={`https://tracking.packeta.com/cs/${packetaId?.toString().startsWith('Z') ? packetaId : 'Z' + packetaId}`}
-                     style={{ color: '#1976d2' }}>
+                  <a
+                    href={`https://tracking.packeta.com/cs/${packetaId?.toString().startsWith('Z') ? packetaId : 'Z' + packetaId}`}
+                    style={{ color: '#1976d2' }}
+                  >
                     {` tracking.packeta.com/cs/${packetaId?.toString().startsWith('Z') ? packetaId : 'Z' + packetaId}`}
                   </a>
                 </Text>
@@ -118,9 +129,10 @@ export default function OrderStatusEmail({
             )}
 
             <Hr style={{ margin: '30px 0' }} />
-            
+
             <Text style={{ fontSize: '14px', color: '#999', textAlign: 'center' }}>
-              Děkujeme za vaši objednávku!<br />
+              Děkujeme za vaši objednávku!
+              <br />
               Tým yeezuz2020.store
             </Text>
           </Section>
