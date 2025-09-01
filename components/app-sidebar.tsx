@@ -15,11 +15,9 @@ import {
 
 import { NavMain } from '@/components/nav-main';
 import { NavSecondary } from '@/components/nav-secondary';
-import { NavUser } from '@/components/nav-user';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -29,11 +27,6 @@ import {
 export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   currentSection?: string;
   onNavigateAction?: (section: string) => void;
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-  };
 }
 
 const defaultData = {
@@ -94,13 +87,7 @@ const defaultData = {
   ],
 };
 
-export function AppSidebar({ currentSection, onNavigateAction, user, ...props }: AppSidebarProps) {
-  const userData = {
-    ...defaultData.user,
-    ...user,
-    avatar: user?.avatar || defaultData.user.avatar,
-  };
-
+export function AppSidebar({ currentSection, onNavigateAction, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" variant="inset" className="border-r bg-sidebar" {...props}>
       <SidebarHeader>
@@ -128,9 +115,6 @@ export function AppSidebar({ currentSection, onNavigateAction, user, ...props }:
         />
         <NavSecondary items={defaultData.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={userData} />
-      </SidebarFooter>
     </Sidebar>
   );
 }

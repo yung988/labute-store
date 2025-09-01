@@ -170,14 +170,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <SidebarProvider defaultOpen={true}>
-        <AppSidebar
-          currentSection={currentSection}
-          onNavigateAction={handleSidebarNavigate}
-          user={{
-            name: 'Admin',
-            email: user.email || 'admin@yeezuz2020.cz',
-          }}
-        />
+        <AppSidebar currentSection={currentSection} onNavigateAction={handleSidebarNavigate} />
         <SidebarInset className="relative z-10 ml-64">
           <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-2 px-4">
