@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Bell, ShoppingCart, CreditCard, Package, Truck, AlertTriangle } from 'lucide-react';
 import { NotificationType } from './notifications-data';
@@ -54,43 +53,40 @@ export const showNotificationToast = ({
 
 // Mock funkce pro simulaci real-time notifikací
 export function NotificationSystem() {
-  useEffect(() => {
-    // Simulace nové objednávky po 3 sekundách
-    const timer1 = setTimeout(() => {
-      showNotificationToast({
-        type: 'order',
-        title: 'Nová objednávka!',
-        message: 'Objednávka #12346 byla právě vytvořena.',
-        actionUrl: '/admin?section=orders&orderId=12346',
-      });
-    }, 3000);
-
-    // Simulace problému s platbou po 8 sekundách
-    const timer2 = setTimeout(() => {
-      showNotificationToast({
-        type: 'payment',
-        title: 'Problém s platbou',
-        message: 'Platba pro objednávku #12347 vyžaduje pozornost.',
-        actionUrl: '/admin?section=orders&orderId=12347',
-      });
-    }, 8000);
-
-    // Simulace low stock po 15 sekundách
-    const timer3 = setTimeout(() => {
-      showNotificationToast({
-        type: 'inventory',
-        title: 'Nízký sklad!',
-        message: 'Produkt "Premium Hoodie" má pouze 1 kus na skladě.',
-        actionUrl: '/admin?section=inventory',
-      });
-    }, 15000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
-  }, []);
-
+  // Automatické mock toasty jsou zakázané - používá se pouze pro manuální volání showNotificationToast
   return null; // Tato komponenta nevrací žádný JSX, pouze spravuje toasty
+}
+
+// Funkce pro spuštění mock notifikací (volitelně)
+export function startMockNotifications() {
+  const notifications = [
+    {
+      type: 'order' as const,
+      title: 'Nová objednávka',
+      message: 'Objednávka #12345 byla vytvořena',
+      actionUrl: '/admin?section=orders&orderId=12345',
+    },
+    {
+      type: 'payment' as const,
+      title: 'Problém s platbou',
+      message: 'Platba pro objednávku #12344 byla zamítnuta',
+      actionUrl: '/admin?section=orders&orderId=12344',
+    },
+    {
+      type: 'inventory' as const,
+      title: 'Nízký sklad',
+      message: 'Produkt "Basic Tee" má pouze 2 kusy na skladě',
+      actionUrl: '/admin?section=inventory',
+    },
+  ];
+
+  // Spusť notifikace s různými zpožděními
+  notifications.forEach((notification, index) => {
+    setTimeout(
+      () => {
+        showNotificationToast(notification);
+      },
+      (index + 1) * 3000
+    ); // 3s, 6s, 9s
+  });
 }

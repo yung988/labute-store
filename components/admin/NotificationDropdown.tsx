@@ -51,7 +51,7 @@ export function NotificationDropdown() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 max-h-[500px] p-0" sideOffset={8}>
+      <DropdownMenuContent align="end" className="w-80 max-h-[500px] p-0 z-[100]" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <DropdownMenuLabel className="p-0 text-base font-semibold">Notifikace</DropdownMenuLabel>

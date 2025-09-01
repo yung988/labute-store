@@ -33,6 +33,16 @@
     --radius: 0.5rem;
     /* Shared header height for sticky offsets (Header has h-16 => 64px) */
     --header-height: 64px;
+
+    /* Sidebar variables */
+    --sidebar: 0 0% 98%;
+    --sidebar-foreground: 0 0% 3.9%;
+    --sidebar-primary: 0 0% 9%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 96.1%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 89.8%;
+    --sidebar-ring: 0 0% 3.9%;
   }
 
   .dark {
@@ -60,6 +70,16 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Sidebar variables for dark mode */
+    --sidebar: 0 0% 14.9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 14.9%;
+    --sidebar-ring: 0 0% 83.1%;
   }
 }
 
@@ -125,6 +145,50 @@
   .packeta-widget,
   .packeta-widget * {
     color: #111 !important;
+  }
+
+  /* Sidebar fixes */
+  [data-slot='sidebar'] {
+    background-color: hsl(var(--sidebar)) !important;
+    border-right: 1px solid hsl(var(--sidebar-border)) !important;
+    z-index: 50 !important;
+  }
+
+  [data-slot='sidebar-inner'] {
+    background-color: hsl(var(--sidebar)) !important;
+  }
+
+  [data-slot='sidebar-container'] {
+    z-index: 50 !important;
+  }
+
+  /* Ensure sidebar content is visible */
+  [data-slot='sidebar'] {
+    z-index: 50 !important;
+  }
+
+  /* Fix for any transparent backgrounds */
+  .bg-sidebar {
+    background-color: hsl(var(--sidebar)) !important;
+  }
+
+  /* Fix for sidebar positioning */
+  .group-sidebar-wrapper {
+    position: relative;
+  }
+
+  /* Fix for notifications positioning */
+  [data-sonner-toaster] {
+    z-index: 9999 !important;
+  }
+
+  /* Ensure dropdowns are above sidebar */
+  [data-radix-popper-content-wrapper] {
+    z-index: 100 !important;
+  }
+
+  [data-radix-dropdown-menu-content] {
+    z-index: 100 !important;
   }
 }
 

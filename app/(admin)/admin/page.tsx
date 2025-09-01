@@ -168,134 +168,138 @@ export default function AdminPage() {
   };
 
   return (
-    <SidebarProvider>
-      <AppSidebar
-        currentSection={currentSection}
-        onNavigateAction={handleSidebarNavigate}
-        user={{
-          name: 'Admin',
-          email: user.email || 'admin@yeezuz2020.cz',
-        }}
-      />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/admin">YEEZUZ2020 Admin</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{getSectionTitle(currentSection)}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="ml-auto flex items-center gap-2 px-4">
-            <div className="hidden md:block max-w-sm">
+    <div className="min-h-screen bg-background">
+      <SidebarProvider defaultOpen={true}>
+        <AppSidebar
+          currentSection={currentSection}
+          onNavigateAction={handleSidebarNavigate}
+          user={{
+            name: 'Admin',
+            email: user.email || 'admin@yeezuz2020.cz',
+          }}
+        />
+        <SidebarInset className="relative z-10">
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbLink href="/admin">YEEZUZ2020 Admin</BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{getSectionTitle(currentSection)}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="ml-auto flex items-center gap-2 px-4">
+              <div className="hidden md:block max-w-sm">
+                <CommandPaletteTrigger
+                  onNavigate={(section, orderId) =>
+                    navigateToSection(section as AdminSection, orderId)
+                  }
+                />
+              </div>
+              <NotificationDropdown />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <UserIcon className="h-4 w-4" />
+                    <span className="sr-only">User menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Odhlásit se
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <div className="md:hidden mb-4">
               <CommandPaletteTrigger
                 onNavigate={(section, orderId) =>
                   navigateToSection(section as AdminSection, orderId)
                 }
               />
             </div>
-            <NotificationDropdown />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <UserIcon className="h-4 w-4" />
-                  <span className="sr-only">User menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Odhlásit se
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
 
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="md:hidden mb-4">
-            <CommandPaletteTrigger
-              onNavigate={(section, orderId) => navigateToSection(section as AdminSection, orderId)}
-            />
-          </div>
-
-          <div className="min-h-screen flex-1 rounded-xl bg-muted/50 p-4">
-            {currentSection === 'dashboard' && (
-              <Suspense fallback={<LoadingSpinner />}>
-                <Dashboard onNavigateAction={navigateToSection} />
-              </Suspense>
-            )}
-
-            {currentSection === 'orders' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Konsolidované objednávky</h2>
+            <div className="flex-1 rounded-xl bg-card p-4 shadow-sm">
+              {currentSection === 'dashboard' && (
                 <Suspense fallback={<LoadingSpinner />}>
-                  <ConsolidatedOrdersTable
-                    onOrderClick={handleOrderClick}
-                    onCommunicateWith={handleOrderClick}
+                  <Dashboard onNavigateAction={navigateToSection} />
+                </Suspense>
+              )}
+
+              {currentSection === 'orders' && (
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Konsolidované objednávky</h2>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ConsolidatedOrdersTable
+                      onOrderClick={handleOrderClick}
+                      onCommunicateWith={handleOrderClick}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
+              {currentSection === 'inventory' && (
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <InventoryTable />
+                  </Suspense>
+                </div>
+              )}
+
+              {currentSection === 'packeta' && (
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PacketaManagement />
+                  </Suspense>
+                </div>
+              )}
+
+              {currentSection === 'customers' && (
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <CustomerCommunication />
+                  </Suspense>
+                </div>
+              )}
+
+              {currentSection === 'emails' && (
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Emailová komunikace</h2>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <EmailCommunication onOrderClick={handleOrderClick} />
+                  </Suspense>
+                </div>
+              )}
+
+              {currentSection === 'order-detail' && selectedOrderId && (
+                <Suspense fallback={<LoadingSpinner />}>
+                  <OrderDetailView
+                    orderId={selectedOrderId}
+                    onBack={() => navigateToSection('orders')}
                   />
                 </Suspense>
-              </div>
-            )}
-
-            {currentSection === 'inventory' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <InventoryTable />
-                </Suspense>
-              </div>
-            )}
-
-            {currentSection === 'packeta' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <PacketaManagement />
-                </Suspense>
-              </div>
-            )}
-
-            {currentSection === 'customers' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <CustomerCommunication />
-                </Suspense>
-              </div>
-            )}
-
-            {currentSection === 'emails' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6">Emailová komunikace</h2>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <EmailCommunication onOrderClick={handleOrderClick} />
-                </Suspense>
-              </div>
-            )}
-
-            {currentSection === 'order-detail' && selectedOrderId && (
-              <Suspense fallback={<LoadingSpinner />}>
-                <OrderDetailView
-                  orderId={selectedOrderId}
-                  onBack={() => navigateToSection('orders')}
-                />
-              </Suspense>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </SidebarInset>
-      <NotificationSystem />
-    </SidebarProvider>
+        </SidebarInset>
+        <NotificationSystem />
+      </SidebarProvider>
+    </div>
   );
 }

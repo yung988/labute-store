@@ -181,7 +181,7 @@ export default function CommandPalette({ open, onOpenChange, onNavigate }: Comma
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 max-w-2xl">
+      <DialogContent className="p-0 max-w-2xl z-[9999]">
         <Command className="rounded-lg border-none shadow-none" shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
