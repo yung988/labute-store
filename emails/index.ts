@@ -2,6 +2,7 @@
 export { default as OrderConfirmation } from './OrderConfirmation';
 export { default as ShippingConfirmation } from './ShippingConfirmation';
 export { default as DeliveredConfirmation } from './DeliveredConfirmation';
+export { default as StatusUpdate } from './StatusUpdate';
 
 // Export theme and utilities
 export { emailTheme, emailStyles, BRAND, createEmailStyle } from './theme';

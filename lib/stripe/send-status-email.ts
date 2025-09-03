@@ -1,7 +1,4 @@
-import { Resend } from 'resend';
-import OrderStatusEmail from '@/app/emails/OrderStatusEmail';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Unified via /api/send-email using emails/* templates
 
 interface OrderData {
   id: string;
@@ -51,17 +48,32 @@ export default async function sendOrderStatusEmail(order: OrderData, previousSta
     : [];
 
   try {
-    await resend.emails.send({
-      from: 'noreply@yeezuz2020.store',
-      to: order.customer_email,
-      subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
-      react: OrderStatusEmail({
-        customerName: order.customer_name || undefined,
-        orderId: order.id,
-        status: order.status,
-        items: items,
-        packetaId: order.packeta_shipment_id || undefined,
-      }),
+    // Map to unified email types
+    let type: 'shipping-confirmation' | 'delivered-confirmation' | 'status-update' = 'status-update';
+    const data: Record<string, unknown> = {
+      orderId: order.id,
+      status: order.status,
+      customerName: order.customer_name || undefined,
+      customerEmail: order.customer_email,
+      items,
+    };
+
+    if (order.status === 'shipped') {
+      type = 'shipping-confirmation';
+      // Additional shipping props can be fetched or passed if available (tracking URL etc.)
+      data.trackingUrl = '';
+    } else if (order.status === 'delivered') {
+      type = 'delivered-confirmation';
+      data.feedbackUrl = '';
+    }
+
+    await fetch(`${process.env.SITE_URL || ''}/api/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(process.env.INTERNAL_API_SECRET ? { 'x-internal-secret': process.env.INTERNAL_API_SECRET } : {}),
+      },
+      body: JSON.stringify({ type, to: order.customer_email, data }),
     });
 
     console.log(`✅ Status email sent to ${order.customer_email} for status: ${order.status}`);

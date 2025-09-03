@@ -1,5 +1,4 @@
-import { Resend } from 'resend';
-import OrderReceiptEmail from '@/app/emails/OrderReceiptEmail';
+// Unified via /api/send-email using emails/OrderConfirmation template
 
 interface Session {
   id: string;
@@ -67,16 +66,26 @@ export default async function sendOrderEmail(session: Session, orderId: string) 
   //     ? `${session.metadata.customer_first_name} ${session.metadata.customer_last_name}`
   //     : session.customer_details?.name;
 
-  // Pošleme email s novým template
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
-    from: 'YEEZUZ2020 <noreply@yeezuz2020.store>',
-    to: session.customer_details.email,
-    subject: `Potvrzení objednávky ${orderId} - YEEZUZ2020`,
-    react: OrderReceiptEmail({
-      session: session as never,
-      items: normalizedItems,
-      orderId,
+  // Send via unified API to ensure single template source
+  await fetch(`${process.env.SITE_URL || ''}/api/send-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(process.env.INTERNAL_API_SECRET ? { 'x-internal-secret': process.env.INTERNAL_API_SECRET } : {}),
+    },
+    body: JSON.stringify({
+      type: 'order-confirmation',
+      to: session.customer_details.email,
+      data: {
+        orderId,
+        customerEmail: session.customer_details.email,
+        items: normalizedItems.map((i: { description: string; quantity: number; amount_total: number }) => ({
+          name: i.description,
+          qty: i.quantity,
+          price: `${(i.amount_total / 100).toFixed(2)} Kč`,
+        })),
+        total: `${((session.amount_total || 0) / 100).toFixed(2)} Kč`,
+      },
     }),
   });
 

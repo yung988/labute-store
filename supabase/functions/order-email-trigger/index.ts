@@ -57,7 +57,14 @@ Deno.serve(async (req: Request) => {
 
     // Handle new orders (INSERT)
     if (payload.type === 'INSERT') {
-      await sendOrderConfirmationEmail(record);
+      await callUnifiedEmailAPI('order-confirmation', record.customer_email, {
+        orderId: record.id,
+        customerEmail: record.customer_email,
+        items: Array.isArray(record.items)
+          ? record.items.map((it: any) => ({ name: it.name || 'Položka', qty: it.quantity || 1, price: it.price || '' }))
+          : [],
+        total: formatPrice(record.amount_total) + ' Kč',
+      });
       await sendTelegramNotification(
         `🛒 Nová objednávka!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\nEmail: ${record.customer_email}\nCelkem: ${formatPrice(record.amount_total)} Kč\n\n✉️ Potvrzovací email odeslán.`
       );
@@ -77,7 +84,14 @@ Deno.serve(async (req: Request) => {
 
       // Check if tracking info was added
       if (record.packeta_tracking_url && !oldRecord?.packeta_tracking_url) {
-        await sendShippingEmail(record);
+        await callUnifiedEmailAPI('shipping-confirmation', record.customer_email, {
+          orderId: record.id,
+          trackingUrl: record.packeta_tracking_url,
+          trackingNumber: record.packeta_shipment_id || undefined,
+          customerName: record.customer_name || undefined,
+          customerEmail: record.customer_email,
+          carrierName: 'Packeta',
+        });
         await sendTelegramNotification(
           `📦 Objednávka odeslána!\n\nID: #${record.id.slice(-8)}\nZákazník: ${record.customer_name || 'Neznámý'}\n\n🚚 Sledování: ${record.packeta_tracking_url}\n${record.packeta_shipment_id ? `📋 Číslo zásilky: ${record.packeta_shipment_id}\n` : ''}\n✉️ Tracking email odeslán.`
         );
@@ -113,56 +127,9 @@ async function sendOrderConfirmationEmail(order: OrderRecord) {
   });
 }
 
-async function sendOrderStatusEmail(order: OrderRecord, oldStatus: string) {
-  const statusMessages = {
-    new: 'Nová objednávka',
-    paid: 'Zaplaceno',
-    processing: 'Zpracovává se',
-    shipped: 'Odesláno',
-    delivered: 'Doručeno',
-    cancelled: 'Zrušeno',
-  };
+// removed old sendOrderStatusEmail (handled by unified API)
 
-  const emailHtml = generateStatusUpdateEmail(order, oldStatus, statusMessages);
-
-  const result = await sendEmail({
-    to: order.customer_email,
-    subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
-    html: emailHtml,
-  });
-
-  await logEmail({
-    order_id: order.id,
-    customer_email: order.customer_email,
-    email_type: 'status',
-    subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
-    status: 'sent',
-    provider: 'resend',
-    provider_id: result?.id || null,
-    metadata: { trigger: 'edge-status' },
-  });
-}
-
-async function sendShippingEmail(order: OrderRecord) {
-  const emailHtml = generateShippingEmail(order);
-
-  const result = await sendEmail({
-    to: order.customer_email,
-    subject: `Vaše objednávka byla odeslána #${order.id.slice(-8)}`,
-    html: emailHtml,
-  });
-
-  await logEmail({
-    order_id: order.id,
-    customer_email: order.customer_email,
-    email_type: 'shipping',
-    subject: `Vaše objednávka byla odeslána #${order.id.slice(-8)}`,
-    status: 'sent',
-    provider: 'resend',
-    provider_id: result?.id || null,
-    metadata: { trigger: 'edge-shipping' },
-  });
-}
+// removed old sendShippingEmail (handled by unified API)
 
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   const response = await fetch('https://api.resend.com/emails', {
@@ -244,6 +211,7 @@ async function sendTelegramNotification(message: string) {
   }
 }
 
+/*
 function generateOrderConfirmationEmail(order: OrderRecord): string {
   const items = Array.isArray(order.items) ? order.items : [];
   const itemsHtml = items
@@ -344,7 +312,9 @@ function generateOrderConfirmationEmail(order: OrderRecord): string {
     </html>
   `;
 }
+*/
 
+/*
 function generateStatusUpdateEmail(
   order: OrderRecord,
   oldStatus: string,
@@ -417,7 +387,9 @@ function generateStatusUpdateEmail(
     </html>
   `;
 }
+*/
 
+/*
 function generateShippingEmail(order: OrderRecord): string {
   return `
     <!DOCTYPE html>
@@ -515,3 +487,4 @@ function getStatusText(status: string): string {
 
   return statusMap[status] || status;
 }
+*/

@@ -14,13 +14,16 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email type definitions
-type EmailType = 'order-confirmation' | 'shipping-confirmation' | 'delivered-confirmation';
 
-interface EmailRequest {
-  type: EmailType;
-  to: string;
-  data: OrderConfirmationProps | ShippingConfirmationProps | DeliveredConfirmationProps;
-}
+type EmailRequest =
+  | { type: 'order-confirmation'; to: string; data: OrderConfirmationProps }
+  | { type: 'shipping-confirmation'; to: string; data: ShippingConfirmationProps }
+  | { type: 'delivered-confirmation'; to: string; data: DeliveredConfirmationProps }
+  | {
+      type: 'status-update';
+      to: string;
+      data: { orderId: string; status: string; customerName?: string; customerEmail: string; items?: unknown[] };
+    };
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +34,11 @@ export async function POST(request: NextRequest) {
 
     const body: EmailRequest = await request.json();
     const { type, to, data } = body;
+
+    // Optional internal auth for server-to-server calls
+    const internalSecret = request.headers.get('x-internal-secret');
+    const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
+    const isInternal = INTERNAL_API_SECRET && internalSecret === INTERNAL_API_SECRET;
 
     // Validate request
     if (!type || !to || !data) {
@@ -73,11 +81,29 @@ export async function POST(request: NextRequest) {
         orderId = deliveredData.orderId;
         break;
 
+      case 'status-update': {
+        const d = data as { orderId: string; status: string; customerName?: string; customerEmail: string; items?: unknown[] };
+        const { StatusUpdate } = await import('@/emails');
+        emailComponent = StatusUpdate({
+          orderId: d.orderId,
+          status: d.status as string,
+          customerName: d.customerName,
+          customerEmail: d.customerEmail,
+          items: Array.isArray(d.items)
+            ? (d.items as Array<{ name?: string; quantity?: number; size?: string; color?: string }>).
+                map((it) => ({ name: it.name, quantity: it.quantity, size: it.size, color: it.color }))
+            : [],
+        });
+        subject = `Změna stavu objednávky #${d.orderId.slice(-8)}`;
+        orderId = d.orderId;
+        break;
+      }
+
       default:
         return NextResponse.json(
           {
             error:
-              'Invalid email type. Must be: order-confirmation, shipping-confirmation, or delivered-confirmation',
+              'Invalid email type. Must be: order-confirmation, shipping-confirmation, delivered-confirmation, or status-update',
           },
           { status: 400 }
         );
@@ -92,6 +118,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'X-Order-ID': orderId,
         'X-Email-Type': type,
+        ...(isInternal ? { 'X-Internal': 'true' } : {}),
       },
     });
 
