@@ -9,7 +9,7 @@ import { hasEnvVars } from '../utils';
 export interface AdminUser {
   id: string;
   email: string;
-  role: 'admin' | 'superadmin';
+  role: 'admin' | 'superadmin' | 'shopmanager';
   user_metadata?: Record<string, any>;
   app_metadata?: Record<string, any>;
 }
@@ -23,10 +23,13 @@ export function isAdminUser(user: unknown): user is AdminUser {
       typeof u.email === 'string' &&
       (u.role === 'admin' ||
         u.role === 'superadmin' ||
+        u.role === 'shopmanager' ||
         (u.user_metadata as Record<string, unknown>)?.role === 'admin' ||
         (u.user_metadata as Record<string, unknown>)?.role === 'superadmin' ||
+        (u.user_metadata as Record<string, unknown>)?.role === 'shopmanager' ||
         (u.app_metadata as Record<string, unknown>)?.role === 'admin' ||
-        (u.app_metadata as Record<string, unknown>)?.role === 'superadmin')
+        (u.app_metadata as Record<string, unknown>)?.role === 'superadmin' ||
+        (u.app_metadata as Record<string, unknown>)?.role === 'shopmanager')
   );
 }
 
@@ -38,10 +41,13 @@ export function verifyAdminRoleFromClaims(claims: unknown): boolean {
   const roleChecks = [
     c.role === 'admin',
     c.role === 'superadmin',
+    c.role === 'shopmanager',
     (c.user_metadata as Record<string, unknown>)?.role === 'admin',
     (c.user_metadata as Record<string, unknown>)?.role === 'superadmin',
+    (c.user_metadata as Record<string, unknown>)?.role === 'shopmanager',
     (c.app_metadata as Record<string, unknown>)?.role === 'admin',
     (c.app_metadata as Record<string, unknown>)?.role === 'superadmin',
+    (c.app_metadata as Record<string, unknown>)?.role === 'shopmanager',
   ];
 
   return roleChecks.some((check) => check === true);
@@ -91,9 +97,13 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
     const user = data.user;
 
     // Check admin role in user metadata
-    const userRole = user.user_metadata?.role || user.app_metadata?.role;
+    const userRole = (user.user_metadata?.role || user.app_metadata?.role) as
+      | 'admin'
+      | 'superadmin'
+      | 'shopmanager'
+      | undefined;
 
-    if (userRole !== 'admin' && userRole !== 'superadmin' && userRole !== 'shopmanager') {
+    if (!userRole || !['admin', 'superadmin', 'shopmanager'].includes(userRole)) {
       return { isValid: false, error: 'Insufficient permissions - admin role required' };
     }
 
@@ -101,7 +111,7 @@ export async function verifyAdminAccess(request: NextRequest): Promise<{
     const adminUser: AdminUser = {
       id: user.id,
       email: user.email || '',
-      role: 'admin',
+      role: userRole,
       user_metadata: user.user_metadata,
       app_metadata: user.app_metadata,
     };

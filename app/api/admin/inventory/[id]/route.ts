@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params;
+export const PATCH = withAdminAuth(async (req: NextRequest) => {
+  const url = new URL(req.url);
+  const id = url.pathname.split('/').pop();
   const body = await req.json();
   const { size, stock } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: 'Product ID required' }, { status: 400 });
+  }
 
   try {
     // Update stock for specific size of product
@@ -24,4 +30,4 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   } catch {
     return NextResponse.json({ error: 'Failed to update stock' }, { status: 500 });
   }
-}
+});

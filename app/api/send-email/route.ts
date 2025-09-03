@@ -9,6 +9,7 @@ import {
   type ShippingConfirmationProps,
   type DeliveredConfirmationProps,
 } from '@/emails';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -93,6 +94,24 @@ export async function POST(request: NextRequest) {
         'X-Email-Type': type,
       },
     });
+
+    // Log email to email_logs (best-effort)
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const providerId = (emailResponse as any)?.data?.id || null;
+      await supabaseAdmin.from('email_logs').insert({
+        order_id: orderId || null,
+        customer_email: to,
+        email_type: type,
+        subject,
+        status: 'sent',
+        provider: 'resend',
+        provider_id: providerId,
+        metadata: { trigger: 'app-api' },
+      });
+    } catch (e) {
+      console.warn('Email log insertion failed (non-blocking):', e);
+    }
 
     if (emailResponse.error) {
       console.error('Resend error:', emailResponse.error);

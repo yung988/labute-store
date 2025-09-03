@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
 import sendOrderStatusEmail from '@/lib/stripe/send-status-email';
 import { Resend } from 'resend';
 import OrderReceiptEmail from '@/app/emails/OrderReceiptEmail';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
-}
-
-export async function POST(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const unauthorized = await requireAuth();
-  if (unauthorized) return unauthorized;
-
+export const POST = withAdminAuth(async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
-  const body = await _req.json();
-  const { type } = body; // 'receipt' or 'status'
+  const body = await req.json();
+  const { type } = body as { type: 'receipt' | 'status' };
 
   try {
     // Get order data
@@ -53,26 +41,22 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
       items = [];
     }
 
+    let providerId: string | null = null;
+
     if (type === 'receipt') {
       // Resend order confirmation email
-      await resend.emails.send({
+      const res = await resend.emails.send({
         from: 'noreply@yeezuz2020.store',
         to: order.customer_email,
         subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
         react: OrderReceiptEmail({
           session: {
             id: order.id,
-            customer_details: {
-              email: order.customer_email,
-            },
+            customer_details: { email: order.customer_email },
             amount_total: order.amount_total,
           },
           items: items.map((item: unknown) => {
-            const typedItem = item as {
-              description?: string;
-              quantity?: number;
-              amount_total?: number;
-            };
+            const typedItem = item as { description?: string; quantity?: number; amount_total?: number };
             return {
               description: typedItem.description || 'Unknown item',
               quantity: typedItem.quantity || 1,
@@ -80,6 +64,20 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
             };
           }),
         }),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      providerId = (res as any)?.data?.id || null;
+
+      // Log email
+      await supabaseAdmin.from('email_logs').insert({
+        order_id: order.id,
+        customer_email: order.customer_email,
+        email_type: 'order_confirmation',
+        subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
+        status: 'sent',
+        provider: 'resend',
+        provider_id: providerId,
+        metadata: { trigger: 'admin-resend' },
       });
     } else if (type === 'status') {
       // Resend status email
@@ -90,6 +88,17 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
         status: order.status,
         items: items,
         packeta_shipment_id: order.packeta_shipment_id,
+      });
+
+      await supabaseAdmin.from('email_logs').insert({
+        order_id: order.id,
+        customer_email: order.customer_email,
+        email_type: 'status',
+        subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
+        status: 'sent',
+        provider: 'resend',
+        provider_id: providerId,
+        metadata: { trigger: 'admin-resend' },
       });
     } else {
       return NextResponse.json(
@@ -115,4 +124,4 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
     console.error('Error resending email:', error);
     return NextResponse.json({ error: 'Failed to resend email' }, { status: 500 });
   }
-}
+});

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-export async function POST(req: NextRequest) {
+export const POST = withAdminAuth(async (req: NextRequest) => {
   // Check if Packeta API is temporarily disabled
   if (process.env.PACKETA_API_DISABLED === 'true') {
     return NextResponse.json(
@@ -474,4 +475,4 @@ export async function POST(req: NextRequest) {
     deliveryMethod: order.delivery_method,
     message: `${deliveryTypeText} shipment created successfully with Packeta ID: ${packetaId} (Customer tracking: ${trackingId})`,
   });
-}
+});

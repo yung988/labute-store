@@ -95,10 +95,21 @@ Deno.serve(async (req: Request) => {
 async function sendOrderConfirmationEmail(order: OrderRecord) {
   const emailHtml = generateOrderConfirmationEmail(order);
 
-  await sendEmail({
+  const result = await sendEmail({
     to: order.customer_email,
     subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
     html: emailHtml,
+  });
+
+  await logEmail({
+    order_id: order.id,
+    customer_email: order.customer_email,
+    email_type: 'order_confirmation',
+    subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
+    status: 'sent',
+    provider: 'resend',
+    provider_id: result?.id || null,
+    metadata: { trigger: 'edge-insert' },
   });
 }
 
@@ -114,20 +125,42 @@ async function sendOrderStatusEmail(order: OrderRecord, oldStatus: string) {
 
   const emailHtml = generateStatusUpdateEmail(order, oldStatus, statusMessages);
 
-  await sendEmail({
+  const result = await sendEmail({
     to: order.customer_email,
     subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
     html: emailHtml,
+  });
+
+  await logEmail({
+    order_id: order.id,
+    customer_email: order.customer_email,
+    email_type: 'status',
+    subject: `Změna stavu objednávky #${order.id.slice(-8)}`,
+    status: 'sent',
+    provider: 'resend',
+    provider_id: result?.id || null,
+    metadata: { trigger: 'edge-status' },
   });
 }
 
 async function sendShippingEmail(order: OrderRecord) {
   const emailHtml = generateShippingEmail(order);
 
-  await sendEmail({
+  const result = await sendEmail({
     to: order.customer_email,
     subject: `Vaše objednávka byla odeslána #${order.id.slice(-8)}`,
     html: emailHtml,
+  });
+
+  await logEmail({
+    order_id: order.id,
+    customer_email: order.customer_email,
+    email_type: 'shipping',
+    subject: `Vaše objednávka byla odeslána #${order.id.slice(-8)}`,
+    status: 'sent',
+    provider: 'resend',
+    provider_id: result?.id || null,
+    metadata: { trigger: 'edge-shipping' },
   });
 }
 
@@ -153,7 +186,28 @@ async function sendEmail({ to, subject, html }: { to: string; subject: string; h
 
   const result = await response.json();
   console.log('Email sent successfully:', result);
-  return result;
+  return result as { id?: string };
+}
+
+async function logEmail(entry: {
+  order_id: string;
+  customer_email: string;
+  email_type: string;
+  subject: string;
+  status: string;
+  provider: string;
+  provider_id: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+    global: { headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } },
+    auth: { persistSession: false },
+  });
+
+  const { error } = await supabase.from('email_logs').insert(entry);
+  if (error) {
+    console.error('Failed to log email:', error);
+  }
 }
 
 async function sendTelegramNotification(message: string) {
