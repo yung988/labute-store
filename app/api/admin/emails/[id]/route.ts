@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { withAdminAuth } from '@/lib/middleware/admin-verification';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
-export const GET = withAdminAuth(async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAdminAuthWithParams(async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const { data, error } = await supabaseAdmin.from('email_logs').select('*').eq('id', id).single();

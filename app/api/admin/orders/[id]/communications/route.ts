@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { withAdminAuth } from '@/lib/middleware/admin-verification';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
-export const GET = withAdminAuth(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAdminAuthWithParams(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
 
     // Load order to make sure it exists
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('id, customer_email, customer_name, status, created_at')
+      .select('id, customer_email, customer_name, status, created_at, updated_at, packeta_shipment_id, packeta_tracking_url')
       .eq('id', id)
       .single();
 

@@ -3,11 +3,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import sendOrderStatusEmail from '@/lib/stripe/send-status-email';
 import { Resend } from 'resend';
 import OrderReceiptEmail from '@/app/emails/OrderReceiptEmail';
-import { withAdminAuth } from '@/lib/middleware/admin-verification';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const POST = withAdminAuth(async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
+export const POST = withAdminAuthWithParams(async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const body = await req.json();
   const { type } = body as { type: 'receipt' | 'status' };

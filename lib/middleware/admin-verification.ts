@@ -155,6 +155,34 @@ export function withAdminAuth(
   };
 }
 
+// Variant supporting Next.js route handlers with params/context
+export function withAdminAuthWithParams<TContext = unknown>(
+  handler: (request: NextRequest, context: TContext, user: AdminUser) => Promise<NextResponse>
+) {
+  return async (request: NextRequest, context: TContext): Promise<NextResponse> => {
+    const verification = await verifyAdminAccess(request);
+
+    if (!verification.isValid) {
+      return NextResponse.json(
+        {
+          error: verification.error || 'Unauthorized',
+          code: 'ADMIN_ACCESS_DENIED',
+        },
+        { status: 403 }
+      );
+    }
+
+    if (!verification.user) {
+      return NextResponse.json(
+        { error: 'Admin user not found', code: 'ADMIN_USER_MISSING' },
+        { status: 403 }
+      );
+    }
+
+    return handler(request, context, verification.user);
+  };
+}
+
 /**
  * Utility function to create admin redirect response
  */

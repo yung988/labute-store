@@ -27,7 +27,6 @@ import {
   User,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -84,39 +83,6 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
   const [composeOrderId, setComposeOrderId] = useState('');
   const [composeSending, setComposeSending] = useState(false);
 
-  const sendComposedEmail = useCallback(async () => {
-    try {
-      setComposeSending(true);
-      const res = await fetch('/api/admin/emails/compose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: composeTo,
-          subject: composeSubject,
-          html: composeBody,
-          email_type: 'support_reply',
-          order_id: composeOrderId || null,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-
-      setShowCompose(false);
-      setComposeTo('');
-      setComposeSubject('');
-      setComposeBody('');
-      setComposeOrderId('');
-
-      await loadEmails();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to send email');
-    } finally {
-      setComposeSending(false);
-    }
-  }, [composeTo, composeSubject, composeBody, composeOrderId, loadEmails, setShowCompose, setComposeTo, setComposeSubject, setComposeBody, setComposeOrderId, setComposeSending]);
 
   // Mock data fallback (when API not available)
   const mockEmails: EmailLog[] = useMemo(() => [
@@ -189,6 +155,40 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
   useEffect(() => {
     loadEmails();
   }, [loadEmails]);
+
+  const sendComposedEmail = useCallback(async () => {
+    try {
+      setComposeSending(true);
+      const res = await fetch('/api/admin/emails/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: composeTo,
+          subject: composeSubject,
+          html: composeBody,
+          email_type: 'support_reply',
+          order_id: composeOrderId || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      setShowCompose(false);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      setComposeOrderId('');
+
+      await loadEmails();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to send email');
+    } finally {
+      setComposeSending(false);
+    }
+  }, [composeTo, composeSubject, composeBody, composeOrderId, loadEmails]);
 
   const filteredEmails = useMemo(() => {
     let filtered = emails;
@@ -533,7 +533,7 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
             <Input placeholder="Příjemce (email)" value={composeTo} onChange={(e) => setComposeTo(e.target.value)} />
             <Input placeholder="Objednávka (volitelné, číslo)" value={composeOrderId} onChange={(e) => setComposeOrderId(e.target.value)} />
             <Input placeholder="Předmět" value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} />
-            <Textarea rows={10} placeholder="HTML obsah emailu" value={composeBody} onChange={(e) => setComposeBody(e.target.value)} />
+            <textarea rows={10} placeholder="HTML obsah emailu" value={composeBody} onChange={(e) => setComposeBody(e.target.value)} className="w-full border rounded-md p-2" />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowCompose(false)} disabled={composeSending}>Zavřít</Button>
               <Button onClick={sendComposedEmail} disabled={composeSending || !composeTo || !composeSubject || !composeBody}>
