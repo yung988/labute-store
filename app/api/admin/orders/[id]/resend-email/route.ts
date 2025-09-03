@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import sendOrderStatusEmail from '@/lib/stripe/send-status-email';
-import { Resend } from 'resend';
-import OrderReceiptEmail from '@/app/emails/OrderReceiptEmail';
+// Resend via unified /api/send-email and unified templates
 import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const POST = withAdminAuthWithParams(async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
@@ -44,29 +42,29 @@ export const POST = withAdminAuthWithParams(async (req: NextRequest, context: { 
     let providerId: string | null = null;
 
     if (type === 'receipt') {
-      // Resend order confirmation email
-      const res = await resend.emails.send({
-        from: 'noreply@yeezuz2020.store',
-        to: order.customer_email,
-        subject: `Potvrzení objednávky #${order.id.slice(-8)}`,
-        react: OrderReceiptEmail({
-          session: {
-            id: order.id,
-            customer_details: { email: order.customer_email },
-            amount_total: order.amount_total,
+      // Resend order confirmation email via unified API
+      const resp = await fetch(`${process.env.SITE_URL || ''}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'order-confirmation',
+          to: order.customer_email,
+          data: {
+            orderId: order.id,
+            customerEmail: order.customer_email,
+            items: items.map((i: unknown) => {
+              const it = i as { description?: string; quantity?: number; amount_total?: number };
+              return {
+                name: it.description || 'Položka',
+                qty: it.quantity || 1,
+                price: `${(((it.amount_total || 0) as number) / 100).toFixed(2)} Kč`,
+              };
+            }),
+            total: `${((order.amount_total || 0) / 100).toFixed(2)} Kč`,
           },
-          items: items.map((item: unknown) => {
-            const typedItem = item as { description?: string; quantity?: number; amount_total?: number };
-            return {
-              description: typedItem.description || 'Unknown item',
-              quantity: typedItem.quantity || 1,
-              amount_total: typedItem.amount_total || 0,
-            };
-          }),
         }),
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      providerId = (res as any)?.data?.id || null;
+      providerId = (await resp.json())?.id || null;
 
       // Log email
       await supabaseAdmin.from('email_logs').insert({

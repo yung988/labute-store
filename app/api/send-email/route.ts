@@ -35,10 +35,6 @@ export async function POST(request: NextRequest) {
     const body: EmailRequest = await request.json();
     const { type, to, data } = body;
 
-    // Optional internal auth for server-to-server calls
-    const internalSecret = request.headers.get('x-internal-secret');
-    const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
-    const isInternal = INTERNAL_API_SECRET && internalSecret === INTERNAL_API_SECRET;
 
     // Validate request
     if (!type || !to || !data) {
@@ -118,7 +114,6 @@ export async function POST(request: NextRequest) {
       headers: {
         'X-Order-ID': orderId,
         'X-Email-Type': type,
-        ...(isInternal ? { 'X-Internal': 'true' } : {}),
       },
     });
 

@@ -71,7 +71,6 @@ export default async function sendOrderEmail(session: Session, orderId: string) 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(process.env.INTERNAL_API_SECRET ? { 'x-internal-secret': process.env.INTERNAL_API_SECRET } : {}),
     },
     body: JSON.stringify({
       type: 'order-confirmation',

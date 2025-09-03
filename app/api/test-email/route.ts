@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
-
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Uses unified /api/send-email endpoint
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Create test order data
+    // Create test order data (for logging/response only)
     const order = {
       id: orderId,
       customer_email: email,
@@ -23,8 +20,8 @@ export async function POST(request: NextRequest) {
       status: 'paid',
     };
 
-    // Send confirmation email
-    const emailHtml = `
+    // Legacy HTML removed; using unified API
+    /*
       <!DOCTYPE html>
       <html>
         <head>
@@ -69,26 +66,38 @@ export async function POST(request: NextRequest) {
           </div>
         </body>
       </html>
-    `;
+    */
 
-    const { data, error } = await resend.emails.send({
-      from: 'YEEZUZ2020 <noreply@yeezuz2020.store>',
-      to: [email],
-      subject: `[TEST] Potvrzení objednávky ${order.id} - YEEZUZ2020`,
-      html: emailHtml,
+    const resp = await fetch(`${process.env.SITE_URL || ''}/api/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'order-confirmation',
+        to: email,
+        data: {
+          orderId: order.id,
+          customerEmail: email,
+          items: [
+            { name: 'Test Tričko', qty: 1, price: '500 Kč' },
+            { name: 'Test Mikina', qty: 1, price: '1,200 Kč' },
+          ],
+          total: '1,700 Kč',
+        },
+      }),
     });
 
-    if (error) {
-      console.error('Error sending test email:', error);
-      return NextResponse.json({ error: 'Failed to send email', details: error }, { status: 500 });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error('Error sending test email:', errorText);
+      return NextResponse.json({ error: 'Failed to send email', details: errorText }, { status: resp.status });
     }
 
-    console.log('Test email sent successfully:', data);
+    const data = await resp.json();
 
     return NextResponse.json({
       success: true,
       message: 'Test email sent successfully',
-      data: data,
+      data,
       testData: order,
     });
   } catch (error) {

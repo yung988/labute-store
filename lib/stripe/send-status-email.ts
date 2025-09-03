@@ -7,6 +7,8 @@ interface OrderData {
   status: string;
   items?: unknown[];
   packeta_shipment_id?: string | null;
+  packeta_tracking_url?: string | null;
+  delivery_method?: string | null;
 }
 
 export default async function sendOrderStatusEmail(order: OrderData, previousStatus?: string) {
@@ -60,18 +62,20 @@ export default async function sendOrderStatusEmail(order: OrderData, previousSta
 
     if (order.status === 'shipped') {
       type = 'shipping-confirmation';
-      // Additional shipping props can be fetched or passed if available (tracking URL etc.)
-      data.trackingUrl = '';
+      data.trackingUrl = order.packeta_tracking_url || undefined;
+      data.trackingNumber = order.packeta_shipment_id || undefined;
+      data.carrierName = order.delivery_method?.toLowerCase().includes('packeta') ? 'Packeta' : undefined;
     } else if (order.status === 'delivered') {
       type = 'delivered-confirmation';
-      data.feedbackUrl = '';
+      // If you have a real feedback URL pattern, replace below generator
+      const base = process.env.SITE_URL || '';
+      data.feedbackUrl = base ? `${base}/review/${order.id}` : undefined;
     }
 
     await fetch(`${process.env.SITE_URL || ''}/api/send-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(process.env.INTERNAL_API_SECRET ? { 'x-internal-secret': process.env.INTERNAL_API_SECRET } : {}),
       },
       body: JSON.stringify({ type, to: order.customer_email, data }),
     });
