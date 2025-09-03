@@ -28,8 +28,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 
 // Lazy load admin components
-const ConsolidatedOrdersTable = React.lazy(
-  () => import('@/components/admin/ConsolidatedOrdersTable')
+const OrdersTable = React.lazy(
+  () => import('@/components/admin/OrdersTable')
 );
 const PacketaManagement = React.lazy(() => import('@/components/admin/PacketaManagement'));
 const OrderDetailView = React.lazy(() => import('@/components/admin/OrderDetailView'));
@@ -149,7 +149,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <SidebarProvider defaultOpen={true}>
         <AppSidebar currentSection={currentSection} onNavigateAction={handleSidebarNavigate} />
-        <SidebarInset className="relative z-10 ml-64">
+        <SidebarInset>
           <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
@@ -195,7 +195,7 @@ export default function AdminPage() {
           </header>
 
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            <div className="md:hidden mb-4">
+            <div className="mb-4">
               <CommandPaletteTrigger
                 onNavigate={(section, orderId) =>
                   navigateToSection(section as AdminSection, orderId)
@@ -212,12 +212,9 @@ export default function AdminPage() {
 
               {currentSection === 'orders' && (
                 <div>
-                  <h2 className="text-3xl font-bold mb-6">Konsolidované objednávky</h2>
+                  <h2 className="text-3xl font-bold mb-6">Objednávky</h2>
                   <Suspense fallback={<LoadingSpinner />}>
-                    <ConsolidatedOrdersTable
-                      onOrderClick={handleOrderClick}
-                      onCommunicateWith={handleOrderClick}
-                    />
+                    <OrdersTable onOrderClick={handleOrderClick} />
                   </Suspense>
                 </div>
               )}

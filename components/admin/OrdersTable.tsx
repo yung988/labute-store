@@ -460,6 +460,32 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
     );
   }
 
+  const exportCsv = (rows: Order[]) => {
+    const header = [
+      'id','customer_email','customer_name','status','amount_total','shipping_amount','created_at','delivery_method','packeta_point_id','packeta_shipment_id'
+    ];
+    const body = rows.map((o) => [
+      o.id,
+      o.customer_email || '',
+      o.customer_name || '',
+      o.status,
+      o.amount_total ?? '',
+      o.shipping_amount ?? '',
+      o.created_at,
+      o.delivery_method || '',
+      o.packeta_point_id || '',
+      o.packeta_shipment_id || ''
+    ]);
+    const csv = [header, ...body].map(r => r.map(x => typeof x === 'string' && x.includes(',') ? `"${x.replaceAll('"','""')}"` : x).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -535,9 +561,9 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Obnovit
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => exportCsv(filteredAndSortedOrders)}>
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                Export CSV
               </Button>
             </div>
           </CardTitle>
@@ -655,12 +681,16 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                       <ContextMenu key={order.id}>
                         <ContextMenuTrigger asChild>
                           <TableRow
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onOrderClick?.(order.id);
+                              }
+                            }}
                             className={`hover:bg-muted/50 cursor-pointer ${selectedOrders.has(order.id) ? 'bg-muted/30' : ''}`}
                             onClick={(e) => {
-                              // Don't trigger row click if clicking on checkbox
-                              if ((e.target as HTMLElement).closest('[role="checkbox"]')) {
-                                return;
-                              }
+                              if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
                               onOrderClick?.(order.id);
                             }}
                           >

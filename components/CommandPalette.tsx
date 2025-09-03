@@ -4,9 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Command } from 'cmdk';
 import {
   Search,
-  Package,
   ShoppingCart,
-  Users,
   BarChart3,
   Truck,
   Mail,
@@ -97,18 +95,11 @@ export default function CommandPalette({ open, onOpenChange, onNavigate }: Comma
       onSelect: () => onNavigate('orders'),
     },
     {
-      id: 'inventory',
-      title: 'Sklad',
-      description: 'Správa skladových zásob',
-      icon: Package,
-      onSelect: () => onNavigate('inventory'),
-    },
-    {
-      id: 'customers',
-      title: 'Zákazníci',
-      description: 'Komunikace se zákazníky',
-      icon: Users,
-      onSelect: () => onNavigate('customers'),
+      id: 'emails',
+      title: 'Emaily',
+      description: 'Zobrazit emailovou komunikaci',
+      icon: Mail,
+      onSelect: () => onNavigate('emails'),
     },
     {
       id: 'packeta',
