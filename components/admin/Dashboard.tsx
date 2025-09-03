@@ -6,8 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   BarChart3,
   ShoppingCart,
-  Users,
-  TrendingUp,
   Package,
   Truck,
   DollarSign,
@@ -21,7 +19,6 @@ import {
   Eye,
   ArrowRight,
   Bell,
-  Zap,
   Calendar,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -67,7 +64,7 @@ type DashboardStats = {
 
 type NavigationProps = {
   onNavigateAction: (
-    section: 'dashboard' | 'orders' | 'inventory' | 'packeta' | 'customers' | 'order-detail',
+    section: 'dashboard' | 'orders' | 'packeta' | 'order-detail',
     orderId?: string
   ) => void;
 };
@@ -374,31 +371,6 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {stats.alerts.lowStock.length > 0 && (
-              <Card className="border-orange-200 bg-orange-50/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-orange-800">
-                    Nízké zásoby
-                  </CardTitle>
-                  <Package className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-900">
-                    {stats.alerts.lowStock.length}
-                  </div>
-                  <p className="text-xs text-orange-700">produktů má nízké zásoby</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-3 w-full text-orange-700 border-orange-300 hover:bg-orange-100"
-                    onClick={() => onNavigateAction('inventory')}
-                  >
-                    Zobrazit sklad
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
             {stats.alerts.oldOrders.length > 0 && (
               <Card className="border-red-200 bg-red-50/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -468,7 +440,7 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
       )}
 
       {/* Main Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card
           className="cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => onNavigateAction('orders')}
@@ -499,50 +471,6 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
                 </div>
               </div>
               <DollarSign className="w-8 h-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => onNavigateAction('customers')}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">{stats.totalCustomers}</div>
-                <div className="text-sm text-muted-foreground">Zákazníci</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-8 h-8 text-purple-600" />
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => onNavigateAction('inventory')}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">{stats.recentOrders}</div>
-                <div className="text-sm text-muted-foreground">Posledních 7 dní</div>
-                {stats.alerts.lowStock.length > 0 && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Zap className="w-3 h-3 text-orange-500" />
-                    <span className="text-xs text-orange-600">
-                      {stats.alerts.lowStock.length} nízké zásoby
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-8 h-8 text-orange-600" />
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </div>
             </div>
           </CardContent>
         </Card>

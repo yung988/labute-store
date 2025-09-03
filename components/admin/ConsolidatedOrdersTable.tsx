@@ -31,7 +31,6 @@ import {
   Printer,
   MessageSquare,
   ExternalLink,
-  Calendar,
   CreditCard,
 } from 'lucide-react';
 import {
@@ -94,8 +93,6 @@ export default function ConsolidatedOrdersTable({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [deliveryFilter, setDeliveryFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
 
   const loadOrders = useCallback(async () => {
@@ -140,27 +137,10 @@ export default function ConsolidatedOrdersTable({
         query = query.eq('status', statusFilter);
       }
 
-      if (deliveryFilter !== 'all') {
-        query = query.eq('delivery_method', deliveryFilter);
-      }
-
       if (searchQuery.trim()) {
         query = query.or(
           `id.ilike.%${searchQuery}%,customer_name.ilike.%${searchQuery}%,customer_email.ilike.%${searchQuery}%,customer_phone.ilike.%${searchQuery}%`
         );
-      }
-
-      // Date filter
-      const now = new Date();
-      if (dateFilter === 'today') {
-        const startOfDay = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-        query = query.gte('created_at', startOfDay);
-      } else if (dateFilter === 'week') {
-        const startOfWeek = new Date(now.setDate(now.getDate() - 7)).toISOString();
-        query = query.gte('created_at', startOfWeek);
-      } else if (dateFilter === 'month') {
-        const startOfMonth = new Date(now.setDate(now.getDate() - 30)).toISOString();
-        query = query.gte('created_at', startOfMonth);
       }
 
       const { data, error } = await query;
@@ -186,7 +166,7 @@ export default function ConsolidatedOrdersTable({
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, deliveryFilter, dateFilter, searchQuery]);
+  }, [statusFilter, searchQuery]);
 
   useEffect(() => {
     loadOrders();
@@ -286,22 +266,32 @@ export default function ConsolidatedOrdersTable({
 
   StatusBadge.displayName = 'StatusBadge';
 
-  const statuses = [
-    'new',
-    'paid',
-    'processing',
-    'shipped',
-    'delivered',
-    'cancelled',
-    'refunded',
-  ] as const;
+  const statuses = useMemo(
+    () => [
+      'new',
+      'paid',
+      'processing',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'refunded',
+    ] as const,
+    []
+  );
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: orders.length };
     statuses.forEach((status) => {
       counts[status] = orders.filter((o) => o.status === status).length;
     });
     return counts;
-  }, [orders]);
+  }, [orders, statuses]);
+
+  const handleRowClick = useCallback(
+    (orderId: string) => {
+      onOrderClick?.(orderId);
+    },
+    [onOrderClick]
+  );
 
   if (loading && orders.length === 0) {
     return (
@@ -381,7 +371,7 @@ export default function ConsolidatedOrdersTable({
         </CardHeader>
         <CardContent>
           {/* Enhanced Responsive Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -421,33 +411,6 @@ export default function ConsolidatedOrdersTable({
                     ({statusCounts[status]})
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            {/* Delivery Method Filter */}
-            <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
-              <SelectTrigger>
-                <Truck className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Doprava" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny</SelectItem>
-                <SelectItem value="home_delivery">Domů</SelectItem>
-                <SelectItem value="pickup_point">Výdejní místo</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Date Filter */}
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger>
-                <Calendar className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Období" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všechny</SelectItem>
-                <SelectItem value="today">Dnes</SelectItem>
-                <SelectItem value="week">Tento týden</SelectItem>
-                <SelectItem value="month">Tento měsíc</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -506,10 +469,7 @@ export default function ConsolidatedOrdersTable({
                   {orders.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        {searchQuery ||
-                        statusFilter !== 'all' ||
-                        deliveryFilter !== 'all' ||
-                        dateFilter !== 'all'
+                        {searchQuery || statusFilter !== 'all'
                           ? 'Žádné objednávky nenalezeny pro zadané filtry'
                           : 'Zatím žádné objednávky'}
                       </TableCell>
@@ -530,7 +490,16 @@ export default function ConsolidatedOrdersTable({
                       return (
                         <TableRow
                           key={order.id}
-                          className={`hover:bg-muted/50 touch-manipulation ${selectedOrders.has(order.id) ? 'bg-muted/30' : ''}`}
+                          className={`hover:bg-muted/50 touch-manipulation ${selectedOrders.has(order.id) ? 'bg-muted/30' : ''} cursor-pointer`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleRowClick(order.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleRowClick(order.id);
+                            }
+                          }}
                         >
                           {/* Sticky Checkbox */}
                           <TableCell
@@ -693,60 +662,94 @@ export default function ConsolidatedOrdersTable({
                             className="sticky right-0 bg-background z-10"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="w-4 h-4" />
+                            <div className="flex items-center gap-1">
+                              {/* Quick actions inline */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                title="Detail objednávky"
+                                onClick={() => onOrderClick?.(order.id)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+
+                              {order.packeta_point_id && order.status === 'paid' && !order.packeta_shipment_id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  title="Vytvořit zásilku"
+                                  onClick={() => createPacketaShipment(order.id)}
+                                >
+                                  <Package className="w-4 h-4" />
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => onOrderClick?.(order.id)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Detail objednávky
-                                </DropdownMenuItem>
+                              )}
 
-                                {onCommunicateWith && (
-                                  <DropdownMenuItem onClick={() => onCommunicateWith(order.id)}>
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    Komunikace
+                              {order.packeta_shipment_id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  title="Tisknout štítek"
+                                  onClick={() => printLabel(order.id)}
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              )}
+
+                              {/* Kebab menu for more actions */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => onOrderClick?.(order.id)}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Detail objednávky
                                   </DropdownMenuItem>
-                                )}
 
-                                <DropdownMenuSeparator />
+                                  {onCommunicateWith && (
+                                    <DropdownMenuItem onClick={() => onCommunicateWith(order.id)}>
+                                      <MessageSquare className="w-4 h-4 mr-2" />
+                                      Komunikace
+                                    </DropdownMenuItem>
+                                  )}
 
-                                {order.packeta_point_id &&
-                                  order.status === 'paid' &&
-                                  !order.packeta_shipment_id && (
-                                    <DropdownMenuItem
-                                      onClick={() => createPacketaShipment(order.id)}
-                                    >
+                                  <DropdownMenuSeparator />
+
+                                  {order.packeta_point_id && order.status === 'paid' && !order.packeta_shipment_id && (
+                                    <DropdownMenuItem onClick={() => createPacketaShipment(order.id)}>
                                       <Package className="w-4 h-4 mr-2" />
                                       Vytvořit zásilku
                                     </DropdownMenuItem>
                                   )}
 
-                                {order.packeta_shipment_id && (
-                                  <DropdownMenuItem onClick={() => printLabel(order.id)}>
-                                    <Printer className="w-4 h-4 mr-2" />
-                                    Tisknout štítek
-                                  </DropdownMenuItem>
-                                )}
+                                  {order.packeta_shipment_id && (
+                                    <DropdownMenuItem onClick={() => printLabel(order.id)}>
+                                      <Printer className="w-4 h-4 mr-2" />
+                                      Tisknout štítek
+                                    </DropdownMenuItem>
+                                  )}
 
-                                {order.stripe_session_id && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      window.open(
-                                        `https://dashboard.stripe.com/payments/${order.stripe_session_id}`,
-                                        '_blank'
-                                      )
-                                    }
-                                  >
-                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                    Stripe Dashboard
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  {order.stripe_session_id && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        window.open(
+                                          `https://dashboard.stripe.com/payments/${order.stripe_session_id}`,
+                                          '_blank'
+                                        )
+                                      }
+                                    >
+                                      <ExternalLink className="w-4 h-4 mr-2" />
+                                      Stripe Dashboard
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

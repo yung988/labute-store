@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 import { PDFDocument } from 'pdf-lib';
 
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
-}
-
-export async function POST(req: NextRequest) {
-  const unauthorized = await requireAuth();
-  if (unauthorized) return unauthorized;
+export const POST = withAdminAuth(async (req: NextRequest) => {
 
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
@@ -427,4 +416,4 @@ ${packetIds.map((id) => `    <id>${id}</id>`).join('\n')}
     console.error('Error bulk printing Packeta labels:', error);
     return NextResponse.json({ error: 'Failed to bulk print labels' }, { status: 500 });
   }
-}
+});

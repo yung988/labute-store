@@ -74,8 +74,18 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
   const [selectedEmail, setSelectedEmail] = useState<EmailDetail | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  // Mock data since we don't have email_logs table yet
-  const mockEmails: EmailLog[] = [
+  // Compose dialog state
+  // (defined once here at the top of the component)
+  const [showCompose, setShowCompose] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [composeOrderId, setComposeOrderId] = useState('');
+  const [composeSending, setComposeSending] = useState(false);
+
+
+  // Mock data fallback (when API not available)
+  const mockEmails: EmailLog[] = useMemo(() => [
     {
       id: '1',
       order_id: 'ord_12345',
@@ -118,28 +128,67 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
       email_content: '<h1>Newsletter</h1><p>Podívejte se na naše nové produkty...</p>',
       metadata: { template: 'newsletter_v1' },
     },
-  ];
+  ], []);
 
   const loadEmails = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: Implement real email logs loading from database
-      // For now, use mock data
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate loading
-      setEmails(mockEmails);
+      const res = await fetch('/api/admin/emails');
+      if (res.ok) {
+        const data = await res.json();
+        setEmails(data.emails || []);
+      } else {
+        // Fallback to mock data
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setEmails(mockEmails);
+      }
     } catch (e: unknown) {
       console.error('Load emails error:', e);
       setError(e instanceof Error ? e.message : 'Failed to load emails');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mockEmails]);
 
   useEffect(() => {
     loadEmails();
-  }, []);
+  }, [loadEmails]);
+
+  const sendComposedEmail = useCallback(async () => {
+    try {
+      setComposeSending(true);
+      const res = await fetch('/api/admin/emails/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: composeTo,
+          subject: composeSubject,
+          html: composeBody,
+          email_type: 'support_reply',
+          order_id: composeOrderId || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      setShowCompose(false);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      setComposeOrderId('');
+
+      await loadEmails();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to send email');
+    } finally {
+      setComposeSending(false);
+    }
+  }, [composeTo, composeSubject, composeBody, composeOrderId, loadEmails]);
 
   const filteredEmails = useMemo(() => {
     let filtered = emails;
@@ -228,14 +277,17 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
     return typeLabels[type] || type;
   };
 
-  const emailTypes = [
-    'order_confirmation',
-    'shipping_notification',
-    'delivery_confirmation',
-    'newsletter',
-    'support_reply',
-  ];
-  const emailStatuses = ['sent', 'delivered', 'opened', 'failed'];
+  const emailTypes = useMemo(
+    () => [
+      'order_confirmation',
+      'shipping_notification',
+      'delivery_confirmation',
+      'newsletter',
+      'support_reply',
+    ],
+    []
+  );
+  const emailStatuses = useMemo(() => ['sent', 'delivered', 'opened', 'failed'], []);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: emails.length };
@@ -250,6 +302,9 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
 
     return counts;
   }, [emails, emailStatuses, emailTypes]);
+
+  // (removed duplicate state declaration)
+  // const [showCompose, setShowCompose] = useState(false);
 
   if (loading && emails.length === 0) {
     return (
@@ -301,6 +356,10 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
               <Button onClick={loadEmails} variant="outline" size="sm" disabled={loading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Obnovit
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowCompose(true)}>
+                <Send className="w-4 h-4 mr-2" />
+                Napsat email
               </Button>
               <Button variant="outline" size="sm">
                 <Download className="w-4 h-4 mr-2" />
@@ -463,6 +522,27 @@ export default function EmailCommunication({ onOrderClick }: EmailCommunicationP
           </div>
         </CardContent>
       </Card>
+
+      {/* Compose Email Dialog */}
+      <Dialog open={showCompose} onOpenChange={setShowCompose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Napsat email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input placeholder="Příjemce (email)" value={composeTo} onChange={(e) => setComposeTo(e.target.value)} />
+            <Input placeholder="Objednávka (volitelné, číslo)" value={composeOrderId} onChange={(e) => setComposeOrderId(e.target.value)} />
+            <Input placeholder="Předmět" value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} />
+            <textarea rows={10} placeholder="HTML obsah emailu" value={composeBody} onChange={(e) => setComposeBody(e.target.value)} className="w-full border rounded-md p-2" />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCompose(false)} disabled={composeSending}>Zavřít</Button>
+              <Button onClick={sendComposedEmail} disabled={composeSending || !composeTo || !composeSubject || !composeBody}>
+                {composeSending ? 'Odesílám...' : 'Odeslat'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Email Detail Dialog */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-export async function GET() {
+
+export const GET = withAdminAuth(async () => {
   try {
     const { data: products, error } = await supabaseAdmin.from('products').select(`
         id,
@@ -22,4 +24,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ error: 'Failed to fetch inventory' }, { status: 500 });
   }
-}
+});

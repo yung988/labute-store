@@ -3,14 +3,12 @@
 import * as React from 'react';
 import {
   IconDashboard,
-  IconDatabase,
   IconInnerShadowTop,
   IconListDetails,
   IconPackage,
-  IconUsers,
-  IconMail,
   IconHelp,
   IconSettings,
+  IconMail,
 } from '@tabler/icons-react';
 
 import { NavMain } from '@/components/nav-main';
@@ -49,22 +47,10 @@ const defaultData = {
       id: 'orders',
     },
     {
-      title: 'Skladem',
-      url: '#',
-      icon: IconDatabase,
-      id: 'inventory',
-    },
-    {
       title: 'Packeta',
       url: '#',
       icon: IconPackage,
       id: 'packeta',
-    },
-    {
-      title: 'Zákazníci',
-      url: '#',
-      icon: IconUsers,
-      id: 'customers',
     },
     {
       title: 'Emaily',

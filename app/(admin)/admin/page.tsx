@@ -31,12 +31,10 @@ import { Separator } from '@/components/ui/separator';
 const ConsolidatedOrdersTable = React.lazy(
   () => import('@/components/admin/ConsolidatedOrdersTable')
 );
-const InventoryTable = React.lazy(() => import('@/components/admin/InventoryTable'));
 const PacketaManagement = React.lazy(() => import('@/components/admin/PacketaManagement'));
 const OrderDetailView = React.lazy(() => import('@/components/admin/OrderDetailView'));
-const CustomerCommunication = React.lazy(() => import('@/components/admin/CustomerCommunication'));
-const EmailCommunication = React.lazy(() => import('@/components/admin/EmailCommunication'));
 const Dashboard = React.lazy(() => import('@/components/admin/Dashboard'));
+const EmailCommunication = React.lazy(() => import('@/components/admin/EmailCommunication'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -48,14 +46,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-type AdminSection =
-  | 'dashboard'
-  | 'orders'
-  | 'inventory'
-  | 'packeta'
-  | 'customers'
-  | 'order-detail'
-  | 'emails';
+type AdminSection = 'dashboard' | 'orders' | 'packeta' | 'order-detail' | 'emails';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -89,18 +80,7 @@ export default function AdminPage() {
     const section = urlParams.get('section') as AdminSection;
     const orderId = urlParams.get('orderId');
 
-    if (
-      section &&
-      [
-        'dashboard',
-        'orders',
-        'inventory',
-        'packeta',
-        'customers',
-        'order-detail',
-        'emails',
-      ].includes(section)
-    ) {
+    if (section && ['dashboard', 'orders', 'packeta', 'order-detail', 'emails'].includes(section)) {
       setCurrentSection(section);
       if (orderId) {
         setSelectedOrderId(orderId);
@@ -154,11 +134,9 @@ export default function AdminPage() {
     const titles = {
       dashboard: 'Dashboard',
       orders: 'Objednávky',
-      inventory: 'Skladem',
       packeta: 'Packeta',
-      customers: 'Zákazníci',
-      emails: 'Emaily',
       'order-detail': 'Detail objednávky',
+      emails: 'Emailová komunikace',
     };
     return titles[section] || 'Admin';
   };
@@ -244,15 +222,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {currentSection === 'inventory' && (
-                <div>
-                  <h2 className="text-3xl font-bold mb-6">Správa skladem</h2>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <InventoryTable />
-                  </Suspense>
-                </div>
-              )}
-
               {currentSection === 'packeta' && (
                 <div>
                   <h2 className="text-3xl font-bold mb-6">Packeta Management</h2>
@@ -262,22 +231,10 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {currentSection === 'customers' && (
-                <div>
-                  <h2 className="text-3xl font-bold mb-6">Zákazníci</h2>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <CustomerCommunication />
-                  </Suspense>
-                </div>
-              )}
-
               {currentSection === 'emails' && (
-                <div>
-                  <h2 className="text-3xl font-bold mb-6">Emailová komunikace</h2>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <EmailCommunication onOrderClick={handleOrderClick} />
-                  </Suspense>
-                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <EmailCommunication onOrderClick={(id) => navigateToSection('order-detail', id)} />
+                </Suspense>
               )}
 
               {currentSection === 'order-detail' && selectedOrderId && (

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-export async function GET() {
+export const GET = withAdminAuth(async () => {
   const PACKETA_API_PASSWORD = process.env.PACKETA_API_PASSWORD;
 
   if (!PACKETA_API_PASSWORD) {
@@ -52,4 +53,4 @@ export async function GET() {
     console.error('Error fetching Packeta carriers:', error);
     return NextResponse.json({ error: 'Failed to fetch carriers' }, { status: 500 });
   }
-}
+});

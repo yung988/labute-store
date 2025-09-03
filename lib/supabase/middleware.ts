@@ -42,27 +42,10 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  await supabase.auth.getClaims();
+  // We intentionally do not use the claims here; admin auth handled in root middleware
 
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) {
-      // Protect admin: redirect unauthenticated users to login
-      const url = request.nextUrl.clone();
-      url.pathname = '/auth/login';
-      return NextResponse.redirect(url);
-    }
-
-    // Check user role for admin access
-    const userRole = user.user_metadata?.role || user.app_metadata?.role;
-    if (!userRole || !['shopmanager', 'superadmin'].includes(userRole)) {
-      // Redirect unauthorized users to error page
-      const url = request.nextUrl.clone();
-      url.pathname = '/auth/error';
-      url.searchParams.set('message', 'Unauthorized access - insufficient permissions');
-      return NextResponse.redirect(url);
-    }
-  }
+  // Admin role checks are handled centrally in middleware.ts via verifyAdminAccess
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

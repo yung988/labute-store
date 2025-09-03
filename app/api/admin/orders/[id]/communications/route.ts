@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAdminAuthWithParams(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
-    const supabase = await createClient();
 
-    // Get order communications (emails sent, status changes, etc.)
-    const { data: order, error: orderError } = await supabase
+    // Load order to make sure it exists
+    const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('*')
+      .select('id, customer_email, customer_name, status, created_at, updated_at, packeta_shipment_id, packeta_tracking_url')
       .eq('id', id)
       .single();
 
-    if (orderError) {
-      return NextResponse.json({ error: orderError.message }, { status: 404 });
+    if (orderError || !order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
     // Build communication timeline from order data
@@ -72,6 +72,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     }
 
+    // Email logs
+    const { data: emails } = await supabaseAdmin
+      .from('email_logs')
+      .select('id, created_at, email_type, subject, customer_email, status')
+      .eq('order_id', order.id)
+      .order('created_at', { ascending: true });
+
+    for (const e of emails || []) {
+      const label = (e.email_type || '').replace(/_/g, ' ');
+      communications.push({
+        id: e.id,
+        timestamp: e.created_at,
+        type: 'email',
+        title: `Email: ${label}`,
+        description: `${e.subject} → ${e.customer_email} [${e.status}]`,
+        icon: e.status === 'failed' ? 'alert-circle' : 'message-circle',
+        automated: true,
+      });
+    }
+
     // Sort by timestamp
     communications.sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -82,7 +102,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     console.error('Error loading communications:', error);
     return NextResponse.json({ error: 'Failed to load communications' }, { status: 500 });
   }
-}
+});
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
