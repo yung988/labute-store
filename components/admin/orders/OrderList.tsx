@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -50,35 +50,38 @@ export default function OrderList() {
   const [totalCount, setTotalCount] = useState(0);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchOrders = async (cursor?: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchOrders = useCallback(
+    async (cursor?: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const params = new URLSearchParams({
-        limit: pagination.pageSize.toString(),
-        ...(cursor && { cursor }),
-      });
+        const params = new URLSearchParams({
+          limit: pagination.pageSize.toString(),
+          ...(cursor && { cursor }),
+        });
 
-      const response = await fetch(`/api/admin/orders?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        const response = await fetch(`/api/admin/orders?${params}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+
+        const result: OrdersResponse = await response.json();
+        setData(result.orders);
+        setTotalCount(result.pagination.count);
+        setNextCursor(result.pagination.nextCursor);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
-
-      const result: OrdersResponse = await response.json();
-      setData(result.orders);
-      setTotalCount(result.pagination.count);
-      setNextCursor(result.pagination.nextCursor);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [pagination.pageSize]
+  );
 
   useEffect(() => {
     fetchOrders();
-  }, [pagination.pageSize]);
+  }, [fetchOrders]);
 
   const table = useReactTable({
     data,

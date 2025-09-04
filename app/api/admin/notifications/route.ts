@@ -14,6 +14,22 @@ interface AdminNotification {
   orderId?: string;
 }
 
+interface ShippingOrder {
+  id: number;
+  status: string;
+  updated_at: string;
+}
+
+interface LowStockSku {
+  product_id: number;
+  size: string;
+  stock: number;
+  products: {
+    id: number;
+    name: string;
+  }[];
+}
+
 export const revalidate = 0;
 
 export const GET = withAdminAuth(async (req: NextRequest) => {
@@ -49,10 +65,14 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
         .limit(50),
     ]);
 
-    if (ordersRes.error) return NextResponse.json({ error: ordersRes.error.message }, { status: 500 });
-    if (shippingRes.error) return NextResponse.json({ error: shippingRes.error.message }, { status: 500 });
-    if (emailErrRes.error) return NextResponse.json({ error: emailErrRes.error.message }, { status: 500 });
-    if (lowStockRes.error) return NextResponse.json({ error: lowStockRes.error.message }, { status: 500 });
+    if (ordersRes.error)
+      return NextResponse.json({ error: ordersRes.error.message }, { status: 500 });
+    if (shippingRes.error)
+      return NextResponse.json({ error: shippingRes.error.message }, { status: 500 });
+    if (emailErrRes.error)
+      return NextResponse.json({ error: emailErrRes.error.message }, { status: 500 });
+    if (lowStockRes.error)
+      return NextResponse.json({ error: lowStockRes.error.message }, { status: 500 });
 
     const notifications: AdminNotification[] = [];
     const dedupe = new Set<string>();
@@ -63,7 +83,8 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
         id: `order:${o.id}:created`,
         type: 'order',
         title: o.status === 'new' ? 'Nová objednávka' : 'Objednávka vytvořena',
-        message: `Objednávka #${String(o.id).slice(-8)} ${o.customer_name ? `od ${o.customer_name}` : ''}`.trim(),
+        message:
+          `Objednávka #${String(o.id).slice(-8)} ${o.customer_name ? `od ${o.customer_name}` : ''}`.trim(),
         isRead: false,
         createdAt: o.created_at,
         actionUrl: `/admin?section=orders&orderId=${o.id}`,
@@ -77,7 +98,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
     }
 
     // Shipping / delivered updates
-    for (const s of shippingRes.data || []) {
+    for (const s of (shippingRes.data as ShippingOrder[]) || []) {
       const label = s.status === 'delivered' ? 'Doručeno' : 'Odesláno';
       const n: AdminNotification = {
         id: `shipping:${s.id}:${s.status}`,
@@ -85,7 +106,7 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
         title: `Změna zásilky: ${label}`,
         message: `Objednávka #${String(s.id).slice(-8)} — ${label.toLowerCase()}`,
         isRead: false,
-        createdAt: (s as any).updated_at || (s as any).created_at || new Date().toISOString(),
+        createdAt: s.updated_at,
         actionUrl: `/admin?section=orders&orderId=${s.id}`,
         orderId: String(s.id),
       };
@@ -116,8 +137,8 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
     }
 
     // Low/out-of-stock inventory
-    for (const sku of lowStockRes.data || []) {
-      const product = (sku as any).products;
+    for (const sku of (lowStockRes.data as LowStockSku[]) || []) {
+      const product = sku.products[0];
       const isOut = sku.stock <= 0;
       const n: AdminNotification = {
         id: `inventory:${sku.product_id}:${sku.size}:${isOut ? 'out' : 'low'}`,
@@ -144,4 +165,3 @@ export const GET = withAdminAuth(async (req: NextRequest) => {
     return NextResponse.json({ error: 'Failed to load notifications' }, { status: 500 });
   }
 });
-

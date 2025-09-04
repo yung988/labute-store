@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function POST(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST() {
   try {
     const supabase = await createClient();
 
@@ -13,8 +13,6 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const _notificationId = params.id;
 
     // For now, we'll just return success since we don't have a notifications table yet
     // In a real implementation, you would update the notification in the database

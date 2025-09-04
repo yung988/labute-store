@@ -1,18 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import OrderList from '@/components/admin/orders/OrderList';
 import OrderFiltersComponent, { OrderFilters } from '@/components/admin/orders/OrderFilters';
 
 export default function OrdersPage() {
-  const router = useRouter();
   const [filters, setFilters] = useState<OrderFilters>({});
-  const [totalResults, setTotalResults] = useState<number>(0);
-
-  const handleOrderClick = (orderId: string) => {
-    router.push(`/admin/orders/${orderId}`);
-  };
 
   const handleFiltersChange = (newFilters: OrderFilters) => {
     setFilters(newFilters);
@@ -34,7 +29,6 @@ export default function OrdersPage() {
         filters={filters}
         onFiltersChange={handleFiltersChange}
         onClearFilters={handleClearFilters}
-        totalResults={totalResults}
       />
 
       <OrderList />

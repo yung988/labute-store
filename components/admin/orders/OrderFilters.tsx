@@ -40,14 +40,15 @@ export default function OrderFiltersComponent({
 }: OrderFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const updateFilter = (key: keyof OrderFilters, value: any) => {
-    const newFilters = { ...filters };
+  const updateFilter = (key: keyof OrderFilters, value: string | number | undefined) => {
+    const newFilters: Partial<OrderFilters> = { ...filters };
     if (value === '' || value === undefined) {
       delete newFilters[key];
     } else {
-      newFilters[key] = value;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      newFilters[key] = value as any;
     }
-    onFiltersChange(newFilters);
+    onFiltersChange(newFilters as OrderFilters);
   };
 
   const hasActiveFilters = Object.keys(filters).length > 0;

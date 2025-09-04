@@ -14,6 +14,17 @@ import { Bell, CheckCheck, Filter } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
 import { type Notification } from './notifications-data';
 
+interface ApiNotification {
+  id: string;
+  type: 'order' | 'payment' | 'inventory' | 'system' | 'shipping';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  actionUrl?: string;
+  orderId?: string;
+}
+
 export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -86,7 +97,7 @@ export function NotificationDropdown() {
         const res = await fetch('/api/admin/notifications?limit=25', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load');
         const json = await res.json();
-        const list: Notification[] = (json.notifications || []).map((n: any) => ({
+        const list: Notification[] = (json.notifications || []).map((n: ApiNotification) => ({
           ...n,
           createdAt: new Date(n.createdAt),
         }));

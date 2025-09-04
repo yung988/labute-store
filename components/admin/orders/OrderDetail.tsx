@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 // Textarea component not available, using native textarea
 import { Separator } from '@/components/ui/separator';
-import { Order } from './columns';
+import { Order, OrderItem } from './columns';
 import { Package, User, MapPin, CreditCard, Clock, Save } from 'lucide-react';
 import {
   Select,
@@ -30,11 +30,7 @@ export default function OrderDetail({ orderId, onClose }: OrderDetailProps) {
   const [internalNotes, setInternalNotes] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [orderId]);
-
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/orders/${orderId}`);
@@ -50,7 +46,11 @@ export default function OrderDetail({ orderId, onClose }: OrderDetailProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   const updateOrderStatus = async (newStatus: string) => {
     try {
@@ -172,7 +172,7 @@ export default function OrderDetail({ orderId, onClose }: OrderDetailProps) {
         <CardContent>
           <div className="space-y-4">
             {Array.isArray(order.items) &&
-              order.items.map((item: any, index: number) => (
+              order.items.map((item: OrderItem, index: number) => (
                 <div key={index} className="flex items-center justify-between p-4 border rounded">
                   <div>
                     <p className="font-medium">{item.product_name || 'Produkt'}</p>

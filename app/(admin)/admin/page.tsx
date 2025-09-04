@@ -1,5 +1,7 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
+
+export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -57,6 +59,7 @@ export default function AdminPage() {
   }, [router]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const section = urlParams.get('section') as AdminSection;
     const orderId = urlParams.get('orderId');
@@ -77,6 +80,7 @@ export default function AdminPage() {
   }, []);
 
   const navigateToSection = (section: AdminSection, orderId?: string) => {
+    if (typeof window === 'undefined') return;
     setCurrentSection(section);
     if (orderId) {
       setSelectedOrderId(orderId);
@@ -98,6 +102,7 @@ export default function AdminPage() {
   };
 
   const handleNavigateToEmails = (orderId?: string, customerEmail?: string) => {
+    if (typeof window === 'undefined') return;
     setSelectedOrderId(orderId || null);
     setSelectedEmail(customerEmail || null);
 

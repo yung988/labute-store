@@ -21,6 +21,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+export type OrderItem = {
+  product_name: string;
+  quantity: number;
+  size?: string;
+  price_cents: number;
+};
+
 export type Order = {
   id: string;
   customer_id: string | null;
@@ -46,7 +53,7 @@ export type Order = {
   packeta_shipment_id: string | null;
   packeta_tracking_url: string | null;
   stripe_invoice_id: string | null;
-  items: any; // JSON array of order items
+  items: OrderItem[]; // JSON array of order items
 };
 
 const getStatusBadge = (status: string) => {

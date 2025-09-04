@@ -1,7 +1,9 @@
 'use client';
 
+'use client';
+
 import * as React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -21,10 +23,12 @@ const getSectionTitle = (section: string): string => {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = React.useState<Date>();
 
-  const currentSection = searchParams.get('section') || 'dashboard';
+  const currentSection =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('section') || 'dashboard'
+      : 'dashboard';
   const pageTitle = getSectionTitle(currentSection);
 
   const handleNavigate = React.useCallback(
@@ -39,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     [router]
   );
 
-  const handleDateSelect = React.useCallback((date: Date) => {
+  const handleDateSelect = React.useCallback((date: Date | undefined) => {
     setSelectedDate(date);
   }, []);
 

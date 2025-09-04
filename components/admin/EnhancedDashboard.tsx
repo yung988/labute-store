@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAdminContext } from '@/context/AdminContext';
+import { Order } from '@/types/orders';
 import {
   ChartConfig,
   ChartContainer,
@@ -334,7 +335,7 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
     loadStats();
   }, [loadStats]);
 
-  const generateDailyOrdersChart = (orders: any[]) => {
+  const generateDailyOrdersChart = (orders: Order[]) => {
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (29 - i));
@@ -346,12 +347,12 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
       return {
         date,
         orders: dayOrders.length,
-        revenue: dayOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / 100,
+        revenue: dayOrders.reduce((sum, order) => sum + (order.total_cents || 0), 0) / 100,
       };
     });
   };
 
-  const generateMonthlyTrendChart = (orders: any[]) => {
+  const generateMonthlyTrendChart = (orders: Order[]) => {
     const last6Months = Array.from({ length: 6 }, (_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
@@ -370,7 +371,7 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
       return {
         month,
         orders: monthOrders.length,
-        revenue: monthOrders.reduce((sum, order) => sum + (order.amount_total || 0), 0) / 100,
+        revenue: monthOrders.reduce((sum, order) => sum + (order.total_cents || 0), 0) / 100,
       };
     });
   };
@@ -494,7 +495,7 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
           </p>
           {selectedDate && (
             <p className="text-xs text-muted-foreground mt-1">
-              Vyberte jiný den v kalendáři nebo klikněte na "Dnes" pro aktuální data
+              Vyberte jiný den v kalendáři nebo klikněte na &quot;Dnes&quot; pro aktuální data
             </p>
           )}
         </div>

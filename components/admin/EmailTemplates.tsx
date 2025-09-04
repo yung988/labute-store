@@ -5,13 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -20,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Copy, Search, FileText, Mail, Settings, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, FileText, Mail, Eye } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 
 type EmailTemplate = {
@@ -168,7 +162,7 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       setTemplates(mockTemplates);
       setLoading(false);
     }, 300);
-  }, []);
+  }, [mockTemplates]);
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =

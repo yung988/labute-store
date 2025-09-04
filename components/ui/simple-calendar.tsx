@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 interface SimpleCalendarProps {
   selected?: Date;
-  onSelect?: (date: Date) => void;
+  onSelect?: (date: Date | undefined) => void;
   className?: string;
   orderDates?: Date[]; // Dny s objednávkami pro vizuální indikátory
   orderCounts?: Record<string, number>; // Počet objednávek pro každý den
@@ -79,7 +79,7 @@ export function SimpleCalendar({
   };
 
   const clearSelection = () => {
-    onSelect?.(undefined as any); // Clear selection
+    onSelect?.(undefined); // Clear selection
   };
 
   const handleDateClick = (date: Date) => {

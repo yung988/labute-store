@@ -7,15 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Search,
   RefreshCw,
@@ -32,7 +24,7 @@ import {
   Eye,
   Settings,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import RichTextEditor from './RichTextEditor';
 import EmailTemplates from './EmailTemplates';
 
@@ -63,6 +55,18 @@ type EmailThread = {
 };
 
 type EmailView = 'inbox' | 'sent' | 'compose' | 'drafts' | 'templates';
+
+type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  content: string;
+  category: 'support' | 'order' | 'marketing' | 'system';
+  variables: string[];
+  created_at: string;
+  updated_at: string;
+  usage_count: number;
+};
 
 interface EmailClientContentProps {
   onOrderClick?: (orderId: string) => void;
@@ -256,7 +260,7 @@ export default function EmailClientContent({
     }
   }, [composeTo, composeSubject, composeBody, composeOrderId, loadEmails]);
 
-  const handleTemplateSelect = (template: any) => {
+  const handleTemplateSelect = (template: EmailTemplate) => {
     setComposeSubject(template.subject);
     setComposeBody(template.content);
     setCurrentView('compose');

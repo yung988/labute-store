@@ -6,7 +6,6 @@ import {
   IconFolder,
   IconInnerShadowTop,
   IconListDetails,
-  IconUsers,
   IconSearch,
   IconMail,
 } from '@tabler/icons-react';
@@ -72,7 +71,7 @@ const data = {
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onNavigate?: (section: string, orderId?: string) => void;
   selectedDate?: Date;
-  onDateSelect?: (date: Date) => void;
+  onDateSelect?: (date: Date | undefined) => void;
 }
 
 // Hook to fetch order dates for calendar indicators

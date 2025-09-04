@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 // GET - Get specific draft
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { data, error } = await supabaseAdmin
       .from('email_drafts')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -21,8 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT - Update draft
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const body = await req.json();
     const { to, subject, content, order_id } = body;
 
@@ -35,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         order_id: order_id || null,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -51,9 +53,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE - Delete draft
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { error } = await supabaseAdmin.from('email_drafts').delete().eq('id', params.id);
+    const { id } = await params;
+    const { error } = await supabaseAdmin.from('email_drafts').delete().eq('id', id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

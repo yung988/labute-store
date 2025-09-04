@@ -75,6 +75,14 @@ type Communication = {
   automated: boolean;
 };
 
+type OrderEmail = {
+  id: string;
+  subject: string;
+  status: 'sent' | 'delivered' | 'opened' | 'failed';
+  sent_at: string;
+  email_content?: string;
+};
+
 interface OrderDetailViewProps {
   orderId: string;
   onBack: () => void;
@@ -89,7 +97,7 @@ export default function OrderDetailView({
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [communications, setCommunications] = useState<Communication[]>([]);
-  const [orderEmails, setOrderEmails] = useState<any[]>([]);
+  const [orderEmails, setOrderEmails] = useState<OrderEmail[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -887,7 +895,7 @@ export default function OrderDetailView({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {orderEmails.slice(0, 5).map((email: any) => (
+                  {orderEmails.slice(0, 5).map((email: OrderEmail) => (
                     <div key={email.id} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Mail className="w-4 h-4 text-primary" />
