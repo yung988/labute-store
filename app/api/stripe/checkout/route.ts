@@ -65,19 +65,15 @@ export async function POST(request: NextRequest) {
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       if (fullName) customerParams.append('name', fullName);
       if (formData.phone) customerParams.append('phone', formData.phone);
-      if (
-        deliveryMethod === 'home_delivery' &&
-        formData.address &&
-        formData.city &&
-        formData.postalCode
-      ) {
+      // Vždy uložíme billing adresu pokud máme údaje
+      if (formData.address && formData.city && formData.postalCode) {
         // Uložíme adresu jako "billing" (customer.address)
         customerParams.append('address[line1]', formData.address);
         customerParams.append('address[city]', formData.city);
         customerParams.append('address[postal_code]', formData.postalCode);
         customerParams.append('address[country]', 'CZ');
 
-        // A také jako shipping, což Stripe často používá k předvyplnění
+        // A také jako shipping pro případ doručení domů
         customerParams.append('shipping[name]', fullName || '');
         customerParams.append('shipping[address][line1]', formData.address);
         customerParams.append('shipping[address][city]', formData.city);
@@ -125,13 +121,16 @@ export async function POST(request: NextRequest) {
       params.append('customer_update[address]', 'auto');
       params.append('customer_update[name]', 'auto');
       params.append('customer_update[shipping]', 'auto');
+      // Použij údaje z Customer objektu pokud jsou k dispozici
+      params.append('billing_address_collection', 'auto');
+      // Nevyžaduj telefon pokud už máme v Customer
+      // params.append('phone_number_collection[enabled]', 'false');
     } else {
-      // Fallback
+      // Fallback - vyžaduj údaje pokud nemáme Customer
       params.append('customer_email', formData.email);
+      params.append('billing_address_collection', 'required');
+      params.append('phone_number_collection[enabled]', 'true');
     }
-    // Vždy vyžadujeme billing adresu pro úplné údaje
-    params.append('billing_address_collection', 'required');
-    params.append('phone_number_collection[enabled]', 'true');
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
