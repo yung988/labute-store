@@ -112,9 +112,7 @@ export async function POST(request: NextRequest) {
     // Build URLSearchParams for Stripe API
     const params = new URLSearchParams();
 
-    // Basic parameters - enable Apple Pay and Google Pay with automatic payment methods
-    params.append('automatic_payment_methods[enabled]', 'true');
-    params.append('automatic_payment_methods[allow_redirects]', 'never');
+    // Basic parameters
     params.append('mode', 'payment');
     params.append(
       'success_url',
@@ -137,8 +135,7 @@ export async function POST(request: NextRequest) {
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
-    // Note: Apple Pay and Google Pay are already enabled via automatic_payment_methods[enabled]=true
-    // No additional payment_method_options needed for these payment methods in Checkout Sessions
+    // Note: Apple Pay and Google Pay are enabled by default in Checkout Sessions if properly configured in Dashboard
 
     // Pro home delivery zachováme údaje v metadata (pro případné budoucí použití)
     if (
