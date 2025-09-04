@@ -137,16 +137,8 @@ export async function POST(request: NextRequest) {
     params.append('locale', 'cs');
     params.append('currency', 'czk');
 
-    // Configure Apple Pay and Google Pay to not collect addresses when we already have them
-    if (customerId && deliveryMethod === 'home_delivery') {
-      // Apple Pay - disable address collection since we have it from customer
-      params.append('payment_method_options[apple_pay][setup_future_usage]', 'off_session');
-      params.append('payment_method_options[apple_pay][capture_method]', 'automatic');
-
-      // Google Pay - disable address collection since we have it from customer
-      params.append('payment_method_options[google_pay][setup_future_usage]', 'off_session');
-      params.append('payment_method_options[google_pay][capture_method]', 'automatic');
-    }
+    // Note: Apple Pay and Google Pay are already enabled via automatic_payment_methods[enabled]=true
+    // No additional payment_method_options needed for these payment methods in Checkout Sessions
 
     // Pro home delivery zachováme údaje v metadata (pro případné budoucí použití)
     if (
