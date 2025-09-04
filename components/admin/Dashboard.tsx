@@ -341,12 +341,8 @@ export default function Dashboard({ onNavigateAction }: NavigationProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">Přehled obchodu a statistiky</p>
-        </div>
+      {/* Header moved to global breadcrumb in admin/page; keep only refresh */}
+      <div className="flex items-center justify-end">
         <Button onClick={loadStats} variant="outline" disabled={loading} size="sm">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Obnovit

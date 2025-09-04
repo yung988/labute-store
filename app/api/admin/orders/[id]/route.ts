@@ -70,6 +70,30 @@ export const PUT = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
     .eq('id', id)
     .single();
 
+  // Validate status transition if status is being updated
+  if (body.status && currentOrder) {
+    const validTransitions: Record<string, string[]> = {
+      new: ['pending', 'cancelled'],
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [], // Final state
+      cancelled: [], // Final state
+    };
+
+    const currentStatus = currentOrder.status;
+    const newStatus = body.status as string;
+
+    if (currentStatus !== newStatus && !validTransitions[currentStatus]?.includes(newStatus)) {
+      return NextResponse.json(
+        {
+          error: `Invalid status transition from ${currentStatus} to ${newStatus}`,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   const updates: Record<string, unknown> = {};
   for (const key of [
     'stripe_session_id',
@@ -82,6 +106,12 @@ export const PUT = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
     'status',
     'amount_total',
     'shipping_amount',
+    'admin_notes',
+    'internal_notes',
+    'billing_address',
+    'billing_city',
+    'billing_postal_code',
+    'billing_country',
   ]) {
     if (key in body) updates[key] = body[key];
   }
@@ -142,6 +172,30 @@ export const PATCH = withAdminAuth(async (req: NextRequest, _adminUser: AdminUse
     .select('status, customer_email')
     .eq('id', id)
     .single();
+
+  // Validate status transition if status is being updated
+  if (body.status && currentOrder) {
+    const validTransitions: Record<string, string[]> = {
+      new: ['pending', 'cancelled'],
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [], // Final state
+      cancelled: [], // Final state
+    };
+
+    const currentStatus = currentOrder.status;
+    const newStatus = body.status as string;
+
+    if (currentStatus !== newStatus && !validTransitions[currentStatus]?.includes(newStatus)) {
+      return NextResponse.json(
+        {
+          error: `Invalid status transition from ${currentStatus} to ${newStatus}`,
+        },
+        { status: 400 }
+      );
+    }
+  }
 
   const updates: Record<string, unknown> = {};
   for (const key of [

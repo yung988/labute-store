@@ -77,9 +77,10 @@ type Order = {
 
 interface OrdersTableProps {
   onOrderClick?: (orderId: string) => void;
+  onNavigateToEmails?: (orderId?: string, customerEmail?: string) => void;
 }
 
-export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
+export default function OrdersTable({ onOrderClick, onNavigateToEmails }: OrdersTableProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -462,7 +463,16 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
 
   const exportCsv = (rows: Order[]) => {
     const header = [
-      'id','customer_email','customer_name','status','amount_total','shipping_amount','created_at','delivery_method','packeta_point_id','packeta_shipment_id'
+      'id',
+      'customer_email',
+      'customer_name',
+      'status',
+      'amount_total',
+      'shipping_amount',
+      'created_at',
+      'delivery_method',
+      'packeta_point_id',
+      'packeta_shipment_id',
     ];
     const body = rows.map((o) => [
       o.id,
@@ -474,14 +484,22 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
       o.created_at,
       o.delivery_method || '',
       o.packeta_point_id || '',
-      o.packeta_shipment_id || ''
+      o.packeta_shipment_id || '',
     ]);
-    const csv = [header, ...body].map(r => r.map(x => typeof x === 'string' && x.includes(',') ? `"${x.replaceAll('"','""')}"` : x).join(',')).join('\n');
+    const csv = [header, ...body]
+      .map((r) =>
+        r
+          .map((x) =>
+            typeof x === 'string' && x.includes(',') ? `"${x.replaceAll('"', '""')}"` : x
+          )
+          .join(',')
+      )
+      .join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `orders-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -561,7 +579,11 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Obnovit
               </Button>
-              <Button variant="outline" size="sm" onClick={() => exportCsv(filteredAndSortedOrders)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportCsv(filteredAndSortedOrders)}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Export CSV
               </Button>
@@ -726,7 +748,22 @@ export default function OrdersTable({ onOrderClick }: OrdersTableProps = {}) {
                             <TableCell>
                               <div className="font-medium">{order.customer_name || 'Nezadáno'}</div>
                               <div className="text-sm text-muted-foreground">
-                                {order.customer_email}
+                                {order.customer_email ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onNavigateToEmails?.(
+                                        order.id,
+                                        order.customer_email || undefined
+                                      );
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 underline hover:no-underline"
+                                  >
+                                    {order.customer_email}
+                                  </button>
+                                ) : (
+                                  'Nezadáno'
+                                )}
                               </div>
                             </TableCell>
 

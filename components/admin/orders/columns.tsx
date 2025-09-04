@@ -23,14 +23,30 @@ import {
 
 export type Order = {
   id: string;
+  customer_id: string | null;
   customer_name: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
   status: string;
   amount_total: number | null;
+  shipping_amount: number | null;
   created_at: string;
+  updated_at: string;
+  delivery_method: string | null;
+  delivery_address: string | null;
+  delivery_city: string | null;
+  delivery_postal_code: string | null;
+  delivery_country: string | null;
+  billing_address: string | null;
+  billing_city: string | null;
+  billing_postal_code: string | null;
+  billing_country: string | null;
+  admin_notes: string | null;
+  internal_notes: string | null;
   packeta_shipment_id: string | null;
   packeta_tracking_url: string | null;
-  delivery_method: string | null;
+  stripe_invoice_id: string | null;
+  items: any; // JSON array of order items
 };
 
 const getStatusBadge = (status: string) => {

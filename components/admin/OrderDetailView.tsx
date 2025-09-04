@@ -78,12 +78,18 @@ type Communication = {
 interface OrderDetailViewProps {
   orderId: string;
   onBack: () => void;
+  onNavigateToEmails?: (orderId?: string, customerEmail?: string) => void;
 }
 
-export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProps) {
+export default function OrderDetailView({
+  orderId,
+  onBack,
+  onNavigateToEmails,
+}: OrderDetailViewProps) {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [communications, setCommunications] = useState<Communication[]>([]);
+  const [orderEmails, setOrderEmails] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -148,6 +154,17 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
         }
       } catch {
         // Ignore communication errors for now
+      }
+
+      // Load order emails
+      try {
+        const emailRes = await fetch(`/api/admin/emails?q=${orderId}`);
+        if (emailRes.ok) {
+          const emailData = await emailRes.json();
+          setOrderEmails(emailData.emails || []);
+        }
+      } catch {
+        // Ignore email loading errors for now
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load order');
@@ -427,10 +444,29 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
                 Upravit
               </Button>
               {order.customer_email && (
-                <Button onClick={sendCustomerEmail} variant="outline" size="sm" disabled={loading}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Poslat email
-                </Button>
+                <>
+                  <Button
+                    onClick={sendCustomerEmail}
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Poslat email
+                  </Button>
+                  <Button
+                    onClick={() => onNavigateToEmails?.(orderId, order.customer_email || undefined)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Napsat email
+                  </Button>
+                  <Button onClick={() => onNavigateToEmails?.(orderId)} variant="outline" size="sm">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Zobrazit emaily
+                  </Button>
+                </>
               )}
               <Button onClick={deleteOrder} variant="destructive" size="sm" disabled={loading}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -839,6 +875,64 @@ export default function OrderDetailView({ orderId, onBack }: OrderDetailViewProp
               </div>
             </CardContent>
           </Card>
+
+          {/* Email History */}
+          {orderEmails.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Email historie ({orderEmails.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {orderEmails.slice(0, 5).map((email: any) => (
+                    <div key={email.id} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Mail className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{email.subject}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {email.status === 'sent'
+                              ? 'Odesláno'
+                              : email.status === 'delivered'
+                                ? 'Doručeno'
+                                : email.status === 'opened'
+                                  ? 'Otevřeno'
+                                  : email.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(email.sent_at).toLocaleString()}
+                        </p>
+                        {email.email_content && (
+                          <div
+                            className="text-xs text-muted-foreground mt-2 line-clamp-2"
+                            dangerouslySetInnerHTML={{
+                              __html: email.email_content.substring(0, 100) + '...',
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {orderEmails.length > 5 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onNavigateToEmails?.(orderId)}
+                      className="w-full"
+                    >
+                      Zobrazit všechny emaily ({orderEmails.length})
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Timeline */}
           {(timeline.length > 0 || communications.length > 0) && (

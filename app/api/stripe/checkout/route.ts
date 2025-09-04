@@ -131,12 +131,8 @@ export async function POST(request: NextRequest) {
       // Fallback
       params.append('customer_email', formData.email);
     }
-    // Nekdyž máme Customer s adresou, nevyžadujeme ji znovu (řeší Apple Pay/Google Pay duplicity)
-    if (customerId) {
-      params.append('billing_address_collection', 'never');
-    } else {
-      params.append('billing_address_collection', 'auto');
-    }
+    // Vždy vyžadujeme billing adresu pro úplné údaje
+    params.append('billing_address_collection', 'required');
     params.append('phone_number_collection[enabled]', 'true');
     params.append('locale', 'cs');
     params.append('currency', 'czk');

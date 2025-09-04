@@ -13,7 +13,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 
 interface Order {
@@ -108,13 +108,6 @@ export default function CommandPalette({ open, onOpenChange, onNavigate }: Comma
       icon: Truck,
       onSelect: () => onNavigate('packeta'),
     },
-    {
-      id: 'emails',
-      title: 'Emailová komunikace',
-      description: 'Přehled odeslaných emailů',
-      icon: Mail,
-      onSelect: () => onNavigate('emails'),
-    },
   ];
 
   const quickActions = [
@@ -173,6 +166,7 @@ export default function CommandPalette({ open, onOpenChange, onNavigate }: Comma
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 max-w-2xl z-[9999]">
+        <DialogHeader className="sr-only"><DialogTitle>Command Palette</DialogTitle></DialogHeader>
         <Command className="rounded-lg border-none shadow-none" shouldFilter={false}>
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />

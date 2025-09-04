@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, CheckCheck, Filter } from 'lucide-react';
 import { NotificationItem } from './NotificationItem';
-import { mockNotifications, type Notification } from './notifications-data';
+import { type Notification } from './notifications-data';
 
 export function NotificationDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -23,32 +23,105 @@ export function NotificationDropdown() {
   const filteredNotifications =
     filter === 'all' ? notifications : notifications.filter((n) => !n.isRead);
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/notifications/${id}/read`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      // Still update UI optimistically
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/admin/notifications/read-all', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      }
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      // Still update UI optimistically
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/notifications/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      }
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      // Still update UI optimistically
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }
   };
+
+  // Auto-mark as read when dropdown opens
+  const handleOpenChange = (open: boolean) => {
+    if (open && unreadCount > 0) {
+      // Mark all unread notifications as read after a short delay
+      setTimeout(() => {
+        const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n.id);
+        unreadIds.forEach((id) => markAsRead(id));
+      }, 1000); // 1 second delay to allow user to see the notifications
+    }
+  };
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/admin/notifications?limit=25', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load');
+        const json = await res.json();
+        const list: Notification[] = (json.notifications || []).map((n: any) => ({
+          ...n,
+          createdAt: new Date(n.createdAt),
+        }));
+        if (!cancelled) setNotifications(list);
+      } catch (e) {
+        // Silently ignore; keep current
+        console.warn('Notifications fetch failed', e);
+      }
+    };
+
+    load();
+    const interval = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs flex items-center justify-center"
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
+        <div className="flex w-full cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent hover:text-accent-foreground">
+          <div className="relative">
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 h-4 w-4 p-0 text-xs flex items-center justify-center"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </div>
+          <span className="group-data-[collapsible=icon]:hidden">Notifikace</span>
+        </div>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-80 max-h-[500px] p-0 z-[100]" sideOffset={8}>

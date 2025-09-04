@@ -26,11 +26,14 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
   const cursor = url.searchParams.get('cursor'); // ISO date string for cursor-based pagination
   const status = url.searchParams.get('status'); // Optional status filter
   const search = url.searchParams.get('search'); // Optional search query
+  const customerId = url.searchParams.get('customer_id'); // Optional customer ID filter
+  const dateFrom = url.searchParams.get('date_from'); // Optional date from filter
+  const dateTo = url.searchParams.get('date_to'); // Optional date to filter
 
   let query = supabase
     .from('orders')
     .select(
-      'id,stripe_session_id,customer_email,customer_name,customer_phone,packeta_point_id,packeta_shipment_id,items,status,amount_total,shipping_amount,created_at,delivery_method,delivery_address,delivery_city,delivery_postal_code,delivery_country,label_printed_at,label_printed_count',
+      'id,stripe_session_id,customer_email,customer_name,customer_phone,customer_id,packeta_point_id,packeta_shipment_id,items,status,amount_total,shipping_amount,created_at,updated_at,delivery_method,delivery_address,delivery_city,delivery_postal_code,delivery_country,billing_address,billing_city,billing_postal_code,billing_country,admin_notes,internal_notes,label_printed_at,label_printed_count,stripe_invoice_id',
       { count: 'exact' }
     )
     .order('created_at', { ascending: false })
@@ -46,10 +49,23 @@ export const GET = withAdminAuth(async (req: NextRequest, _adminUser: AdminUser)
     query = query.eq('status', status);
   }
 
-  // Apply search filter (simple implementation - can be enhanced)
+  // Apply customer ID filter
+  if (customerId) {
+    query = query.eq('customer_id', customerId);
+  }
+
+  // Apply date range filter
+  if (dateFrom) {
+    query = query.gte('created_at', dateFrom);
+  }
+  if (dateTo) {
+    query = query.lte('created_at', dateTo);
+  }
+
+  // Apply search filter (enhanced implementation)
   if (search) {
     query = query.or(
-      `customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.%${search}%`
+      `customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,id.ilike.%${search}%,admin_notes.ilike.%${search}%,internal_notes.ilike.%${search}%`
     );
   }
 
