@@ -56,7 +56,6 @@ export default function PrivacyPage() {
             info@yeezuz2020.store
           </a>
         </span>
-        <span className="block text-sm text-gray-600 mt-1">Nebo na: support@yeezuz2020.com</span>
       </p>
 
       <h2 className="font-bold underline mb-2">Změny zásad</h2>

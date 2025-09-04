@@ -153,7 +153,7 @@ curl -X POST "https://your-app-url.com/api/test-email-forwarding" \
 
 Můžete nastavit více forwarding adres:
 
-- `support@yeezuz2020.store` → `yeezuz332@gmail.com`
+- `contact@yeezuz2020.store` → `yeezuz332@gmail.com`
 - `contact@yeezuz2020.store` → `yeezuz332@gmail.com`
 - `orders@yeezuz2020.store` → `yeezuz332@gmail.com`
 

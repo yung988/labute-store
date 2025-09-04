@@ -21,7 +21,6 @@ export default function OrderPolicyPage() {
             info@yeezuz2020.store
           </a>
         </p>
-        <p className="mt-1 text-sm text-gray-600">Nebo na: support@yeezuz2020.com</p>
       </section>
 
       <section className="mb-10">

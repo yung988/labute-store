@@ -18,8 +18,6 @@ export default function AccessibilityPage() {
               info@yeezuz2020.store
             </a>
           </span>
-          <br />
-          <span className="text-sm text-gray-600">Nebo na: support@yeezuz2020.com</span>
         </p>
       </section>
     </div>
