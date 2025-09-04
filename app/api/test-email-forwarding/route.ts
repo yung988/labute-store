@@ -59,7 +59,7 @@ async function handlePost(req: NextRequest) {
 export const POST = withAdminAuth(handlePost);
 
 // GET endpoint pro jednoduchý test
-async function handleGet(_req: NextRequest) {
+async function handleGet() {
   try {
     const { data, error } = await resend.emails.send({
       from: 'Test <noreply@yeezuz2020.store>',
@@ -75,8 +75,14 @@ async function handleGet(_req: NextRequest) {
       `,
     });
 
-    if (error) {
-      return NextResponse.json({ error: 'Chyba při odesílání test e-mailu' }, { status: 500 });
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error: 'Chyba při odesílání test e-mailu',
+          details: error?.message || 'Neznámá chyba',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -84,7 +90,7 @@ async function handleGet(_req: NextRequest) {
       message: 'Test e-mail odeslán na info@yeezuz2020.store',
       emailId: data?.id,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Neočekávaná chyba' }, { status: 500 });
   }
 }
