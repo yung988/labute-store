@@ -13,7 +13,13 @@ export default function AccessibilityPage() {
           Pokud narazíte na jakékoli bariéry nebo problémy s přístupností, kontaktujte nás prosím
           na:
           <br />
-          <span className="font-semibold">support@yeezuz2020.com</span>
+          <span className="font-semibold">
+            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
+              info@yeezuz2020.store
+            </a>
+          </span>
+          <br />
+          <span className="text-sm text-gray-600">Nebo na: support@yeezuz2020.com</span>
         </p>
       </section>
     </div>

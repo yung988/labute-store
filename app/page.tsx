@@ -56,6 +56,18 @@ export default async function HomePage() {
       <div className="sticky" style={{ top: 'calc(var(--header-height) + 1rem)' }}>
         <ProductGrid products={orderedProducts} />
       </div>
+
+      {/* Contact section */}
+      <div className="mt-16 text-center">
+        <h2 className="text-lg font-medium text-black mb-4">MÁTE OTÁZKY?</h2>
+        <p className="text-sm text-gray-600 mb-2">
+          Kontaktujte nás na{' '}
+          <a href="mailto:info@yeezuz2020.store" className="text-black hover:underline font-medium">
+            info@yeezuz2020.store
+          </a>
+        </p>
+        <p className="text-xs text-gray-500">Odpovíme vám co nejdříve</p>
+      </div>
     </main>
   );
 }

@@ -51,7 +51,12 @@ export default function PrivacyPage() {
       <p className="mb-6">
         Máte právo na přístup ke svým osobním údajům, jejich opravu, výmaz nebo omezení zpracování.
         V případě jakýchkoli dotazů nás kontaktujte na e-mailu:
-        <span className="block font-semibold mt-1">support@yeezuz2020.com</span>
+        <span className="block font-semibold mt-1">
+          <a href="mailto:info@yeezuz2020.store" className="hover:underline">
+            info@yeezuz2020.store
+          </a>
+        </span>
+        <span className="block text-sm text-gray-600 mt-1">Nebo na: support@yeezuz2020.com</span>
       </p>
 
       <h2 className="font-bold underline mb-2">Změny zásad</h2>

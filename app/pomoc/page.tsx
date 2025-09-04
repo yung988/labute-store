@@ -16,7 +16,12 @@ export default function OrderPolicyPage() {
         <p className="mt-4 uppercase font-medium">
           Pro zákaznickou podporu zašlete číslo objednávky a dotaz na:
         </p>
-        <p className="mt-2 text-lg font-bold text-black">support@yeezuz2020.com</p>
+        <p className="mt-2 text-lg font-bold text-black">
+          <a href="mailto:info@yeezuz2020.store" className="hover:underline">
+            info@yeezuz2020.store
+          </a>
+        </p>
+        <p className="mt-1 text-sm text-gray-600">Nebo na: support@yeezuz2020.com</p>
       </section>
 
       <section className="mb-10">

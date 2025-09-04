@@ -17,6 +17,20 @@ export default function Footer() {
           <NewsletterSignup />
         </div>
 
+        {/* Contact info */}
+        <div className="mb-8 text-center">
+          <h3 className="text-sm font-medium text-black mb-2">KONTAKT</h3>
+          <p className="text-sm text-gray-600">
+            Máte otázky? Napište nám na{' '}
+            <a
+              href="mailto:info@yeezuz2020.store"
+              className="text-black hover:underline font-medium"
+            >
+              info@yeezuz2020.store
+            </a>
+          </p>
+        </div>
+
         {/* Footer links */}
         <footer className="flex flex-wrap justify-between text-sm gap-4">
           <Link href="/pomoc" className="hover:underline">

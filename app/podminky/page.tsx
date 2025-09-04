@@ -22,7 +22,10 @@ export default function TermsPage() {
             <br />
             Sídlo: Znojmo
             <br />
-            E-mail: info@yeezuz2020.store
+            E-mail:{' '}
+            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
+              info@yeezuz2020.store
+            </a>
             <br />
             Web: www.yeezuz2020.store
           </p>

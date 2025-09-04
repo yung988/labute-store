@@ -158,7 +158,12 @@ export default function TrackOrderPage() {
         </Card>
 
         <div className="text-center text-sm text-gray-500">
-          <p>Potřebujete pomoct? Kontaktujte nás na support@yeezuz2020.store</p>
+          <p>
+            Potřebujete pomoct? Kontaktujte nás na{' '}
+            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
+              info@yeezuz2020.store
+            </a>
+          </p>
         </div>
       </div>
     </div>
