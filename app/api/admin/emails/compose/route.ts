@@ -19,7 +19,7 @@ export const POST = withAdminAuth(async (req: NextRequest) => {
     }
 
     const res = await resend.emails.send({
-      from: 'noreply@yeezuz2020.store',
+      from: 'noreply@yeezuz2020.cz',
       to,
       subject,
       html,

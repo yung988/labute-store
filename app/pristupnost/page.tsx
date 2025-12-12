@@ -14,8 +14,8 @@ export default function AccessibilityPage() {
           na:
           <br />
           <span className="font-semibold">
-            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
-              info@yeezuz2020.store
+            <a href="mailto:info@yeezuz2020.cz" className="hover:underline">
+              info@yeezuz2020.cz
             </a>
           </span>
         </p>

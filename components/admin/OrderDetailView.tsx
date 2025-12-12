@@ -33,6 +33,7 @@ import {
 // Dialog components removed - not used in this component
 import { createClient } from '@/lib/supabase/client';
 import { formatOrderId } from '@/lib/product-images';
+import OrderSupportTickets from './OrderSupportTickets';
 
 type OrderDetail = {
   id: string;
@@ -883,6 +884,17 @@ export default function OrderDetailView({
               </div>
             </CardContent>
           </Card>
+
+          {/* Support Tickets */}
+          <OrderSupportTickets
+            orderId={orderId}
+            onTicketClick={(ticketId) => {
+              // Navigate to support section with this ticket
+              if (typeof window !== 'undefined') {
+                window.location.href = `/admin?section=support&ticketId=${ticketId}`;
+              }
+            }}
+          />
 
           {/* Email History */}
           {orderEmails.length > 0 && (

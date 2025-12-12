@@ -66,10 +66,10 @@ export default async function HomePage() {
           <p className="text-sm text-gray-600 mb-2">
             Kontaktujte nás na{' '}
             <a
-              href="mailto:info@yeezuz2020.store"
+              href="mailto:info@yeezuz2020.cz"
               className="text-black hover:underline font-medium"
             >
-              info@yeezuz2020.store
+              info@yeezuz2020.cz
             </a>
           </p>
           <p className="text-xs text-gray-500">Odpovíme vám co nejdříve</p>

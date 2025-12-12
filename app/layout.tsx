@@ -14,8 +14,21 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: 'Yeezuz2020 Store',
-  description: '2020',
+  title: 'YEEZUZ2020 | Oficiální e-shop',
+  description: 'Oficiální e-shop YEEZUZ2020 - oblečení a hudební CD. Doprava po celé ČR.',
+  openGraph: {
+    title: 'YEEZUZ2020 | Oficiální e-shop',
+    description: 'Oficiální e-shop YEEZUZ2020 - oblečení a hudební CD. Doprava po celé ČR.',
+    url: 'https://yeezuz2020.cz',
+    siteName: 'YEEZUZ2020',
+    locale: 'cs_CZ',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'YEEZUZ2020 | Oficiální e-shop',
+    description: 'Oficiální e-shop YEEZUZ2020 - oblečení a hudební CD.',
+  },
 };
 
 const geistSans = Geist({
@@ -30,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="cs" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light" />
       </head>

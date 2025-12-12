@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { increaseInventory, type CartItemForInventory } from '@/lib/inventory';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function handler(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id: orderId } = await params;
 
@@ -78,7 +82,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     if (updateError) {
       console.error('Failed to update order status:', updateError);
-      // Inventář je už rollbacknutý, ale status se neaktualizoval
+      return NextResponse.json(
+        { error: 'Inventář byl vrácen, ale nepodařilo se aktualizovat status objednávky' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -94,3 +101,5 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 }
+
+export const POST = withAdminAuthWithParams(handler);

@@ -17,6 +17,7 @@ const getSectionTitle = (section: string): string => {
     'order-detail': 'Detail objednávky',
     emails: 'Emailová komunikace',
     packeta: 'Packeta',
+    support: 'Zákaznická podpora',
   };
   return titles[section] || 'Admin Panel';
 };

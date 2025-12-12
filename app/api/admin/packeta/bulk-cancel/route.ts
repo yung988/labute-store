@@ -1,19 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
-}
-
-export async function POST() {
-  const unauthorized = await requireAuth();
-  if (unauthorized) return unauthorized;
+async function handler() {
 
   // Check if Packeta API password is configured
   if (!process.env.PACKETA_API_PASSWORD) {
@@ -207,3 +196,5 @@ export async function POST() {
     return NextResponse.json({ error: 'Failed to cancel shipments' }, { status: 500 });
   }
 }
+
+export const POST = withAdminAuth(handler);

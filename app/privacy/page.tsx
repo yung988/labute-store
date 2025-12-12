@@ -52,8 +52,8 @@ export default function PrivacyPage() {
         Máte právo na přístup ke svým osobním údajům, jejich opravu, výmaz nebo omezení zpracování.
         V případě jakýchkoli dotazů nás kontaktujte na e-mailu:
         <span className="block font-semibold mt-1">
-          <a href="mailto:info@yeezuz2020.store" className="hover:underline">
-            info@yeezuz2020.store
+          <a href="mailto:info@yeezuz2020.cz" className="hover:underline">
+            info@yeezuz2020.cz
           </a>
         </span>
       </p>
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
         této stránce.
       </p>
 
-      <p className="text-[10px] mt-12">Poslední aktualizace: duben 2025</p>
+      <p className="text-[10px] mt-12">Poslední aktualizace: prosinec 2025</p>
     </div>
   );
 }

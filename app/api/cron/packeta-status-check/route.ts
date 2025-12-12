@@ -47,7 +47,11 @@ async function fetchWithRetry(
 // Verify cron secret to prevent unauthorized access
 function verifyCronSecret(req: NextRequest): boolean {
   const cronSecret = req.headers.get('authorization');
-  const expectedSecret = process.env.CRON_SECRET || 'your-secret-key';
+  const expectedSecret = process.env.CRON_SECRET;
+  if (!expectedSecret) {
+    console.error('CRON_SECRET environment variable is not set');
+    return false;
+  }
   return cronSecret === `Bearer ${expectedSecret}`;
 }
 

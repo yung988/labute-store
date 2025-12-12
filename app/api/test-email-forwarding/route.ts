@@ -12,15 +12,15 @@ async function handlePost(req: NextRequest) {
       return NextResponse.json({ error: 'Chybí testEmail parametr' }, { status: 400 });
     }
 
-    // Odeslání test e-mailu na info@yeezuz2020.store
+    // Odeslání test e-mailu na info@yeezuz2020.cz
     const { data, error } = await resend.emails.send({
-      from: 'Test <noreply@yeezuz2020.store>',
-      to: 'info@yeezuz2020.store',
+      from: 'Test <noreply@yeezuz2020.cz>',
+      to: 'info@yeezuz2020.cz',
       subject: 'Test e-mailového forwarding',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>🧪 Test e-mailového forwarding</h2>
-          <p>Tento e-mail testuje, jestli forwarding z <strong>info@yeezuz2020.store</strong> na váš e-mail funguje správně.</p>
+          <p>Tento e-mail testuje, jestli forwarding z <strong>info@yeezuz2020.cz</strong> na váš e-mail funguje správně.</p>
 
           <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <strong>Test odeslán:</strong> ${new Date().toLocaleString('cs-CZ')}<br>
@@ -31,7 +31,7 @@ async function handlePost(req: NextRequest) {
 
           <hr style="margin: 30px 0;">
           <p style="color: #666; font-size: 12px;">
-            Tento test byl odeslán z aplikace yeezuz2020.store
+            Tento test byl odeslán z aplikace yeezuz2020.cz
           </p>
         </div>
       `,
@@ -46,7 +46,7 @@ async function handlePost(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Test e-mail odeslán na info@yeezuz2020.store',
+      message: 'Test e-mail odeslán na info@yeezuz2020.cz',
       emailId: data?.id,
       testEmail: testEmail,
     });
@@ -62,8 +62,8 @@ export const POST = withAdminAuth(handlePost);
 async function handleGet() {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Test <noreply@yeezuz2020.store>',
-      to: 'info@yeezuz2020.store',
+      from: 'Test <noreply@yeezuz2020.cz>',
+      to: 'info@yeezuz2020.cz',
       subject: 'Automatický test forwarding',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -87,7 +87,7 @@ async function handleGet() {
 
     return NextResponse.json({
       success: true,
-      message: 'Test e-mail odeslán na info@yeezuz2020.store',
+      message: 'Test e-mail odeslán na info@yeezuz2020.cz',
       emailId: data?.id,
     });
   } catch {

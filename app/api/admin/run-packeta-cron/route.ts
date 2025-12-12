@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { withAdminAuth } from '@/lib/middleware/admin-verification';
 
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return null;
-}
-
-export async function POST() {
-  const unauthorized = await requireAuth();
-  if (unauthorized) return unauthorized;
+async function handler() {
 
   const SITE_URL = process.env.SITE_URL?.replace(/\/$/, '');
   const CRON_SECRET = process.env.CRON_SECRET;
@@ -51,3 +40,5 @@ export async function POST() {
     return NextResponse.json({ error: 'Trigger failed', message: String(e) }, { status: 500 });
   }
 }
+
+export const POST = withAdminAuth(handler);

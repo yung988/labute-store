@@ -41,7 +41,7 @@ export default function ZasilkovnaWidget({
   onPointSelect,
   country = 'cz',
   language = 'cs',
-  appIdentity = 'yeezuz2020.store',
+  appIdentity = 'yeezuz2020.cz',
 }: ZasilkovnaWidgetProps) {
   const [selectedPoint, setSelectedPoint] = useState<ZasilkovnaPoint | null>(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);

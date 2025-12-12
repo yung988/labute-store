@@ -14,6 +14,7 @@ import { NotificationSystem } from '@/components/admin/NotificationSystem';
 const OrdersTable = React.lazy(() => import('@/components/admin/OrdersTable'));
 const InventoryTable = React.lazy(() => import('@/components/admin/InventoryTable'));
 const OrderDetailView = React.lazy(() => import('@/components/admin/OrderDetailView'));
+const SupportManagement = React.lazy(() => import('@/components/admin/SupportManagement'));
 
 const EnhancedDashboard = React.lazy(() => import('@/components/admin/EnhancedDashboard'));
 const EmailClientContent = React.lazy(() => import('@/components/admin/EmailClientContent'));
@@ -28,13 +29,14 @@ const LoadingSpinner = () => (
   </div>
 );
 
-type AdminSection = 'dashboard' | 'orders' | 'inventory' | 'order-detail' | 'emails' | 'packeta';
+type AdminSection = 'dashboard' | 'orders' | 'inventory' | 'order-detail' | 'emails' | 'packeta' | 'support';
 
 export default function AdminPage() {
   const router = useRouter();
   const [currentSection, setCurrentSection] = useState<AdminSection>('dashboard');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,7 @@ export default function AdminPage() {
 
     if (
       section &&
-      ['dashboard', 'orders', 'inventory', 'order-detail', 'emails'].includes(section)
+      ['dashboard', 'orders', 'inventory', 'order-detail', 'emails', 'support'].includes(section)
     ) {
       setCurrentSection(section);
       if (orderId) {
@@ -75,6 +77,10 @@ export default function AdminPage() {
       }
       if (email) {
         setSelectedEmail(email);
+      }
+      const ticketId = urlParams.get('ticketId');
+      if (ticketId) {
+        setSelectedTicketId(ticketId);
       }
     }
   }, []);
@@ -176,6 +182,15 @@ export default function AdminPage() {
               orderId={selectedOrderId}
               onBack={() => navigateToSection('orders')}
               onNavigateToEmails={handleNavigateToEmails}
+            />
+          </Suspense>
+        )}
+
+        {currentSection === 'support' && (
+          <Suspense fallback={<LoadingSpinner />}>
+            <SupportManagement
+              initialTicketId={selectedTicketId || undefined}
+              onNavigateToOrder={(id: string) => navigateToSection('order-detail', id)}
             />
           </Suspense>
         )}

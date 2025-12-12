@@ -19,10 +19,10 @@ import {
   Calendar,
   TrendingUp,
   Users,
+  Headset,
+  PackageX,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { useAdminContext } from '@/context/AdminContext';
-import { Order } from '@/types/orders';
 import {
   ChartConfig,
   ChartContainer,
@@ -54,6 +54,13 @@ type DashboardStats = {
     total: number;
     shipped: number;
     pending: number;
+  };
+  supportStats: {
+    openTickets: number;
+    inProgressTickets: number;
+    totalTickets: number;
+    pendingReturns: number;
+    urgentTickets: number;
   };
   recentOrdersList: Array<{
     id: string;
@@ -101,7 +108,7 @@ type DashboardStats = {
 
 type NavigationProps = {
   onNavigateAction: (
-    section: 'dashboard' | 'orders' | 'packeta' | 'order-detail',
+    section: 'dashboard' | 'orders' | 'packeta' | 'order-detail' | 'support',
     orderId?: string
   ) => void;
 };
@@ -117,14 +124,6 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const statusColors = {
-  paid: '#10b981',
-  new: '#10b981',
-  shipped: '#3b82f6',
-  cancelled: '#ef4444',
-  processing: '#f59e0b',
-};
-
 export default function EnhancedDashboard({ onNavigateAction }: NavigationProps) {
   const { selectedDate } = useAdminContext();
   const [stats, setStats] = useState<DashboardStats>({
@@ -135,6 +134,7 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
     todayOrders: 0,
     statusBreakdown: {},
     packetaStats: { total: 0, shipped: 0, pending: 0 },
+    supportStats: { openTickets: 0, inProgressTickets: 0, totalTickets: 0, pendingReturns: 0, urgentTickets: 0 },
     recentOrdersList: [],
     alerts: {
       lowStock: [],
@@ -155,109 +155,22 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
     setLoading(true);
     setError(null);
     try {
-      const supabase = createClient();
-
-      // Get all orders (with optional date filtering)
-      let query = supabase.from('orders').select('*').order('created_at', { ascending: false });
-
-      // Apply date filter if selected
+      // Build API URL with optional date filter
+      const params = new URLSearchParams();
       if (selectedDate) {
-        const startOfDay = new Date(selectedDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(selectedDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        query = query
-          .gte('created_at', startOfDay.toISOString())
-          .lte('created_at', endOfDay.toISOString());
+        params.set('date', selectedDate.toISOString());
       }
 
-      const { data: orders, error: ordersError } = await query;
+      const response = await fetch(`/api/admin/dashboard-stats?${params.toString()}`);
 
-      if (ordersError) throw new Error(ordersError.message);
-
-      if (!orders) {
-        setStats({
-          totalOrders: 0,
-          totalRevenue: 0,
-          totalCustomers: 0,
-          recentOrders: 0,
-          todayOrders: 0,
-          statusBreakdown: {},
-          packetaStats: { total: 0, shipped: 0, pending: 0 },
-          recentOrdersList: [],
-          alerts: {
-            lowStock: [],
-            oldOrders: [],
-            pendingShipments: 0,
-          },
-          chartData: {
-            dailyOrders: [],
-            statusChart: [],
-            monthlyTrend: [],
-          },
-        });
-        return;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      // Calculate basic stats
-      const totalOrders = orders.length;
-      const totalRevenue = orders.reduce((sum, order) => sum + (order.amount_total || 0), 0);
+      const data = await response.json();
 
-      // Unique customers
-      const uniqueEmails = new Set(
-        orders.filter((o) => o.customer_email).map((o) => o.customer_email)
-      );
-      const totalCustomers = uniqueEmails.size;
-
-      // Recent orders (last 7 days)
-      const lastWeek = new Date();
-      lastWeek.setDate(lastWeek.getDate() - 7);
-      const recentOrders = orders.filter((o) => new Date(o.created_at) > lastWeek).length;
-
-      // Today's orders
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayOrders = orders.filter((o) => {
-        const orderDate = new Date(o.created_at);
-        orderDate.setHours(0, 0, 0, 0);
-        return orderDate.getTime() === today.getTime();
-      }).length;
-
-      // Status breakdown
-      const statusBreakdown: Record<string, number> = {};
-      orders.forEach((order) => {
-        statusBreakdown[order.status] = (statusBreakdown[order.status] || 0) + 1;
-      });
-
-      // Packeta stats
-      const packetaOrders = orders.filter((o) => o.packeta_shipment_id);
-      const packetaStats = {
-        total: packetaOrders.length,
-        shipped: packetaOrders.filter((o) => o.status === 'shipped').length,
-        pending: packetaOrders.filter((o) => o.status !== 'shipped').length,
-      };
-
-      // Recent orders list (last 10)
-      const recentOrdersList = orders.slice(0, 10);
-
-      // Calculate alerts
-      const now = new Date();
-      const oldOrders = orders
-        .filter(
-          (o) =>
-            (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
-            o.status !== 'shipped'
-        )
-        .map((o) => {
-          const createdAt = new Date(o.created_at);
-          const daysOld = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-          return { ...o, days_old: daysOld };
-        })
-        .filter((o) => o.days_old > 1)
-        .slice(0, 5);
-
-      // Get low stock items
+      // Fetch low stock items separately
       let lowStock: Array<{
         product_name: string;
         size: string;
@@ -287,41 +200,11 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
         // Ignore inventory errors for now
       }
 
-      const pendingShipments = orders.filter(
-        (o) =>
-          (o.status === 'paid' || o.status === 'new' || o.status === 'processing') &&
-          !o.packeta_shipment_id &&
-          o.status !== 'shipped' &&
-          o.status !== 'cancelled'
-      ).length;
-
-      // Generate chart data
-      const dailyOrders = generateDailyOrdersChart(orders);
-      const statusChart = Object.entries(statusBreakdown).map(([status, count]) => ({
-        status: getStatusLabel(status),
-        count,
-        color: statusColors[status as keyof typeof statusColors] || '#6b7280',
-      }));
-      const monthlyTrend = generateMonthlyTrendChart(orders);
-
       setStats({
-        totalOrders,
-        totalRevenue,
-        totalCustomers,
-        recentOrders,
-        todayOrders,
-        statusBreakdown,
-        packetaStats,
-        recentOrdersList,
+        ...data,
         alerts: {
+          ...data.alerts,
           lowStock,
-          oldOrders,
-          pendingShipments,
-        },
-        chartData: {
-          dailyOrders,
-          statusChart,
-          monthlyTrend,
         },
       });
     } catch (e) {
@@ -334,47 +217,6 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
   useEffect(() => {
     loadStats();
   }, [loadStats]);
-
-  const generateDailyOrdersChart = (orders: Order[]) => {
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
-      return date.toISOString().split('T')[0];
-    });
-
-    return last30Days.map((date) => {
-      const dayOrders = orders.filter((order) => order.created_at.startsWith(date));
-      return {
-        date,
-        orders: dayOrders.length,
-        revenue: dayOrders.reduce((sum, order) => sum + (order.total_cents || 0), 0) / 100,
-      };
-    });
-  };
-
-  const generateMonthlyTrendChart = (orders: Order[]) => {
-    const last6Months = Array.from({ length: 6 }, (_, i) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - (5 - i));
-      return {
-        month: date.toLocaleDateString('cs-CZ', { month: 'short', year: '2-digit' }),
-        year: date.getFullYear(),
-        monthIndex: date.getMonth(),
-      };
-    });
-
-    return last6Months.map(({ month, year, monthIndex }) => {
-      const monthOrders = orders.filter((order) => {
-        const orderDate = new Date(order.created_at);
-        return orderDate.getFullYear() === year && orderDate.getMonth() === monthIndex;
-      });
-      return {
-        month,
-        orders: monthOrders.length,
-        revenue: monthOrders.reduce((sum, order) => sum + (order.total_cents || 0), 0) / 100,
-      };
-    });
-  };
 
   const handleQuickAction = async (
     orderId: string,
@@ -459,17 +301,6 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      paid: 'Zaplaceno',
-      new: 'Nové',
-      shipped: 'Odesláno',
-      cancelled: 'Zrušeno',
-      processing: 'Zpracovává se',
-    };
-    return labels[status] || status;
   };
 
   if (loading && stats.totalOrders === 0) {
@@ -577,6 +408,54 @@ export default function EnhancedDashboard({ onNavigateAction }: NavigationProps)
                 </div>
               </div>
               <Truck className="w-8 h-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => onNavigateAction('support')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{stats.supportStats.openTickets}</div>
+                <div className="text-sm text-muted-foreground">Nové tickety</div>
+                <div className="flex items-center gap-1 mt-1">
+                  {stats.supportStats.urgentTickets > 0 && (
+                    <>
+                      <AlertTriangle className="w-3 h-3 text-red-500" />
+                      <span className="text-xs text-red-600">{stats.supportStats.urgentTickets} urgentní</span>
+                    </>
+                  )}
+                  {stats.supportStats.urgentTickets === 0 && (
+                    <>
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      <span className="text-xs text-green-600">Vše v pořádku</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Headset className="w-8 h-8 text-indigo-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => onNavigateAction('support')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{stats.supportStats.pendingReturns}</div>
+                <div className="text-sm text-muted-foreground">Čekající reklamace</div>
+                <div className="flex items-center gap-1 mt-1">
+                  <Clock className="w-3 h-3 text-amber-500" />
+                  <span className="text-xs text-amber-600">K vyřízení</span>
+                </div>
+              </div>
+              <PackageX className="w-8 h-8 text-amber-600" />
             </div>
           </CardContent>
         </Card>

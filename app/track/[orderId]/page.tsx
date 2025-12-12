@@ -160,8 +160,8 @@ export default function TrackOrderPage() {
         <div className="text-center text-sm text-gray-500">
           <p>
             Potřebujete pomoct? Kontaktujte nás na{' '}
-            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
-              info@yeezuz2020.store
+            <a href="mailto:info@yeezuz2020.cz" className="hover:underline">
+              info@yeezuz2020.cz
             </a>
           </p>
         </div>

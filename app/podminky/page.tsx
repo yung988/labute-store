@@ -23,17 +23,17 @@ export default function TermsPage() {
             Sídlo: Znojmo
             <br />
             E-mail:{' '}
-            <a href="mailto:info@yeezuz2020.store" className="hover:underline">
-              info@yeezuz2020.store
+            <a href="mailto:info@yeezuz2020.cz" className="hover:underline">
+              info@yeezuz2020.cz
             </a>
             <br />
-            Web: www.yeezuz2020.store
+            Web: www.yeezuz2020.cz
           </p>
           <p className="mb-4">(dále jen &ldquo;prodávající&rdquo;)</p>
           <p className="mb-4">
             Tyto obchodní podmínky upravují vzájemná práva a povinnosti prodávajícího a fyzické
             osoby, která uzavírá kupní smlouvu prostřednictvím internetového obchodu dostupného na
-            www.yeezuz2020.store, který nabízí prodej oděvů a hudebních nosičů (CD) značky
+            www.yeezuz2020.cz, který nabízí prodej oděvů a hudebních nosičů (CD) značky
             YEEZUZ2020.
           </p>
           <p className="mb-4">
@@ -161,7 +161,7 @@ export default function TermsPage() {
             je zakázáno.
           </p>
           <p className="mb-4">
-            Tyto obchodní podmínky nabývají účinnosti dnem 12. 4. 2025 a nahrazují předchozí verze.
+            Tyto obchodní podmínky nabývají účinnosti dnem 9. 12. 2025 a nahrazují předchozí verze.
           </p>
         </div>
       </section>

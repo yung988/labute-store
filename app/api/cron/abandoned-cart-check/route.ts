@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
         // Send abandoned cart email
         const { error: emailError } = await resend.emails.send({
-          from: 'yeezuz2020.store <noreply@yeezuz2020.store>',
+          from: 'yeezuz2020.cz <noreply@yeezuz2020.cz>',
           to: [cart.customer_email],
           subject: `Zapomněli jste něco v košíku? 🛒`,
           html: `
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://yeezuz2020.store/cart" 
+                <a href="https://yeezuz2020.cz/cart" 
                    style="background: #000; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                   Dokončit objednávku
                 </a>
