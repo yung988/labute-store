@@ -50,27 +50,27 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
   const [formContent, setFormContent] = useState('');
   const [formCategory, setFormCategory] = useState<EmailTemplate['category']>('support');
 
-  // Mock templates
+  // Mock templates moved outside component to be stable
   const mockTemplates: EmailTemplate[] = [
     {
       id: '1',
       name: 'Potvrzení objednávky',
       subject: 'Potvrzení objednávky #{ORDER_ID}',
       content: `
-        <h2>Děkujeme za vaši objednávku!</h2>
-        <p>Dobrý den {CUSTOMER_NAME},</p>
-        <p>vaše objednávka <strong>#{ORDER_ID}</strong> byla úspěšně přijata a je nyní zpracovávána.</p>
-        
-        <h3>Detaily objednávky:</h3>
-        <ul>
-          <li>Číslo objednávky: {ORDER_ID}</li>
-          <li>Celková částka: {TOTAL_AMOUNT} Kč</li>
-          <li>Datum objednávky: {ORDER_DATE}</li>
-        </ul>
-        
-        <p>O dalším postupu vás budeme informovat emailem.</p>
-        <p>S pozdravem,<br>Tým Labute Store</p>
-      `,
+      <h2>Děkujeme za vaši objednávku!</h2>
+      <p>Dobrý den {CUSTOMER_NAME},</p>
+      <p>vaše objednávka <strong>#{ORDER_ID}</strong> byla úspěšně přijata a je nyní zpracovávána.</p>
+      
+      <h3>Detaily objednávky:</h3>
+      <ul>
+        <li>Číslo objednávky: {ORDER_ID}</li>
+        <li>Celková částka: {TOTAL_AMOUNT} Kč</li>
+        <li>Datum objednávky: {ORDER_DATE}</li>
+      </ul>
+      
+      <p>O dalším postupu vás budeme informovat emailem.</p>
+      <p>S pozdravem,<br>Tým Labute Store</p>
+    `,
       category: 'order',
       variables: ['CUSTOMER_NAME', 'ORDER_ID', 'TOTAL_AMOUNT', 'ORDER_DATE'],
       created_at: new Date().toISOString(),
@@ -82,14 +82,14 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       name: 'Odpověď na dotaz',
       subject: 'Re: {ORIGINAL_SUBJECT}',
       content: `
-        <p>Dobrý den {CUSTOMER_NAME},</p>
-        <p>děkujeme za váš dotaz. Rádi vám pomůžeme.</p>
-        
-        <p>{RESPONSE_CONTENT}</p>
-        
-        <p>Pokud máte další otázky, neváhejte nás kontaktovat.</p>
-        <p>S pozdravem,<br>{AGENT_NAME}<br>Zákaznická podpora</p>
-      `,
+      <p>Dobrý den {CUSTOMER_NAME},</p>
+      <p>děkujeme za váš dotaz. Rádi vám pomůžeme.</p>
+      
+      <p>{RESPONSE_CONTENT}</p>
+      
+      <p>Pokud máte další otázky, neváhejte nás kontaktovat.</p>
+      <p>S pozdravem,<br>{AGENT_NAME}<br>Zákaznická podpora</p>
+    `,
       category: 'support',
       variables: ['CUSTOMER_NAME', 'ORIGINAL_SUBJECT', 'RESPONSE_CONTENT', 'AGENT_NAME'],
       created_at: new Date().toISOString(),
@@ -101,20 +101,20 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       name: 'Oznámení o odeslání',
       subject: 'Vaše objednávka #{ORDER_ID} byla odeslána',
       content: `
-        <h2>Vaše objednávka je na cestě!</h2>
-        <p>Dobrý den {CUSTOMER_NAME},</p>
-        <p>vaše objednávka <strong>#{ORDER_ID}</strong> byla odeslána a je na cestě k vám.</p>
-        
-        <h3>Informace o zásilce:</h3>
-        <ul>
-          <li>Tracking číslo: <strong>{TRACKING_NUMBER}</strong></li>
-          <li>Dopravce: {CARRIER}</li>
-          <li>Očekávané doručení: {DELIVERY_DATE}</li>
-        </ul>
-        
-        <p>Zásilku můžete sledovat na: <a href="{TRACKING_URL}">{TRACKING_URL}</a></p>
-        <p>S pozdravem,<br>Tým Labute Store</p>
-      `,
+      <h2>Vaše objednávka je na cestě!</h2>
+      <p>Dobrý den {CUSTOMER_NAME},</p>
+      <p>vaše objednávka <strong>#{ORDER_ID}</strong> byla odeslána a je na cestě k vám.</p>
+      
+      <h3>Informace o zásilce:</h3>
+      <ul>
+        <li>Tracking číslo: <strong>{TRACKING_NUMBER}</strong></li>
+        <li>Dopravce: {CARRIER}</li>
+        <li>Očekávané doručení: {DELIVERY_DATE}</li>
+      </ul>
+      
+      <p>Zásilku můžete sledovat na: <a href="{TRACKING_URL}">{TRACKING_URL}</a></p>
+      <p>S pozdravem,<br>Tým Labute Store</p>
+    `,
       category: 'order',
       variables: [
         'CUSTOMER_NAME',
@@ -133,20 +133,20 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       name: 'Newsletter',
       subject: 'Nové produkty v našem e-shopu',
       content: `
-        <h1>Objevte naše novinky!</h1>
-        <p>Dobrý den {CUSTOMER_NAME},</p>
-        <p>máme pro vás skvělé novinky! V našem e-shopu najdete nové produkty, které vás určitě zaujmou.</p>
-        
-        <h3>Nejnovější produkty:</h3>
-        <p>{FEATURED_PRODUCTS}</p>
-        
-        <p>Navštivte náš e-shop a objevte všechny novinky: <a href="{SHOP_URL}">Labute Store</a></p>
-        
-        <p>S pozdravem,<br>Tým Labute Store</p>
-        
-        <hr>
-        <p><small>Pokud si nepřejete dostávat tyto emaily, můžete se <a href="{UNSUBSCRIBE_URL}">odhlásit</a>.</small></p>
-      `,
+      <h1>Objevte naše novinky!</h1>
+      <p>Dobrý den {CUSTOMER_NAME},</p>
+      <p>máme pro vás skvělé novinky! V našem e-shopu najdete nové produkty, které vás určitě zaujmou.</p>
+      
+      <h3>Nejnovější produkty:</h3>
+      <p>{FEATURED_PRODUCTS}</p>
+      
+      <p>Navštivte náš e-shop a objevte všechny novinky: <a href="{SHOP_URL}">Labute Store</a></p>
+      
+      <p>S pozdravem,<br>Tým Labute Store</p>
+      
+      <hr>
+      <p><small>Pokud si nepřejete dostávat tyto emaily, můžete se <a href="{UNSUBSCRIBE_URL}">odhlásit</a>.</small></p>
+    `,
       category: 'marketing',
       variables: ['CUSTOMER_NAME', 'FEATURED_PRODUCTS', 'SHOP_URL', 'UNSUBSCRIBE_URL'],
       created_at: new Date().toISOString(),
@@ -162,7 +162,7 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       setTemplates(mockTemplates);
       setLoading(false);
     }, 300);
-  }, [mockTemplates]);
+  }, []);
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =

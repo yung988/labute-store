@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://yeezuz2020.cz';
@@ -42,19 +42,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productPages: MetadataRoute.Sitemap = [];
 
   try {
-    const supabase = await createClient();
-    const { data: products } = await supabase
-      .from('products')
-      .select('slug, updated_at')
-      .eq('is_active', true);
+    // NOTE: We use the direct client here to avoid using cookies() which prevents static generation
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (products) {
-      productPages = products.map((product) => ({
-        url: `${baseUrl}/product/${product.slug}`,
-        lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-      }));
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: products } = await supabase
+        .from('products')
+        .select('slug, updated_at')
+        .eq('is_active', true);
+
+      if (products) {
+        productPages = products.map((product) => ({
+          url: `${baseUrl}/product/${product.slug}`,
+          lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        }));
+      }
     }
   } catch (error) {
     console.error('Error fetching products for sitemap:', error);

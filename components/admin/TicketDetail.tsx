@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export default function TicketDetail({ ticketId, onBack }: Props) {
   const [sending, setSending] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/tickets/${ticketId}`, {
@@ -70,11 +70,11 @@ export default function TicketDetail({ ticketId, onBack }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId]);
 
   useEffect(() => {
     fetchTicket();
-  }, [ticketId]);
+  }, [fetchTicket]);
 
   const handleSendReply = async () => {
     if (!replyMessage.trim() || !ticket) return;
@@ -287,13 +287,12 @@ export default function TicketDetail({ ticketId, onBack }: Props) {
                         </span>
                       </div>
                       <div
-                        className={`p-3 rounded-lg ${
-                          reply.sender_type === 'staff'
-                            ? reply.is_internal_note
-                              ? 'bg-yellow-50 border border-yellow-200'
-                              : 'bg-blue-50'
-                            : 'bg-gray-50'
-                        }`}
+                        className={`p-3 rounded-lg ${reply.sender_type === 'staff'
+                          ? reply.is_internal_note
+                            ? 'bg-yellow-50 border border-yellow-200'
+                            : 'bg-blue-50'
+                          : 'bg-gray-50'
+                          }`}
                       >
                         <p className="whitespace-pre-wrap text-sm">{reply.message}</p>
                       </div>

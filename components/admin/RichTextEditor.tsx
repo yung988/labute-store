@@ -14,7 +14,7 @@ import {
   List,
   ListOrdered,
   Link,
-  Image,
+  Image as ImageIcon,
   Code,
   Quote,
   Undo,
@@ -289,7 +289,7 @@ export default function RichTextEditor({
             <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Vložit obrázek">
-                  <Image className="w-4 h-4" />
+                  <ImageIcon className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent>

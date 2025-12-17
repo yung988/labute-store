@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export default function SupportTicketsList({ onTicketClick }: Props) {
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -58,11 +58,11 @@ export default function SupportTicketsList({ onTicketClick }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     fetchTickets();
-  }, [filter]);
+  }, [fetchTickets]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

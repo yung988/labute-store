@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ export default function ReturnRequestsList() {
   const [adminNotes, setAdminNotes] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
 
-  const fetchReturns = async () => {
+  const fetchReturns = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -62,11 +62,11 @@ export default function ReturnRequestsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     fetchReturns();
-  }, [filter]);
+  }, [fetchReturns]);
 
   const handleOpenDetail = (returnReq: ReturnRequest) => {
     setSelectedReturn(returnReq);
