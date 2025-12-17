@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import { BuyButton } from '@/components/BuyButton';
 import { ProductGallery } from '@/components/ProductGallery';
 import { RelatedProducts } from '@/components/RelatedProducts';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
-// Force this page to be dynamic to avoid build-time execution of cookies() in Supabase client
-export const dynamic = 'force-dynamic';
+// Revalidate this page every hour
+export const revalidate = 3600;
+export const dynamicParams = true; // Allow generating pages for new products on demand
 
 // Interface for transformed product data used by components
 interface TransformedProduct {
@@ -30,10 +31,36 @@ interface TransformedProduct {
   }[];
 }
 
+// Generate static params for all active products
+export async function generateStaticParams() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) return [];
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data: products } = await supabase
+    .from('products')
+    .select('slug')
+    .eq('is_active', true);
+
+  return products?.map((product) => ({
+    slug: product.slug,
+  })) || [];
+}
+
 // Funkce pro načtení produktu z API
 async function getProduct(slug: string): Promise<TransformedProduct | null> {
   try {
-    const supabase = await createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase credentials missing');
+      return null;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: productWithDetails } = await supabase
       .from('products')

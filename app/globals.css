@@ -87,6 +87,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -205,20 +206,8 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* Contact section styles */
-.contact-section {
-  transition:
-    opacity 0.3s ease-in-out,
-    transform 0.3s ease-in-out;
-}
-
-.contact-section.hidden {
-  opacity: 0;
-  transform: translateY(-20px);
-  pointer-events: none;
 }

@@ -1,7 +1,7 @@
 // app/page.tsx
 import { createClient } from '@/lib/supabase/server';
 import ProductGrid from '@/components/ProductGrid';
-import ScrollHandler from '@/components/ScrollHandler';
+
 
 interface HomeProductImage {
   url: string;
@@ -54,25 +54,9 @@ export default async function HomePage() {
 
   return (
     <>
-      <ScrollHandler />
       <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-[8vh] sm:pt-[6vh] lg:pt-[8vh] pb-[18vh] sm:pb-[24vh] lg:pb-[28vh]">
         <div className="sticky" style={{ top: 'calc(var(--header-height) + 1rem)' }}>
           <ProductGrid products={orderedProducts} />
-        </div>
-
-        {/* Contact section - hidden on scroll */}
-        <div className="mt-16 text-center contact-section">
-          <h2 className="text-lg font-medium text-black mb-4">MÁTE OTÁZKY?</h2>
-          <p className="text-sm text-gray-600 mb-2">
-            Kontaktujte nás na{' '}
-            <a
-              href="mailto:info@yeezuz2020.cz"
-              className="text-black hover:underline font-medium"
-            >
-              info@yeezuz2020.cz
-            </a>
-          </p>
-          <p className="text-xs text-gray-500">Odpovíme vám co nejdříve</p>
         </div>
       </main>
     </>
