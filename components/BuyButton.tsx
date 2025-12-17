@@ -116,6 +116,7 @@ export const BuyButton = ({
           type="button"
           onClick={handleAddToCart}
           disabled={loading}
+          data-testid="add-to-cart-button"
           className="w-full bg-black text-white p-3 text-xs font-medium tracking-wide hover:bg-gray-900 transition-colors disabled:bg-zinc-300 disabled:text-zinc-500 uppercase"
         >
           {loading ? 'Přidávám do košíku...' : 'Přidat do košíku'}

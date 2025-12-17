@@ -57,7 +57,7 @@ const CartSummary = ({
 
   return (
     <div
-      className={`bg-white ${isMobile ? 'border-b border-gray-300' : 'border border-gray-300 rounded-none'} ${!isMobile ? 'sticky top-0 h-screen overflow-y-auto' : ''}`}
+      className={`bg-white ${isMobile ? 'border-b border-gray-300' : 'border border-gray-300 rounded-none'} ${!isMobile ? 'sticky top-0 h-fit max-h-screen overflow-y-auto' : ''}`}
     >
       {isMobile && (
         <div className="sticky top-0 bg-white border-b border-gray-300 p-4">
@@ -174,6 +174,19 @@ function CartForm() {
   const [deliveryPrice, setDeliveryPrice] = useState<number>(
     deliveryMethod === 'pickup' ? 79 : 149
   );
+
+  // SAFETY: Force enable scrolling on mount to prevent lock from sidebar or other components
+  useEffect(() => {
+    // Immediate unlock
+    document.body.style.overflow = '';
+
+    // Safety check after small delay in case of race conditions with animations
+    const timeout = setTimeout(() => {
+      document.body.style.overflow = '';
+    }, 100);
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     const getQuote = async () => {
@@ -358,7 +371,7 @@ function CartForm() {
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-0">
         {/* Levá strana - Formulář */}
-        <div className="lg:overflow-y-auto lg:h-screen p-6 lg:p-12">
+        <div className="p-6 lg:p-12">
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-2xl font-medium tracking-wide uppercase">YEEZUZ2020</h1>
@@ -377,11 +390,10 @@ function CartForm() {
                       setDeliveryMethod('home_delivery');
                       localStorage.setItem('checkout-delivery-method', 'home_delivery');
                     }}
-                    className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${
-                      deliveryMethod === 'home_delivery'
-                        ? 'border-black bg-black text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
+                    className={`flex items-center justify-center gap-2 p-4 transition-all rounded-none border-2 ${deliveryMethod === 'home_delivery'
+                      ? 'border-black bg-black text-white'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
                   >
                     <Package className="w-4 h-4" />
                     <span className="text-sm font-medium">Doručit domů</span>
@@ -393,11 +405,10 @@ function CartForm() {
                       setDeliveryMethod('pickup');
                       localStorage.setItem('checkout-delivery-method', 'pickup');
                     }}
-                    className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${
-                      deliveryMethod === 'pickup'
-                        ? 'border-black bg-black text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
+                    className={`flex items-center justify-center gap-2 p-4 border-2 transition-all rounded-none ${deliveryMethod === 'pickup'
+                      ? 'border-black bg-black text-white'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
                   >
                     <MapPin className="w-4 h-4" />
                     <span className="text-sm font-medium">Výdejní místo</span>

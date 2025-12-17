@@ -38,7 +38,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
 
@@ -48,18 +48,16 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/30 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/30 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         style={{ zIndex: 999999 }}
         onClick={onClose}
       />
 
       {/* Sidebar */}
       <div
-        className={`fixed right-0 top-0 w-full max-w-md bg-white shadow-xl flex flex-col will-change-transform ${
-          dragging ? 'transition-none' : 'transition-transform duration-300 ease-in-out'
-        }`}
+        className={`fixed right-0 top-0 w-full max-w-md bg-white shadow-xl flex flex-col will-change-transform ${dragging ? 'transition-none' : 'transition-transform duration-300 ease-in-out'
+          }`}
         style={{
           zIndex: 1000000,
           height: '100svh',
@@ -130,6 +128,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                 {items.map((item, index) => (
                   <div
                     key={`${item.id}-${item.size || 'no-size'}-${index}`}
+                    data-testid="cart-item"
                     className="flex gap-4 pb-6 border-b border-gray-100 last:border-b-0"
                   >
                     {item.image && (

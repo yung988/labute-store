@@ -15,6 +15,7 @@ export function CartTrigger() {
         variant="ghost"
         size="icon"
         className="relative hover:bg-gray-50 transition-colors"
+        data-testid="cart-trigger"
         onClick={() => setIsSidebarOpen(true)}
       >
         <ShoppingBag className="h-5 w-5 text-gray-700" />

@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, CheckCheck, Filter } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { NotificationItem } from './NotificationItem';
 import { type Notification } from './notifications-data';
 
@@ -164,7 +165,7 @@ export function NotificationDropdown() {
         </div>
 
         {/* Content */}
-        <div className="max-h-[400px] overflow-y-auto">
+        <ScrollArea className="h-[400px]">
           {filteredNotifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -190,7 +191,7 @@ export function NotificationDropdown() {
               ))}
             </div>
           )}
-        </div>
+        </ScrollArea>
 
         {/* Footer */}
         {filteredNotifications.length > 0 && (
