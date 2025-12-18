@@ -69,7 +69,7 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       </ul>
       
       <p>O dalším postupu vás budeme informovat emailem.</p>
-      <p>S pozdravem,<br>Tým Labute Store</p>
+      <p>S pozdravem,<br>Tým YEEZUZ2020</p>
     `,
       category: 'order',
       variables: ['CUSTOMER_NAME', 'ORDER_ID', 'TOTAL_AMOUNT', 'ORDER_DATE'],
@@ -113,7 +113,7 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       </ul>
       
       <p>Zásilku můžete sledovat na: <a href="{TRACKING_URL}">{TRACKING_URL}</a></p>
-      <p>S pozdravem,<br>Tým Labute Store</p>
+      <p>S pozdravem,<br>Tým YEEZUZ2020</p>
     `,
       category: 'order',
       variables: [
@@ -140,9 +140,9 @@ export default function EmailTemplates({ onSelectTemplate, onClose }: EmailTempl
       <h3>Nejnovější produkty:</h3>
       <p>{FEATURED_PRODUCTS}</p>
       
-      <p>Navštivte náš e-shop a objevte všechny novinky: <a href="{SHOP_URL}">Labute Store</a></p>
+      <p>Navštivte náš e-shop a objevte všechny novinky: <a href="{SHOP_URL}">YEEZUZ2020</a></p>
       
-      <p>S pozdravem,<br>Tým Labute Store</p>
+      <p>S pozdravem,<br>Tým YEEZUZ2020</p>
       
       <hr>
       <p><small>Pokud si nepřejete dostávat tyto emaily, můžete se <a href="{UNSUBSCRIBE_URL}">odhlásit</a>.</small></p>

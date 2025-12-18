@@ -202,7 +202,7 @@ export const statsTemplate = (stats: {
 
 // Template pro help zprávu
 export const helpTemplate = (): string => {
-  return `🤖 <b>LABUTE STORE BOT - NÁPOVĚDA</b>
+  return `🤖 <b>YEEZUZ2020 BOT - NÁPOVĚDA</b>
 
 📋 <b>Dostupné příkazy:</b>
 

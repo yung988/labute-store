@@ -198,6 +198,6 @@ export const createEmailStyle = (baseStyle: any, overrides: any = {}) => ({
 export const BRAND = {
   name: 'YEEZUZ2020',
   tagline: '2020',
-  supportEmail: 'info@yeezuz2020.com',
-  website: 'https://yeezuz2020.com',
+  supportEmail: 'info@yeezuz2020.cz',
+  website: 'https://yeezuz2020.cz',
 } as const;

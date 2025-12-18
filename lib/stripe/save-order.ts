@@ -324,8 +324,38 @@ export default async function saveOrderToDb(session: StripeCheckoutSession): Pro
 
     if (!inventoryResult.success) {
       console.error('❌ Failed to update inventory:', inventoryResult.error);
-      // Poznámka: Objednávka je již uložena, ale sklad se neaktualizoval
-      // V produkci bychom mohli chtít rollback nebo notifikaci admina
+
+      // Update order with inventory issue flag for admin visibility
+      try {
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            admin_notes: `⚠️ INVENTORY ISSUE: ${inventoryResult.error}`,
+          })
+          .eq('id', orderId);
+      } catch (updateErr) {
+        console.error('Failed to update order with inventory flag:', updateErr);
+      }
+
+      // Send Telegram alert to admin
+      const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN;
+      const telegramChatId = process.env.TELEGRAM_CHAT_ID;
+      if (telegramBotToken && telegramChatId) {
+        try {
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: `⚠️ <b>INVENTORY SELHALO!</b>\n\n📋 Objednávka: <b>${orderId}</b>\n❌ Chyba: ${inventoryResult.error}\n\n🔧 <i>Vyžaduje manuální kontrolu skladu!</i>`,
+              parse_mode: 'HTML',
+            }),
+          });
+          console.log('📱 Inventory failure alert sent to Telegram');
+        } catch (telegramErr) {
+          console.error('Failed to send Telegram inventory alert:', telegramErr);
+        }
+      }
     } else {
       console.log('✅ Inventory updated successfully:', inventoryResult.updatedItems);
     }

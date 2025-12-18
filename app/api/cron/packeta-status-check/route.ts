@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
             headers: {
               'Content-Type': 'application/xml',
               Accept: 'application/xml',
-              'User-Agent': 'labute-store/cron (Packeta status check)',
+              'User-Agent': 'yeezuz2020/cron (Packeta status check)',
             },
             body: xmlBody,
           },

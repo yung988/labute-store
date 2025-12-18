@@ -5,7 +5,7 @@ export default function TermsPage() {
 
       <section className="mb-10">
         <h2 className="font-bold underline text-black mb-4">
-          VŠEOBECNÉ OBCHODNÍ PODMÍNKY YEEZUZ2020.STORE
+          VŠEOBECNÉ OBCHODNÍ PODMÍNKY YEEZUZ2020.CZ
         </h2>
 
         <div className="mb-6">

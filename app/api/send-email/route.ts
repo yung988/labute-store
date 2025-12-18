@@ -105,6 +105,37 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    // Idempotency check - prevent duplicate emails within 5 minutes
+    if (orderId) {
+      try {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: existingEmail } = await supabaseAdmin
+          .from('email_logs')
+          .select('id, created_at')
+          .eq('order_id', orderId)
+          .eq('email_type', type)
+          .gte('created_at', fiveMinutesAgo)
+          .limit(1);
+
+        if (existingEmail && existingEmail.length > 0) {
+          console.log(
+            `⏭️ Skipping duplicate ${type} email for order ${orderId} (already sent at ${existingEmail[0].created_at})`
+          );
+          return NextResponse.json({
+            success: true,
+            message: 'Email already sent recently - skipped duplicate',
+            duplicate: true,
+            orderId,
+            type,
+            existingEmailId: existingEmail[0].id,
+          });
+        }
+      } catch (checkError) {
+        // Log but continue - don't block email sending if check fails
+        console.warn('Idempotency check failed (continuing with send):', checkError);
+      }
+    }
+
     // Send email
     const emailResponse = await resend.emails.send({
       from: `${BRAND.name} <${process.env.FROM_EMAIL || BRAND.supportEmail}>`,
