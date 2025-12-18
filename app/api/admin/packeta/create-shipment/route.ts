@@ -78,48 +78,53 @@ export const POST = withAdminAuth(async (req: NextRequest) => {
   // Calculate total weight from order items (in kg for Packeta API)
   let totalWeightKg = 0.5; // Default 0.5kg fallback
   try {
-    if (order.items && typeof order.items === 'string') {
-      const items = JSON.parse(order.items) as Array<{
-        description: string;
-        quantity: number;
-        amount_total: number;
-      }>;
+    // Handle both string (legacy) and array (JSONB) formats
+    let items: Array<{
+      description: string;
+      quantity: number;
+      amount_total: number;
+    }> = [];
 
-      if (items.length > 0) {
-        let calculatedWeightKg = 0;
+    if (typeof order.items === 'string') {
+      items = JSON.parse(order.items);
+    } else if (Array.isArray(order.items)) {
+      items = order.items;
+    }
 
-        for (const item of items) {
-          // Skip shipping items
-          if (
-            item.description?.toLowerCase().includes('shipping') ||
-            item.description?.toLowerCase().includes('doprava') ||
-            item.description?.toLowerCase().includes('zásilkovna')
-          ) {
-            continue;
-          }
+    if (items.length > 0) {
+      let calculatedWeightKg = 0;
 
-          // Find product by name (case-insensitive partial match)
-          const { data: product, error: productError } = await supabaseAdmin
-            .from('products')
-            .select('name, weight_kg')
-            .ilike('name', `%${item.description}%`)
-            .single();
-
-          if (productError) {
-            continue;
-          }
-
-          if (product?.weight_kg) {
-            // Weight is already in kg, just multiply by quantity
-            const itemWeightKg = product.weight_kg * item.quantity;
-            calculatedWeightKg += itemWeightKg;
-          }
+      for (const item of items) {
+        // Skip shipping items
+        if (
+          item.description?.toLowerCase().includes('shipping') ||
+          item.description?.toLowerCase().includes('doprava') ||
+          item.description?.toLowerCase().includes('zásilkovna')
+        ) {
+          continue;
         }
 
-        if (calculatedWeightKg > 0) {
-          // Cap weight at 30kg (Packeta limit) and ensure minimum 0.1kg
-          totalWeightKg = Math.max(0.1, Math.min(30, calculatedWeightKg));
+        // Find product by name (case-insensitive partial match)
+        const { data: product, error: productError } = await supabaseAdmin
+          .from('products')
+          .select('name, weight_kg')
+          .ilike('name', `%${item.description}%`)
+          .single();
+
+        if (productError) {
+          continue;
         }
+
+        if (product?.weight_kg) {
+          // Weight is already in kg, just multiply by quantity
+          const itemWeightKg = product.weight_kg * item.quantity;
+          calculatedWeightKg += itemWeightKg;
+        }
+      }
+
+      if (calculatedWeightKg > 0) {
+        // Cap weight at 30kg (Packeta limit) and ensure minimum 0.1kg
+        totalWeightKg = Math.max(0.1, Math.min(30, calculatedWeightKg));
       }
     }
   } catch {

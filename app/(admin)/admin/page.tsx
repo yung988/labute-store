@@ -18,6 +18,7 @@ const SupportManagement = React.lazy(() => import('@/components/admin/SupportMan
 
 const EnhancedDashboard = React.lazy(() => import('@/components/admin/EnhancedDashboard'));
 const EmailClientContent = React.lazy(() => import('@/components/admin/EmailClientContent'));
+const PacketaManagement = React.lazy(() => import('@/components/admin/PacketaManagement'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -69,7 +70,7 @@ export default function AdminPage() {
 
     if (
       section &&
-      ['dashboard', 'orders', 'inventory', 'order-detail', 'emails', 'support'].includes(section)
+      ['dashboard', 'orders', 'inventory', 'order-detail', 'emails', 'packeta', 'support'].includes(section)
     ) {
       setCurrentSection(section);
       if (orderId) {
@@ -191,6 +192,14 @@ export default function AdminPage() {
             <SupportManagement
               initialTicketId={selectedTicketId || undefined}
               onNavigateToOrder={(id: string) => navigateToSection('order-detail', id)}
+            />
+          </Suspense>
+        )}
+
+        {currentSection === 'packeta' && (
+          <Suspense fallback={<LoadingSpinner />}>
+            <PacketaManagement
+              onOrderClick={(id: string) => navigateToSection('order-detail', id)}
             />
           </Suspense>
         )}

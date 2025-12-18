@@ -30,20 +30,30 @@ async function handler(
     let inventoryItems: CartItemForInventory[] = [];
 
     try {
-      const items = JSON.parse(order.items || '[]');
+      // Handle both string (legacy) and array (JSONB) formats
+      type OrderItem = {
+        productId?: string;
+        size?: string;
+        quantity?: number;
+        description?: string;
+        name?: string;
+      };
+      let items: OrderItem[];
+      if (typeof order.items === 'string') {
+        items = JSON.parse(order.items || '[]');
+      } else if (Array.isArray(order.items)) {
+        items = order.items as OrderItem[];
+      } else {
+        items = [];
+      }
       inventoryItems = items
-        .filter((item: { productId?: string; size?: string }) => item.productId && item.size)
-        .map(
-          (item: {
-            productId: string;
-            size: string;
-            quantity: number;
-            description?: string;
-            name?: string;
-          }) => ({
+        .filter((item): item is OrderItem & { productId: string; size: string } =>
+          Boolean(item.productId && item.size)
+        )
+        .map((item) => ({
             productId: item.productId,
             size: item.size,
-            quantity: item.quantity,
+            quantity: item.quantity || 1,
             name: item.description || item.name || 'Unknown product',
           })
         );

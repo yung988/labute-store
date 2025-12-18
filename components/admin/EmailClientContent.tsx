@@ -23,6 +23,8 @@ import {
   Clock,
   Eye,
   Settings,
+  X,
+  FileText,
 } from 'lucide-react';
 
 import RichTextEditor from './RichTextEditor';
@@ -68,6 +70,16 @@ type EmailTemplate = {
   usage_count: number;
 };
 
+type EmailDraft = {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  orderId: string;
+  created_at: string;
+  updated_at: string;
+};
+
 interface EmailClientContentProps {
   onOrderClick?: (orderId: string) => void;
   initialOrderId?: string;
@@ -92,6 +104,13 @@ export default function EmailClientContent({
   const [composeBody, setComposeBody] = useState('');
   const [composeOrderId, setComposeOrderId] = useState('');
   const [composeSending, setComposeSending] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+
+  // Drafts state
+  const [drafts, setDrafts] = useState<EmailDraft[]>([]);
+
+  // Attachments state
+  const [attachments, setAttachments] = useState<Array<{ filename: string; content: string; size: number }>>([]);
 
   // Mock data for development
   const mockEmails: EmailLog[] = useMemo(
@@ -202,9 +221,137 @@ export default function EmailClientContent({
     );
   }, []);
 
+  // Draft management functions
+  const DRAFTS_STORAGE_KEY = 'email_drafts';
+
+  const loadDrafts = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(DRAFTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as EmailDraft[];
+        setDrafts(parsed.sort((a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        ));
+      }
+    } catch (e) {
+      console.error('Failed to load drafts:', e);
+    }
+  }, []);
+
+  const saveDraft = useCallback(() => {
+    if (!composeTo && !composeSubject && !composeBody) {
+      return; // Don't save empty drafts
+    }
+
+    const now = new Date().toISOString();
+    const draft: EmailDraft = {
+      id: editingDraftId || `draft_${Date.now()}`,
+      to: composeTo,
+      subject: composeSubject,
+      body: composeBody,
+      orderId: composeOrderId,
+      created_at: editingDraftId ? drafts.find(d => d.id === editingDraftId)?.created_at || now : now,
+      updated_at: now,
+    };
+
+    const updatedDrafts = editingDraftId
+      ? drafts.map(d => d.id === editingDraftId ? draft : d)
+      : [draft, ...drafts];
+
+    setDrafts(updatedDrafts);
+    localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(updatedDrafts));
+
+    // Reset editing state
+    setEditingDraftId(draft.id);
+
+    return draft.id;
+  }, [composeTo, composeSubject, composeBody, composeOrderId, editingDraftId, drafts]);
+
+  const deleteDraft = useCallback((draftId: string) => {
+    const updatedDrafts = drafts.filter(d => d.id !== draftId);
+    setDrafts(updatedDrafts);
+    localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(updatedDrafts));
+
+    if (editingDraftId === draftId) {
+      setEditingDraftId(null);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      setComposeOrderId('');
+    }
+  }, [drafts, editingDraftId]);
+
+  const editDraft = useCallback((draft: EmailDraft) => {
+    setComposeTo(draft.to);
+    setComposeSubject(draft.subject);
+    setComposeBody(draft.body);
+    setComposeOrderId(draft.orderId);
+    setEditingDraftId(draft.id);
+    setCurrentView('compose');
+  }, []);
+
+  // File attachment handler
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+    const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25MB total
+
+    const currentTotalSize = attachments.reduce((sum, att) => sum + att.size, 0);
+
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(`Soubor "${file.name}" je příliš velký (max 10MB)`);
+        continue;
+      }
+
+      if (currentTotalSize + file.size > MAX_TOTAL_SIZE) {
+        alert('Celková velikost příloh nesmí překročit 25MB');
+        break;
+      }
+
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove data URL prefix to get pure base64
+            const base64Content = result.split(',')[1];
+            resolve(base64Content);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        setAttachments((prev) => [
+          ...prev,
+          { filename: file.name, content: base64, size: file.size },
+        ]);
+      } catch (e) {
+        console.error('File read error:', e);
+        alert(`Nepodařilo se načíst soubor "${file.name}"`);
+      }
+    }
+
+    // Reset input
+    event.target.value = '';
+  }, [attachments]);
+
+  const removeAttachment = useCallback((filename: string) => {
+    setAttachments((prev) => prev.filter((att) => att.filename !== filename));
+  }, []);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   useEffect(() => {
     loadEmails();
-  }, [loadEmails]);
+    loadDrafts();
+  }, [loadEmails, loadDrafts]);
 
   // Initialize based on props
   useEffect(() => {
@@ -237,6 +384,10 @@ export default function EmailClientContent({
           html: composeBody,
           email_type: 'support_reply',
           order_id: composeOrderId || null,
+          attachments: attachments.map((att) => ({
+            filename: att.filename,
+            content: att.content,
+          })),
         }),
       });
 
@@ -245,11 +396,18 @@ export default function EmailClientContent({
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
+      // Delete draft if we were editing one
+      if (editingDraftId) {
+        deleteDraft(editingDraftId);
+      }
+
       // Reset compose form
       setComposeTo('');
       setComposeSubject('');
       setComposeBody('');
       setComposeOrderId('');
+      setEditingDraftId(null);
+      setAttachments([]);
       setCurrentView('sent');
 
       await loadEmails();
@@ -258,7 +416,7 @@ export default function EmailClientContent({
     } finally {
       setComposeSending(false);
     }
-  }, [composeTo, composeSubject, composeBody, composeOrderId, loadEmails]);
+  }, [composeTo, composeSubject, composeBody, composeOrderId, attachments, editingDraftId, deleteDraft, loadEmails]);
 
   const handleTemplateSelect = (template: EmailTemplate) => {
     setComposeSubject(template.subject);
@@ -353,7 +511,7 @@ export default function EmailClientContent({
           </TabsTrigger>
           <TabsTrigger value="drafts" className="flex items-center gap-2">
             <Archive className="w-4 h-4" />
-            Koncepty
+            Koncepty {drafts.length > 0 && `(${drafts.length})`}
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
@@ -588,12 +746,58 @@ export default function EmailClientContent({
                     className="mt-2"
                   />
                 </div>
+                {/* Attachments display */}
+                {attachments.length > 0 && (
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Paperclip className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        Přílohy ({attachments.length})
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({formatFileSize(attachments.reduce((sum, att) => sum + att.size, 0))})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {attachments.map((att) => (
+                        <div
+                          key={att.filename}
+                          className="flex items-center gap-2 bg-background border rounded-md px-2 py-1"
+                        >
+                          <FileText className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-sm truncate max-w-[150px]">{att.filename}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({formatFileSize(att.size)})
+                          </span>
+                          <button
+                            onClick={() => removeAttachment(att.filename)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Paperclip className="w-4 h-4 mr-2" />
-                      Příloha
-                    </Button>
+                    <label>
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileUpload}
+                        accept="*/*"
+                      />
+                      <Button variant="outline" size="sm" asChild>
+                        <span className="cursor-pointer">
+                          <Paperclip className="w-4 h-4 mr-2" />
+                          Příloha
+                        </span>
+                      </Button>
+                    </label>
                     <Button variant="outline" size="sm" onClick={() => setCurrentView('templates')}>
                       <Settings className="w-4 h-4 mr-2" />
                       Šablona
@@ -602,10 +806,29 @@ export default function EmailClientContent({
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setCurrentView('inbox')}
+                      onClick={() => {
+                        setComposeTo('');
+                        setComposeSubject('');
+                        setComposeBody('');
+                        setComposeOrderId('');
+                        setEditingDraftId(null);
+                        setAttachments([]);
+                        setCurrentView('inbox');
+                      }}
                       disabled={composeSending}
                     >
                       Zrušit
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        saveDraft();
+                        alert('Koncept uložen');
+                      }}
+                      disabled={composeSending || (!composeTo && !composeSubject && !composeBody)}
+                    >
+                      <Archive className="w-4 h-4 mr-2" />
+                      {editingDraftId ? 'Aktualizovat koncept' : 'Uložit jako koncept'}
                     </Button>
                     <Button
                       onClick={sendComposedEmail}
@@ -638,17 +861,70 @@ export default function EmailClientContent({
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Archive className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Žádné koncepty</h3>
-                <p className="text-muted-foreground mb-4">
-                  Začněte psát email a uložte ho jako koncept
-                </p>
-                <Button onClick={() => setCurrentView('compose')}>
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Napsat email
-                </Button>
-              </div>
+              {drafts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Archive className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Žádné koncepty</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Začněte psát email a uložte ho jako koncept
+                  </p>
+                  <Button onClick={() => setCurrentView('compose')}>
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Napsat email
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {drafts.map((draft) => (
+                    <div
+                      key={draft.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => editDraft(draft)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">
+                            {draft.to || '(bez příjemce)'}
+                          </span>
+                          {draft.orderId && (
+                            <Badge variant="secondary" className="text-xs">
+                              {draft.orderId}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {draft.subject || '(bez předmětu)'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Upraveno: {new Date(draft.updated_at).toLocaleString('cs-CZ')}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editDraft(draft)}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Opravdu smazat tento koncept?')) {
+                              deleteDraft(draft.id);
+                            }
+                          }}
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

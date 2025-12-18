@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withAdminAuthWithParams } from '@/lib/middleware/admin-verification';
 
 // GET - Get specific draft
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function getHandler(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { data, error } = await supabaseAdmin
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 // PUT - Update draft
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function putHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await req.json();
@@ -53,7 +54,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 // DELETE - Delete draft
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function deleteHandler(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { error } = await supabaseAdmin.from('email_drafts').delete().eq('id', id);
@@ -68,3 +69,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Failed to delete draft' }, { status: 500 });
   }
 }
+
+export const GET = withAdminAuthWithParams(getHandler);
+export const PUT = withAdminAuthWithParams(putHandler);
+export const DELETE = withAdminAuthWithParams(deleteHandler);

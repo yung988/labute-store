@@ -40,7 +40,11 @@ type PacketaShipment = {
   packeta_point_id: string | null;
 };
 
-export default function PacketaManagement() {
+interface PacketaManagementProps {
+  onOrderClick?: (orderId: string) => void;
+}
+
+export default function PacketaManagement({ onOrderClick }: PacketaManagementProps) {
   const [shipments, setShipments] = useState<PacketaShipment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -463,9 +467,12 @@ export default function PacketaManagement() {
                           />
                         </td>
                         <td className="p-3">
-                          <div className="font-mono font-bold text-primary">
+                          <button
+                            onClick={() => onOrderClick?.(shipment.order_id)}
+                            className="font-mono font-bold text-primary hover:underline cursor-pointer text-left"
+                          >
                             {formatOrderId(shipment.order_id)}
-                          </div>
+                          </button>
                         </td>
                         <td className="p-3">
                           <div className="font-mono text-sm">{shipment.packeta_shipment_id}</div>

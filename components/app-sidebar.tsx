@@ -9,6 +9,7 @@ import {
   IconSearch,
   IconMail,
   IconHeadset,
+  IconTruck,
 } from '@tabler/icons-react';
 import { Calendar } from 'lucide-react';
 
@@ -58,6 +59,11 @@ const data = {
       title: 'Podpora',
       url: '/admin?section=support',
       icon: IconHeadset,
+    },
+    {
+      title: 'Packeta',
+      url: '/admin?section=packeta',
+      icon: IconTruck,
     },
     {
       title: 'Emaily',

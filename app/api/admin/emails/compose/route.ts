@@ -5,6 +5,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+type EmailAttachment = {
+  filename: string;
+  content: string; // base64 encoded
+};
+
 export const POST = withAdminAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
@@ -13,16 +18,24 @@ export const POST = withAdminAuth(async (req: NextRequest) => {
     const html = String(body.html || '').trim();
     const email_type = String(body.email_type || 'support_reply');
     const order_id = body.order_id ? String(body.order_id) : null;
+    const attachments: EmailAttachment[] = Array.isArray(body.attachments) ? body.attachments : [];
 
     if (!to || !subject || !html) {
       return NextResponse.json({ error: 'Missing to/subject/html' }, { status: 400 });
     }
+
+    // Prepare attachments for Resend (convert base64 to Buffer)
+    const resendAttachments = attachments.map((att) => ({
+      filename: att.filename,
+      content: Buffer.from(att.content, 'base64'),
+    }));
 
     const res = await resend.emails.send({
       from: 'noreply@yeezuz2020.cz',
       to,
       subject,
       html,
+      ...(resendAttachments.length > 0 && { attachments: resendAttachments }),
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +50,10 @@ export const POST = withAdminAuth(async (req: NextRequest) => {
       provider: 'resend',
       provider_id,
       email_content: html,
-      metadata: { trigger: 'admin-compose' },
+      metadata: {
+        trigger: 'admin-compose',
+        attachments: attachments.map((a) => a.filename),
+      },
     });
 
     if (error) {
