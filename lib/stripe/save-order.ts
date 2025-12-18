@@ -251,7 +251,7 @@ export default async function saveOrderToDb(session: StripeCheckoutSession): Pro
     delivery_postal_code: deliveryPostalCode,
     delivery_country: 'CZ',
     status: 'paid',
-    items: JSON.stringify(normalizedItems),
+    items: normalizedItems,
     amount_total: session.amount_total,
   };
   if (typeof shippingAmount === 'number' && !Number.isNaN(shippingAmount)) {
