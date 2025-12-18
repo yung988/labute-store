@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 interface RelatedProductsProps {
   currentProductId: string;
@@ -23,7 +23,15 @@ async function getRandomProducts(
   limit: number = 4
 ): Promise<SimpleProduct[]> {
   try {
-    const supabase = await createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase credentials missing for related products');
+      return [];
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: allProducts } = await supabase
       .from('products')
