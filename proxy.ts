@@ -2,7 +2,7 @@ import { updateSession } from '@/lib/supabase/middleware';
 import { verifyAdminAccess, createAdminRedirect } from '@/lib/middleware/admin-verification';
 import { type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // First run the existing session update
   const sessionResponse = await updateSession(request);
 
